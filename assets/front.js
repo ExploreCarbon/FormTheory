@@ -423,6 +423,7 @@
 	}
 
 	function init(form) {
+		form.classList.add('ft-js'); // Lets themes style JS-only behaviour (for example hiding Next when answers auto-advance).
 		form.querySelectorAll('[data-ft-repeater]').forEach(initRepeater);
 		var pages = Array.prototype.slice.call(form.querySelectorAll('[data-ft-page]'));
 		var progress = form.querySelector('[data-ft-progress]');
