@@ -396,7 +396,17 @@ class FormTheory_Frontend {
 		echo '<div class="ft-hp" aria-hidden="true"><label>' . esc_html__( 'Leave empty', 'formtheory' ) . '<input type="text" name="ft_hp" tabindex="-1" autocomplete="off"></label></div>';
 
 		if ( $errors ) {
-			echo '<div class="ft-error-summary" role="alert" tabindex="-1"><p>' . esc_html( $errors['_form'] ?? __( 'Please fix the errors below.', 'formtheory' ) ) . '</p></div>';
+			echo '<div class="ft-error-summary" role="alert" tabindex="-1"><p>' . esc_html( $errors['_form'] ?? __( 'Please fix the errors below.', 'formtheory' ) ) . '</p>';
+			$items = '';
+			foreach ( $fields as $sf ) {
+				if ( ! empty( $errors[ $sf['id'] ] ) ) {
+					$items .= '<li><a href="#' . esc_attr( 'ft-' . $form_id . '-' . $sf['id'] . '-wrap' ) . '" data-ft-goto="' . esc_attr( $sf['id'] ) . '">' . esc_html( ( '' !== (string) $sf['label'] ? $sf['label'] . ': ' : '' ) . $errors[ $sf['id'] ] ) . '</a></li>';
+				}
+			}
+			if ( $items ) {
+				echo '<ul>' . $items . '</ul>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts above.
+			}
+			echo '</div>';
 		}
 		if ( $multi ) {
 			echo '<p class="ft-progress" aria-live="polite" data-ft-progress></p>';
@@ -457,7 +467,7 @@ class FormTheory_Frontend {
 		$aria      = $aria_base . ( $f['required'] ? ' aria-required="true"' : '' );
 		$req_sr    = $f['required'] ? '<span class="ft-sr"> ' . esc_html__( '(required)', 'formtheory' ) . '</span>' : '';
 
-		echo '<div class="' . esc_attr( $classes ) . '" data-ft-field="' . esc_attr( $f['id'] ) . '" data-ft-required="' . ( $f['required'] ? '1' : '0' ) . '" data-ft-type="' . esc_attr( $f['type'] ) . '"' . $cond . '>'; // phpcs:ignore -- $cond escaped above.
+		echo '<div id="' . esc_attr( $id ) . '-wrap" class="' . esc_attr( $classes ) . '" data-ft-field="' . esc_attr( $f['id'] ) . '" data-ft-required="' . ( $f['required'] ? '1' : '0' ) . '" data-ft-type="' . esc_attr( $f['type'] ) . '"' . $cond . '>'; // phpcs:ignore -- $cond escaped above.
 
 		if ( 'html' === $f['type'] ) {
 			echo '<div class="ft-field ft-type-html"' . $cond . '>' . wp_kses_post( $f['content'] ) . '</div>'; // phpcs:ignore -- $cond escaped above.

@@ -134,6 +134,17 @@
 		});
 
 		form.addEventListener('click', function (e) {
+			var go = e.target.closest('[data-ft-goto]');
+			if (go) {
+				e.preventDefault();
+				var w = form.querySelector('[data-ft-field="' + go.getAttribute('data-ft-goto') + '"]');
+				if (!w) return;
+				var pi = pages.findIndex(function (pg) { return pg.contains(w); });
+				if (pages.length > 1 && pi > -1) show(pi, false);
+				var c = w.querySelector('input:not([type=hidden]), select, textarea');
+				if (c) c.focus();
+				return;
+			}
 			if (e.target.closest('[data-ft-next]')) {
 				if (validatePage(pages[current])) show(current + 1, true);
 			} else if (e.target.closest('[data-ft-prev]')) {
@@ -154,6 +165,20 @@
 			var p = document.createElement('p');
 			p.textContent = errors._form || t('fix_errors', 'Please fix the errors below.');
 			summary.appendChild(p);
+			var list = document.createElement('ul');
+			form.querySelectorAll('[data-ft-field]').forEach(function (w) {
+				var m = errors[w.getAttribute('data-ft-field')];
+				if (!m) return;
+				var lab = w.querySelector('legend, label');
+				var li = document.createElement('li');
+				var a = document.createElement('a');
+				a.href = '#' + w.id;
+				a.setAttribute('data-ft-goto', w.getAttribute('data-ft-field'));
+				a.textContent = (lab ? lab.firstChild.textContent.trim() + ': ' : '') + m;
+				li.appendChild(a);
+				list.appendChild(li);
+			});
+			if (list.childNodes.length) summary.appendChild(list);
 			var firstWrap = null;
 			form.querySelectorAll('[data-ft-field]').forEach(function (w) {
 				var msg = errors[w.getAttribute('data-ft-field')] || '';
