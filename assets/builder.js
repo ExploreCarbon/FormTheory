@@ -283,6 +283,7 @@
 		var conf = el('textarea', { rows: 3, class: 'large-text', oninput: function (e) { cfg.confirmation = e.target.value; } });
 		conf.value = cfg.confirmation || '';
 		settings.appendChild(labelled('Confirmation message', conf));
+		settings.appendChild(check('Submit without page reload (AJAX)', cfg.ajax !== false, function (v) { cfg.ajax = v; }));
 		settings.appendChild(labelled('After submit', select({ message: 'Show message', page: 'Go to page (ID)', redirect: 'Redirect to URL' }, cfg.confirmation_type || 'message', function (v) { cfg.confirmation_type = v; render(); })));
 		if (cfg.confirmation_type === 'page') {
 			settings.appendChild(labelled('Page ID', textIn(cfg.confirmation_page || '', function (v) { cfg.confirmation_page = parseInt(v, 10) || 0; }, 'number')));
