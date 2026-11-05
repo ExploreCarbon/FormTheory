@@ -2,7 +2,7 @@
 
 Lightweight WordPress form builder: conditional logic, file uploads, multi-page forms, entries, CSV export, email notifications. No build step.
 
-- **Version:** 1.3.1
+- **Version:** 1.4.0
 - **Requires:** WordPress 6.0+, PHP 7.4+
 - **License:** GPL-2.0-or-later
 

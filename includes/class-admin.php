@@ -220,6 +220,15 @@ class FormTheory_Admin {
 			'show_message'     => __( 'Show message', 'formtheory' ),
 			'go_to_page'       => __( 'Go to page (ID)', 'formtheory' ),
 			'redirect_to_url'  => __( 'Redirect to URL', 'formtheory' ),
+			'redirect_by_score' => __( 'Redirect by score', 'formtheory' ),
+			'score_threshold'  => __( 'Good-score threshold (%)', 'formtheory' ),
+			/* translators: %s: score category name. */
+			'score_page_for'   => __( 'Page ID when "%s" scores lowest', 'formtheory' ),
+			'score_overall_page' => __( 'Page ID when every category is at or above the threshold', 'formtheory' ),
+			'points'           => __( 'Points per choice (one per line, same order as choices; optional)', 'formtheory' ),
+			'score_category'   => __( 'Score category (optional, letters/numbers/dashes)', 'formtheory' ),
+			'auto_advance'     => __( 'Multi-page: move to the next page when a choice is selected', 'formtheory' ),
+			'store_entries'    => __( 'Save entries in the database (turn off to only send notifications and webhooks)', 'formtheory' ),
 			'page_id'          => __( 'Page ID', 'formtheory' ),
 			'redirect_url'     => __( 'Redirect URL (merge tags allowed in path/query)', 'formtheory' ),
 		);

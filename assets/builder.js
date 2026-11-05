@@ -390,6 +390,13 @@
 			ta.value = (f.options || []).join('\n');
 			body.appendChild(labelled(t('choices', 'Choices (one per line)'), ta));
 		}
+		if (['select', 'radio'].indexOf(f.type) !== -1) {
+			// Optional quiz scoring: points line up with the choices above; category groups fields for "Redirect by score".
+			var pts = el('textarea', { rows: 4, class: 'large-text', oninput: function (e) { f.points = e.target.value.split('\n').map(function (s) { return parseFloat(s) || 0; }); } });
+			pts.value = (f.points || []).join('\n');
+			body.appendChild(labelled(t('points', 'Points per choice (one per line, same order as choices; optional)'), pts));
+			body.appendChild(labelled(t('score_category', 'Score category (optional, letters/numbers/dashes)'), textIn(f.category || '', function (v) { f.category = v; })));
+		}
 		if (f.type === 'file') {
 			body.appendChild(labelled(t('allowed_ext', 'Allowed extensions (comma separated)'), textIn(f.allowed || 'jpg,jpeg,png,pdf', function (v) { f.allowed = v; })));
 			var mb = textIn(f.max_mb || 5, function (v) { f.max_mb = parseInt(v, 10) || 5; }, 'number');
@@ -462,11 +469,24 @@
 		settings.appendChild(labelled(t('confirmation_msg', 'Confirmation message'), conf));
 		settings.appendChild(check(t('ajax', 'Submit without page reload (AJAX)'), cfg.ajax !== false, function (v) { cfg.ajax = v; }));
 		settings.appendChild(check(t('save_resume', 'Allow visitors to save and continue later'), !!cfg.save_resume, function (v) { cfg.save_resume = v; }));
-		var afterSel = select({ message: t('show_message', 'Show message'), page: t('go_to_page', 'Go to page (ID)'), redirect: t('redirect_to_url', 'Redirect to URL') }, cfg.confirmation_type || 'message', function (v) { cfg.confirmation_type = v; render(); var again = root.querySelector('[data-ftb-after]'); if (again) again.focus(); });
+		settings.appendChild(check(t('auto_advance', 'Multi-page: move to the next page when a choice is selected'), !!cfg.auto_advance, function (v) { cfg.auto_advance = v; }));
+		settings.appendChild(check(t('store_entries', 'Save entries in the database (turn off to only send notifications and webhooks)'), cfg.store_entries !== false, function (v) { cfg.store_entries = v; }));
+		var afterSel = select({ message: t('show_message', 'Show message'), page: t('go_to_page', 'Go to page (ID)'), redirect: t('redirect_to_url', 'Redirect to URL'), score: t('redirect_by_score', 'Redirect by score') }, cfg.confirmation_type || 'message', function (v) { cfg.confirmation_type = v; cfg.scoring = cfg.scoring || { threshold: 80, overall_page: 0, pages: {} }; cfg.scoring.enabled = v === 'score'; render(); var again = root.querySelector('[data-ftb-after]'); if (again) again.focus(); });
 		afterSel.setAttribute('data-ftb-after', '1');
 		settings.appendChild(labelled(t('after_submit', 'After submit'), afterSel));
 		if (cfg.confirmation_type === 'page') {
 			settings.appendChild(labelled(t('page_id', 'Page ID'), textIn(cfg.confirmation_page || '', function (v) { cfg.confirmation_page = parseInt(v, 10) || 0; }, 'number')));
+		}
+		if (cfg.confirmation_type === 'score') {
+			var sc = cfg.scoring = cfg.scoring || { enabled: true, threshold: 80, overall_page: 0, pages: {} };
+			sc.pages = sc.pages || {};
+			settings.appendChild(labelled(t('score_threshold', 'Good-score threshold (%)'), textIn(sc.threshold == null ? 80 : sc.threshold, function (v) { sc.threshold = parseInt(v, 10) || 0; }, 'number')));
+			var cats = [];
+			cfg.fields.forEach(function (f) { var c = (f.category || '').toLowerCase().replace(/[^a-z0-9_-]/g, ''); if (c && cats.indexOf(c) === -1) cats.push(c); });
+			cats.forEach(function (c) {
+				settings.appendChild(labelled(fmt(t('score_page_for', 'Page ID when "%s" scores lowest'), c), textIn(sc.pages[c] || '', function (v) { sc.pages[c] = parseInt(v, 10) || 0; }, 'number')));
+			});
+			settings.appendChild(labelled(t('score_overall_page', 'Page ID when every category is at or above the threshold'), textIn(sc.overall_page || '', function (v) { sc.overall_page = parseInt(v, 10) || 0; }, 'number')));
 		}
 		if (cfg.confirmation_type === 'redirect') {
 			settings.appendChild(labelled(t('redirect_url', 'Redirect URL (merge tags allowed in path/query)'), textIn(cfg.confirmation_url, function (v) { cfg.confirmation_url = v; }, 'url')));
