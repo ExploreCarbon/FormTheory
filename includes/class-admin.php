@@ -267,14 +267,19 @@ class FormTheory_Admin {
 	public function register_settings() {
 		register_setting( 'formtheory_settings', 'formtheory_settings', array(
 			'type'              => 'array',
-			'sanitize_callback' => function ( $in ) {
-				$in = is_array( $in ) ? $in : array();
-				return array(
-					'turnstile_site'   => sanitize_text_field( $in['turnstile_site'] ?? '' ),
-					'turnstile_secret' => sanitize_text_field( $in['turnstile_secret'] ?? '' ),
-				);
-			},
+			'sanitize_callback' => array( __CLASS__, 'sanitize_settings' ),
 		) );
+	}
+
+	/** Merges onto the stored option so keys owned by other features survive. */
+	public static function sanitize_settings( $in ) {
+		$in                         = is_array( $in ) ? $in : array();
+		$out                        = get_option( 'formtheory_settings', array() );
+		$out                        = is_array( $out ) ? $out : array();
+		$out['turnstile_site']      = sanitize_text_field( $in['turnstile_site'] ?? '' );
+		$out['turnstile_secret']    = sanitize_text_field( $in['turnstile_secret'] ?? '' );
+		$out['delete_on_uninstall'] = ! empty( $in['delete_on_uninstall'] );
+		return $out;
 	}
 
 	public function page_settings() {
@@ -290,6 +295,7 @@ class FormTheory_Admin {
 		echo '<tr><th scope="row"><label for="ft-ts-site">Site key</label></th><td><input type="text" class="regular-text" id="ft-ts-site" name="formtheory_settings[turnstile_site]" value="' . esc_attr( $s['turnstile_site'] ) . '"></td></tr>';
 		echo '<tr><th scope="row"><label for="ft-ts-secret">Secret key</label></th><td><input type="password" class="regular-text" id="ft-ts-secret" name="formtheory_settings[turnstile_secret]" value="' . esc_attr( $s['turnstile_secret'] ) . '" autocomplete="off"></td></tr>';
 		echo '</table>';
+		echo '<h2>' . esc_html__( 'Uninstall', 'formtheory' ) . '</h2><table class="form-table" role="presentation"><tr><th scope="row">' . esc_html__( 'Data removal', 'formtheory' ) . '</th><td><label for="ft-del"><input type="checkbox" id="ft-del" name="formtheory_settings[delete_on_uninstall]" value="1"' . checked( ! empty( $s['delete_on_uninstall'] ), true, false ) . '> ' . esc_html__( 'Delete all FormTheory data when the plugin is deleted', 'formtheory' ) . '</label><p class="description">' . esc_html__( 'Warning: all forms, entries and uploaded files are permanently deleted when the plugin is deleted. This cannot be undone.', 'formtheory' ) . '</p></td></tr></table>';
 		submit_button();
 		echo '</form></div>';
 	}

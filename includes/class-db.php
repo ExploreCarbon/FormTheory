@@ -13,6 +13,60 @@ class FormTheory_DB {
 		return $wpdb->prefix . 'formtheory_entries';
 	}
 
+	public static function webhook_log_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'formtheory_webhook_log';
+	}
+
+	/**
+	 * Remove all plugin data. Only called from uninstall.php after the opt-in flag check.
+	 * Single-site scope: multisite per-blog cleanup is not handled.
+	 */
+	public static function uninstall() {
+		global $wpdb;
+		foreach ( array( self::forms_table(), self::entries_table(), self::webhook_log_table() ) as $table ) {
+			$wpdb->query( "DROP TABLE IF EXISTS $table" );
+		}
+		foreach ( array( 'formtheory_settings', 'formtheory_recaptcha', 'formtheory_db_version' ) as $opt ) {
+			delete_option( $opt );
+		}
+		foreach ( array( 'formtheory_send_webhook', 'formtheory_deliver_webhook', 'formtheory_purge' ) as $hook ) {
+			wp_clear_scheduled_hook( $hook );
+		}
+		self::remove_dir( self::upload_dir() );
+	}
+
+	/** Recursively delete a directory. Refuses unless its basename is exactly formtheory-private; never follows symlinks. */
+	public static function remove_dir( $dir ) {
+		$dir = rtrim( (string) $dir, '/\\' );
+		if ( 'formtheory-private' !== basename( $dir ) || is_link( $dir ) || ! is_dir( $dir ) ) {
+			return;
+		}
+		self::remove_tree( $dir );
+	}
+
+	private static function remove_tree( $dir ) {
+		$items = scandir( $dir );
+		if ( false === $items ) {
+			return;
+		}
+		foreach ( $items as $item ) {
+			if ( '.' === $item || '..' === $item ) {
+				continue;
+			}
+			$path = $dir . '/' . $item;
+			if ( is_link( $path ) ) {
+				continue;
+			}
+			if ( is_dir( $path ) ) {
+				self::remove_tree( $path );
+			} else {
+				@unlink( $path );
+			}
+		}
+		@rmdir( $dir );
+	}
+
 	public static function install() {
 		global $wpdb;
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';

@@ -82,6 +82,10 @@ On by default for new forms (**Submit without page reload**); forms created in 1
 
 Each form can post entries to HTTPS endpoints after submission. Requests are queued via WP-Cron so they never delay the visitor (5 s timeout, private/loopback hosts refused; sites with `DISABLE_WP_CRON` need a real cron job). Formats: JSON (`form_id`, `form_title`, `entry_id`, `submitted_at`, `fields`) or form-encoded. With a secret set, requests carry `X-FormTheory-Signature: sha256=<HMAC-SHA256 of body>`. Optional conditions as for notifications.
 
+## Uninstall
+
+Off by default. Enable "Delete all FormTheory data when the plugin is deleted" in Settings to permanently remove forms, entries, uploaded files, the webhook log, options and scheduled events on deletion. Single-site only; multisite per-blog cleanup is not handled.
+
 ## Hooks
 
 - `formtheory_after_submission( $entry_id, $form, $data )` — action, after an entry is stored.
