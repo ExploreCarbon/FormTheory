@@ -19,6 +19,7 @@ class FormTheory_Frontend {
 		wp_register_style( 'formtheory', FORMTHEORY_URL . 'assets/front.css', array(), FORMTHEORY_VERSION );
 		wp_register_script( 'formtheory', FORMTHEORY_URL . 'assets/front.js', array(), FORMTHEORY_VERSION, true );
 		wp_localize_script( 'formtheory', 'FormTheoryI18n', self::i18n() );
+		wp_register_script( 'formtheory-signature', FORMTHEORY_URL . 'assets/signature.js', array( 'formtheory' ), FORMTHEORY_VERSION, true );
 	}
 
 	/** Strings for assets/front.js (read as FormTheoryI18n.key). */
@@ -56,6 +57,16 @@ class FormTheory_Frontend {
 
 	/** Uploaded files for the submission being processed ($_FILES shape). */
 	private $files = array();
+
+	/** Drawn signature data URLs (field id => string) for the submission being processed; kept out of $values. */
+	private $sig_data = array();
+
+	/** PNG signature: magic bytes, max decoded size, max dimensions, max base64 length checked before decoding. */
+	const SIG_PREFIX    = 'data:image/png;base64,';
+	const SIG_MAX_BYTES = 204800;
+	const SIG_MAX_B64   = 280000;
+	const SIG_MAX_W     = 2000;
+	const SIG_MAX_H     = 1000;
 
 	/** Classic (non-JS) POST handler. */
 	public function maybe_submit() {
@@ -101,8 +112,9 @@ class FormTheory_Frontend {
 	 */
 	public function process( array $form, array $post, array $files ) {
 		$form_id     = (int) $form['id'];
-		$this->files = $files;
-		$result      = array( 'ok' => false, 'errors' => array(), 'values' => array(), 'entry_id' => null, 'redirect' => null, 'message' => null );
+		$this->files    = $files;
+		$this->sig_data = array();
+		$result     = array( 'ok' => false, 'errors' => array(), 'values' => array(), 'entry_id' => null, 'redirect' => null, 'message' => null );
 
 		// Honeypot: silently pretend success, store nothing.
 		if ( ! empty( $post['ft_hp'] ) ) {
@@ -161,6 +173,9 @@ class FormTheory_Frontend {
 			}
 			if ( 'file' === $f['type'] ) {
 				$err = $this->check_file( $f ); // Stored after validation so failed submits leave no orphans.
+			} elseif ( 'signature' === $f['type'] ) {
+				$err         = $this->check_signature( $f, $values[ $id ] ); // Drawn image written after validation, like files.
+				$data[ $id ] = $values[ $id ];
 			} else {
 				$err         = $this->validate( $f, $values[ $id ] );
 				$data[ $id ] = $values[ $id ];
@@ -184,6 +199,15 @@ class FormTheory_Frontend {
 				if ( $stored ) {
 					$data[ $f['id'] ] = $stored;
 				}
+			}
+			$sig_data = $this->sig_data[ $f['id'] ] ?? '';
+			if ( 'signature' === $f['type'] && ! empty( $visible[ $f['id'] ] ) && '' !== $sig_data ) {
+				$stored = $this->store_signature( $f, $sig_data ); // Drawn wins over typed.
+				if ( is_wp_error( $stored ) ) {
+					$result['errors'] = array( $f['id'] => $stored->get_error_message() );
+					return $result;
+				}
+				$data[ $f['id'] ] = $stored;
 			}
 		}
 
@@ -273,6 +297,14 @@ class FormTheory_Frontend {
 				}
 			}
 			return $out ? $out : '';
+		}
+		if ( 'signature' === $f['type'] ) {
+			// Drawn data URL is kept aside (validated byte-for-byte later, never echoed back); value is the typed name or ''.
+			$v     = is_array( $v ) ? $v : array();
+			$data  = isset( $v['data'] ) && is_string( $v['data'] ) ? $v['data'] : '';
+			$typed = isset( $v['typed'] ) && is_string( $v['typed'] ) ? mb_substr( sanitize_text_field( $v['typed'] ), 0, 120 ) : '';
+			$this->sig_data[ $f['id'] ] = $data;
+			return '' !== $typed ? array( 'typed' => $typed ) : '';
 		}
 		if ( is_array( $v ) ) {
 			return '';
@@ -377,6 +409,70 @@ class FormTheory_Frontend {
 		return '';
 	}
 
+	/** Validation-only (no writes): drawn data must be a valid PNG; otherwise typed name or required. */
+	private function check_signature( $f, $value ) {
+		$data = $this->sig_data[ $f['id'] ] ?? '';
+		if ( '' !== $data ) {
+			$bytes = self::decode_signature( $data );
+			return is_wp_error( $bytes ) ? $bytes->get_error_message() : '';
+		}
+		if ( is_array( $value ) && '' !== trim( (string) ( $value['typed'] ?? '' ) ) ) {
+			return '';
+		}
+		return $f['required'] ? __( 'This field is required.', 'formtheory' ) : '';
+	}
+
+	/**
+	 * Strictly decode a drawn-signature data URL. Order matters: prefix and
+	 * string length are checked before decoding to bound memory.
+	 *
+	 * @return string|WP_Error PNG bytes.
+	 */
+	private static function decode_signature( $data_url ) {
+		$bad = new WP_Error( 'ft_sig', __( 'The signature could not be read. Please clear it and sign again.', 'formtheory' ) );
+		if ( ! is_string( $data_url ) || 0 !== strpos( $data_url, self::SIG_PREFIX ) ) {
+			return $bad;
+		}
+		$b64 = substr( $data_url, strlen( self::SIG_PREFIX ) );
+		if ( strlen( $b64 ) > self::SIG_MAX_B64 ) {
+			return new WP_Error( 'ft_sig_size', __( 'The signature image is too large. Please clear it and sign again.', 'formtheory' ) );
+		}
+		$bytes = base64_decode( $b64, true );
+		if ( false === $bytes || '' === $bytes ) {
+			return $bad;
+		}
+		if ( strlen( $bytes ) > self::SIG_MAX_BYTES ) {
+			return new WP_Error( 'ft_sig_size', __( 'The signature image is too large. Please clear it and sign again.', 'formtheory' ) );
+		}
+		if ( 0 !== strncmp( $bytes, "\x89PNG\r\n\x1a\n", 8 ) ) {
+			return $bad;
+		}
+		$info = @getimagesizefromstring( $bytes ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- malformed input is expected.
+		if ( ! $info || 'image/png' !== ( $info['mime'] ?? '' ) || IMAGETYPE_PNG !== ( $info[2] ?? 0 )
+			|| $info[0] < 1 || $info[1] < 1 || $info[0] > self::SIG_MAX_W || $info[1] > self::SIG_MAX_H ) {
+			return $bad;
+		}
+		return $bytes;
+	}
+
+	/**
+	 * Re-validate and write a drawn signature to the private dir under a random 32-hex name.
+	 *
+	 * @return array|WP_Error { sig: string, name: string }
+	 */
+	public function store_signature( array $f, $data_url ) {
+		$bytes = self::decode_signature( $data_url );
+		if ( is_wp_error( $bytes ) ) {
+			return $bytes;
+		}
+		FormTheory_DB::protect_upload_dir();
+		$stored = bin2hex( random_bytes( 16 ) ) . '.png';
+		if ( strlen( $bytes ) !== file_put_contents( FormTheory_DB::upload_dir() . '/' . $stored, $bytes, LOCK_EX ) ) {
+			return new WP_Error( 'ft_sig_write', __( 'Upload failed.', 'formtheory' ) );
+		}
+		return array( 'sig' => $stored, 'name' => 'signature.png' );
+	}
+
 	/** Moves upload into private dir under a random name. Returns null if none. */
 	private function store_file( $f ) {
 		$file = $this->file_input( $f );
@@ -411,6 +507,9 @@ class FormTheory_Frontend {
 		}
 		wp_enqueue_style( 'formtheory' );
 		wp_enqueue_script( 'formtheory' );
+		if ( in_array( 'signature', array_column( $form['config']['fields'], 'type' ), true ) ) {
+			wp_enqueue_script( 'formtheory-signature' );
+		}
 
 		$anchor = 'formtheory-' . $form_id;
 		if ( isset( $_GET['ft_done'] ) && absint( $_GET['ft_done'] ) === $form_id ) {
@@ -587,6 +686,16 @@ class FormTheory_Frontend {
 				echo '<div class="ft-addr-part ft-addr-' . esc_attr( $part ) . '"><label for="' . esc_attr( $pid ) . '">' . esc_html( $labels[ $part ] ) . '</label>';
 				echo '<input type="text" id="' . esc_attr( $pid ) . '" name="' . esc_attr( $name . '[' . $part . ']' ) . '" value="' . esc_attr( $pv ) . '" autocomplete="' . esc_attr( $tokens[ $part ] ) . '"' . $preq . '></div>'; // phpcs:ignore -- $preq static.
 			}
+			echo '</fieldset>';
+		} elseif ( 'signature' === $f['type'] ) {
+			// Canvas is an optional pointer-only aid; the labelled typed-name input is the keyboard/accessible path (WCAG 2.5.7).
+			$typed = is_array( $value ) && isset( $value['typed'] ) && is_string( $value['typed'] ) ? $value['typed'] : '';
+			echo '<fieldset class="ft-signature"' . $aria_base . '><legend>' . esc_html( $f['label'] ) . $req . $req_sr . '</legend>'; // phpcs:ignore -- $aria_base/$req static/escaped.
+			echo '<div class="ft-sig-pad"><canvas class="ft-sig-canvas" width="600" height="200" role="img" aria-label="' . esc_attr__( 'Optional drawing area: sign with a mouse, pen or finger, or type your name below.', 'formtheory' ) . '" data-ft-sig-canvas></canvas></div>';
+			echo '<button type="button" class="ft-btn ft-sig-clear" data-ft-sig-clear>' . esc_html__( 'Clear signature', 'formtheory' ) . '</button>';
+			echo '<input type="hidden" name="' . esc_attr( $name . '[data]' ) . '" value="" data-ft-sig-data>';
+			echo '<div class="ft-sig-typed"><label for="' . esc_attr( $id . '-typed' ) . '">' . esc_html__( 'Or type your full name to sign', 'formtheory' ) . '</label>';
+			echo '<input type="text" id="' . esc_attr( $id . '-typed' ) . '" name="' . esc_attr( $name . '[typed]' ) . '" value="' . esc_attr( $typed ) . '" maxlength="120" autocomplete="name"></div>';
 			echo '</fieldset>';
 		} elseif ( 'consent' === $f['type'] ) {
 			echo '<fieldset><legend>' . esc_html( $f['label'] ) . $req . $req_sr . '</legend>'; // phpcs:ignore -- static/escaped.

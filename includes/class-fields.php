@@ -6,9 +6,9 @@ defined( 'ABSPATH' ) || exit;
  */
 class FormTheory_Fields {
 
-	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html', 'calc', 'rating', 'address' );
+	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html', 'calc', 'rating', 'address', 'signature' );
 	/** Types whose value is structured: never a conditional-logic source. */
-	const NON_COND_SOURCE = array( 'address' );
+	const NON_COND_SOURCE = array( 'address', 'signature' );
 	/** Address parts in canonical (render and storage) order. */
 	const ADDRESS_PARTS = array( 'street', 'street2', 'city', 'state', 'zip', 'country' );
 	/** Address parts enabled when none are configured. */

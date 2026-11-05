@@ -352,8 +352,10 @@ class FormTheory_DB {
 		$entry = self::get_entry( $id );
 		if ( $entry ) {
 			foreach ( $entry['data'] as $val ) {
-				if ( is_array( $val ) && isset( $val['file'] ) ) {
-					$path = self::upload_dir() . '/' . basename( $val['file'] );
+				// Uploaded files ('file') and drawn signatures ('sig') both live in the private dir.
+				$stored = is_array( $val ) ? ( $val['file'] ?? ( $val['sig'] ?? null ) ) : null;
+				if ( is_string( $stored ) && '' !== $stored ) {
+					$path = self::upload_dir() . '/' . basename( $stored );
 					if ( is_file( $path ) ) {
 						wp_delete_file( $path );
 					}

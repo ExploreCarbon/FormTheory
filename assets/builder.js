@@ -26,12 +26,12 @@
 		});
 		return out;
 	}
-	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation', rating: 'Rating', address: 'Address' }, I18N.types || {});
+	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation', rating: 'Rating', address: 'Address', signature: 'Signature' }, I18N.types || {});
 	var ADDRESS_PARTS = ['street', 'street2', 'city', 'state', 'zip', 'country'];
 	var ADDRESS_DEFAULT = ['street', 'city', 'state', 'zip', 'country'];
 	var PART_LABELS = { street: 'Street address', street2: 'Apartment, suite, etc.', city: 'City', state: 'State / Province', zip: 'ZIP / Postal code', country: 'Country' };
 	// Structured types (mirror FormTheory_Fields::NON_COND_SOURCE) cannot be conditional-logic sources.
-	var NON_COND_SOURCE = ['address'];
+	var NON_COND_SOURCE = ['address', 'signature'];
 	var OPS = Object.assign({ is: 'is', isnot: 'is not', contains: 'contains', gt: 'greater than', lt: 'less than', empty: 'is empty', notempty: 'is not empty' }, I18N.ops || {});
 	var uid = 0;
 

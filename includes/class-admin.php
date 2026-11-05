@@ -68,6 +68,7 @@ class FormTheory_Admin {
 				'calc'     => __( 'Calculation', 'formtheory' ),
 				'rating'   => __( 'Rating', 'formtheory' ),
 				'address'  => __( 'Address', 'formtheory' ),
+				'signature' => __( 'Signature', 'formtheory' ),
 			),
 			'ops'              => array(
 				'is'       => __( 'is', 'formtheory' ),
@@ -411,6 +412,11 @@ class FormTheory_Admin {
 			if ( is_array( $val ) && isset( $val['file'] ) ) {
 				$url = $this->action_url( 'formtheory_file', array( 'entry' => (int) $entry['id'], 'field' => $f['id'] ) );
 				echo '<a href="' . esc_url( $url ) . '">' . esc_html( $val['name'] ) . '</a>';
+			} elseif ( is_array( $val ) && isset( $val['sig'] ) ) {
+				$url = $this->action_url( 'formtheory_file', array( 'entry' => (int) $entry['id'], 'field' => $f['id'] ) );
+				/* translators: %s: field label. */
+				$alt = sprintf( __( 'Signature drawn for %s', 'formtheory' ), $f['label'] );
+				echo '<img class="ft-sig-img" src="' . esc_url( $url ) . '" alt="' . esc_attr( $alt ) . '" style="max-width:100%;height:auto;background:#fff;border:1px solid #8c8f94">';
 			} else {
 				echo nl2br( esc_html( $this->plain_value( $val ) ) );
 			}
@@ -792,22 +798,50 @@ class FormTheory_Admin {
 		exit;
 	}
 
+	/**
+	 * Download headers for a stored value. image/png inline only for a drawn
+	 * signature ('sig') whose bytes start with the PNG magic; everything else
+	 * is an octet-stream attachment. Always nosniff.
+	 *
+	 * @param array  $val  Stored entry value.
+	 * @param string $head First 8 bytes of the stored file.
+	 * @return string[]
+	 */
+	public static function file_headers( array $val, $head ) {
+		$is_png = isset( $val['sig'] ) && ! isset( $val['file'] ) && "\x89PNG\r\n\x1a\n" === $head;
+		$name   = str_replace( array( '"', '\\', "\r", "\n" ), '', (string) ( $val['name'] ?? '' ) );
+		if ( '' === $name ) {
+			$name = 'download';
+		}
+		return array(
+			'Content-Type: ' . ( $is_png ? 'image/png' : 'application/octet-stream' ),
+			'X-Content-Type-Options: nosniff',
+			'Content-Disposition: ' . ( $is_png ? 'inline' : 'attachment' ) . '; filename="' . $name . '"',
+		);
+	}
+
 	public function handle_file() {
 		$this->guard( 'formtheory_file' );
 		$entry = FormTheory_DB::get_entry( isset( $_GET['entry'] ) ? absint( $_GET['entry'] ) : 0 );
 		$field = isset( $_GET['field'] ) ? sanitize_key( $_GET['field'] ) : '';
 		$val   = $entry['data'][ $field ] ?? null;
-		if ( ! is_array( $val ) || empty( $val['file'] ) ) {
+		$stored = is_array( $val ) ? ( $val['file'] ?? ( $val['sig'] ?? '' ) ) : '';
+		if ( ! is_string( $stored ) || '' === $stored ) {
 			wp_die( esc_html__( 'File not found.', 'formtheory' ), 404 );
 		}
-		$path = FormTheory_DB::upload_dir() . '/' . basename( $val['file'] );
+		$path = FormTheory_DB::upload_dir() . '/' . basename( $stored );
 		if ( ! is_file( $path ) ) {
 			wp_die( esc_html__( 'File not found.', 'formtheory' ), 404 );
 		}
+		$fh   = fopen( $path, 'rb' );
+		$head = $fh ? (string) fread( $fh, 8 ) : '';
+		if ( $fh ) {
+			fclose( $fh );
+		}
 		nocache_headers();
-		header( 'Content-Type: application/octet-stream' );
-		header( 'X-Content-Type-Options: nosniff' );
-		header( 'Content-Disposition: attachment; filename="' . str_replace( array( '"', "\r", "\n" ), '', $val['name'] ) . '"' );
+		foreach ( self::file_headers( $val, $head ) as $h ) {
+			header( $h );
+		}
 		header( 'Content-Length: ' . filesize( $path ) );
 		readfile( $path );
 		exit;

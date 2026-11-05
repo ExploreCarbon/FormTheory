@@ -63,3 +63,7 @@
 /* Self-contained surface: contrast holds on any host background. */
 .ft-confirmation { padding: 1rem; border: 2px solid #15803d; border-radius: 4px; background: #f0fdf4; color: #14532d; }
 .ft-hp { position: absolute !important; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.ft-signature .ft-sig-pad { max-width: 600px; border: 2px solid currentColor; border-radius: 4px; background: #fff; }
+.ft-signature .ft-sig-canvas { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; touch-action: none; cursor: crosshair; }
+.ft-signature .ft-sig-clear { margin: .5rem 0 .75rem; background: #fff; color: var(--ft-accent); }
+.ft-signature .ft-sig-clear:focus-visible { outline: 3px solid var(--ft-accent); outline-offset: 2px; }
