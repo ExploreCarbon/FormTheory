@@ -338,6 +338,55 @@ class FormTheory_DB {
 		$wpdb->delete( self::entries_table(), array( 'id' => $id ), array( '%d' ) );
 	}
 
+	/**
+	 * Single place that computes the retention cutoff (site-local wall time,
+	 * matching insert_entry()'s current_time( 'mysql' )). Extend here for other tables.
+	 */
+	public static function retention_cutoff( $days ) {
+		return gmdate( 'Y-m-d H:i:s', (int) current_time( 'timestamp' ) - (int) $days * 86400 );
+	}
+
+	/** Deletes entries older than $days (files included). $days <= 0 = keep forever, no query. @return int */
+	public static function purge_older_than( $days ) {
+		global $wpdb;
+		$days = (int) $days;
+		if ( $days <= 0 ) {
+			return 0;
+		}
+		$cutoff = self::retention_cutoff( $days );
+		$ids    = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM ' . self::entries_table() . ' WHERE created_at < %s', $cutoff ) );
+		$n      = 0;
+		foreach ( (array) $ids as $id ) {
+			self::delete_entry( (int) $id );
+			$n++;
+		}
+		return $n;
+	}
+
+	/** Entries whose data has an exact (case-insensitive) scalar value equal to $email. */
+	public static function find_entries_by_email( $email ) {
+		global $wpdb;
+		$email = strtolower( trim( (string) $email ) );
+		if ( '' === $email ) {
+			return array();
+		}
+		$like = '%' . $wpdb->esc_like( substr( wp_json_encode( $email ), 1, -1 ) ) . '%';
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::entries_table() . ' WHERE data LIKE %s ORDER BY id ASC', $like ), ARRAY_A );
+		$out  = array();
+		foreach ( (array) $rows as $r ) {
+			$d = json_decode( $r['data'], true );
+			$d = is_array( $d ) ? $d : array();
+			foreach ( $d as $v ) {
+				if ( is_scalar( $v ) && strtolower( trim( (string) $v ) ) === $email ) {
+					$r['data'] = $d;
+					$out[]     = $r;
+					break;
+				}
+			}
+		}
+		return $out;
+	}
+
 	private static function client_ip() {
 		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 		return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';

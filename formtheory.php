@@ -24,6 +24,7 @@ require_once FORMTHEORY_DIR . 'includes/class-notify.php';
 require_once FORMTHEORY_DIR . 'includes/class-webhooks.php';
 require_once FORMTHEORY_DIR . 'includes/class-recaptcha.php';
 require_once FORMTHEORY_DIR . 'includes/class-portable.php';
+require_once FORMTHEORY_DIR . 'includes/class-privacy.php';
 require_once FORMTHEORY_DIR . 'includes/class-admin.php';
 require_once FORMTHEORY_DIR . 'includes/class-frontend.php';
 
@@ -38,4 +39,5 @@ add_action( 'plugins_loaded', function () {
 	}
 	new FormTheory_Frontend();
 	FormTheory_Webhooks::init();
+	FormTheory_Privacy::init();
 } );
