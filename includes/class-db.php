@@ -366,25 +366,41 @@ class FormTheory_DB {
 	/** Entries whose data has an exact (case-insensitive) scalar value equal to $email. */
 	public static function find_entries_by_email( $email ) {
 		global $wpdb;
-		$email = mb_strtolower( trim( (string) $email ) );
+		$email = self::lower( trim( (string) $email ) );
 		if ( '' === $email ) {
 			return array();
 		}
-		$like = '%' . $wpdb->esc_like( substr( wp_json_encode( $email ), 1, -1 ) ) . '%';
-		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::entries_table() . ' WHERE data LIKE %s ORDER BY id ASC', $like ), ARRAY_A );
-		$out  = array();
-		foreach ( (array) $rows as $r ) {
-			$d = json_decode( $r['data'], true );
-			$d = is_array( $d ) ? $d : array();
-			foreach ( $d as $v ) {
-				if ( is_scalar( $v ) && mb_strtolower( trim( (string) $v ) ) === $email ) {
-					$r['data'] = $d;
-					$out[]     = $r;
-					break;
+		$table = self::entries_table();
+		$out   = array();
+		// Non-ASCII is stored as \uXXXX with case-variant hex, so a LIKE prefilter could miss; scan in id batches instead.
+		$ascii = ! preg_match( '/[^\x20-\x7e]/', $email );
+		$like  = $ascii ? '%' . $wpdb->esc_like( substr( wp_json_encode( $email ), 1, -1 ) ) . '%' : '';
+		$last  = 0;
+		do {
+			if ( $ascii ) {
+				$sql = $wpdb->prepare( "SELECT * FROM $table WHERE data LIKE %s AND id > %d ORDER BY id ASC LIMIT 500", $like, $last );
+			} else {
+				$sql = $wpdb->prepare( "SELECT * FROM $table WHERE id > %d ORDER BY id ASC LIMIT 500", $last );
+			}
+			$rows = (array) $wpdb->get_results( $sql, ARRAY_A );
+			foreach ( $rows as $r ) {
+				$last = max( $last, (int) $r['id'] );
+				$d    = json_decode( $r['data'], true );
+				$d    = is_array( $d ) ? $d : array();
+				foreach ( $d as $v ) {
+					if ( is_scalar( $v ) && self::lower( trim( (string) $v ) ) === $email ) {
+						$r['data'] = $d;
+						$out[]     = $r;
+						break;
+					}
 				}
 			}
-		}
+		} while ( count( $rows ) >= 500 );
 		return $out;
+	}
+
+	private static function lower( $s ) {
+		return function_exists( 'mb_strtolower' ) ? mb_strtolower( (string) $s, 'UTF-8' ) : strtolower( (string) $s );
 	}
 
 	private static function client_ip() {

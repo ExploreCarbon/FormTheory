@@ -125,6 +125,29 @@ class PrivacyTest extends TestCase {
 		$this->assertTrue( $r['done'] );
 	}
 
+	public function test_ascii_email_uses_like_prefilter() {
+		$sqls = array();
+		$this->wpdb->shouldReceive( 'get_results' )->andReturnUsing( function ( $sql ) use ( &$sqls ) {
+			$sqls[] = $sql;
+			return array();
+		} );
+		\FormTheory_DB::find_entries_by_email( 'Bob_1@example.com' );
+		$this->assertCount( 1, $sqls );
+		$this->assertStringContainsString( 'data LIKE %bob\_1@example.com%', $sqls[0] );
+	}
+
+	public function test_non_ascii_email_scans_without_like_and_finds_uppercase_entry() {
+		$sqls = array();
+		$row  = $this->row( 1, "\u{c9}MILE@example.com" );
+		$this->wpdb->shouldReceive( 'get_results' )->andReturnUsing( function ( $sql ) use ( &$sqls, $row ) {
+			$sqls[] = $sql;
+			return array( $row );
+		} );
+		$found = \FormTheory_DB::find_entries_by_email( "\u{e9}mile@example.com" );
+		$this->assertCount( 1, $found );
+		$this->assertStringNotContainsString( 'LIKE', $sqls[0] );
+	}
+
 	public function test_email_match_non_ascii_case_insensitive() {
 		$this->rows( array( $this->row( 1, "\u{c9}MILE@example.com" ) ) );
 		$found = \FormTheory_DB::find_entries_by_email( "\u{e9}mile@example.com" );
