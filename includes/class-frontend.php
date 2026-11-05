@@ -16,6 +16,7 @@ class FormTheory_Frontend {
 		add_action( 'template_redirect', array( $this, 'resume_headers' ) );
 		add_action( 'init', array( $this, 'register_block' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'attach_editor_data' ) );
 	}
 
 	public function register_assets() {
@@ -58,17 +59,83 @@ class FormTheory_Frontend {
 		);
 	}
 
-	/** Server-rendered block wrapping the shortcode (no build step). */
+	/**
+	 * Server-rendered block wrapping the shortcode (no build step). The editor
+	 * script is registered here on `init` (cheap, no queries) because WP resolves
+	 * `editor_script` handles when block assets are enqueued, which is before
+	 * `wp_enqueue_scripts` ever runs; register_assets() is front end only.
+	 */
 	public function register_block() {
 		if ( ! function_exists( 'register_block_type' ) ) {
 			return;
 		}
+		wp_register_script(
+			'formtheory-block',
+			FORMTHEORY_URL . 'assets/block.js',
+			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-server-side-render', 'wp-i18n' ),
+			FORMTHEORY_VERSION,
+			true
+		);
 		register_block_type( 'formtheory/form', array(
+			'title'           => __( 'FormTheory Form', 'formtheory' ),
+			'category'        => 'widgets',
+			'icon'            => 'feedback',
+			'editor_script'   => 'formtheory-block',
 			'attributes'      => array( 'id' => array( 'type' => 'number', 'default' => 0 ) ),
 			'render_callback' => function ( $attrs ) {
-				return $this->shortcode( array( 'id' => $attrs['id'] ?? 0 ) );
+				$id = absint( $attrs['id'] ?? 0 );
+				if ( self::is_editor_context() ) {
+					$form = FormTheory_DB::get_form( $id );
+					if ( $form ) {
+						return $this->render_form( $form, true );
+					}
+				}
+				return $this->shortcode( array( 'id' => $id ) );
 			},
 		) );
+	}
+
+	/** Block editor preview: the server-side-render REST call (or any admin screen). */
+	public static function is_editor_context() {
+		return ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || is_admin();
+	}
+
+	/**
+	 * Forms for the block's picker, leading empty option first. Queried lazily in
+	 * attach_editor_data() on `enqueue_block_editor_assets`, never on a front-end load.
+	 *
+	 * @return array[] { value: int, label: string }
+	 */
+	public static function block_forms() {
+		$out = array( array( 'value' => 0, 'label' => __( '— Select a form —', 'formtheory' ) ) );
+		foreach ( (array) FormTheory_DB::get_forms() as $row ) {
+			$title = trim( (string) $row['title'] );
+			/* translators: %d: form ID, shown when a form has no title. */
+			$out[] = array( 'value' => (int) $row['id'], 'label' => '' !== $title ? $title : sprintf( __( 'Untitled form #%d', 'formtheory' ), (int) $row['id'] ) );
+		}
+		return $out;
+	}
+
+	/** Strings for assets/block.js (read as FormTheoryBlock.i18n.key). */
+	public static function block_i18n() {
+		return array(
+			'title'        => __( 'FormTheory Form', 'formtheory' ),
+			'description'  => __( 'Embed a form built with FormTheory.', 'formtheory' ),
+			'select'       => __( 'Form', 'formtheory' ),
+			'instructions' => __( 'Choose which form to show here.', 'formtheory' ),
+			'missing'      => __( 'The selected form no longer exists. Choose another form.', 'formtheory' ),
+			'no_forms'     => __( 'No forms yet. Create one under FormTheory first.', 'formtheory' ),
+		);
+	}
+
+	/**
+	 * Hands the forms list to the editor script. Hooked to `enqueue_block_editor_assets`
+	 * so the DB query only runs when an editor loads. JSON_HEX_TAG|JSON_HEX_AMP keep a
+	 * form title like `</script>` inert inside the inline script.
+	 */
+	public function attach_editor_data() {
+		$data = array( 'forms' => self::block_forms(), 'i18n' => self::block_i18n() );
+		wp_add_inline_script( 'formtheory-block', 'window.FormTheoryBlock = ' . wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP ) . ';', 'before' );
 	}
 
 	/* ---------- Submit ---------- */
@@ -843,14 +910,25 @@ class FormTheory_Frontend {
 		if ( ! $form ) {
 			return current_user_can( 'manage_options' ) ? '<p>' . esc_html__( 'FormTheory: form not found.', 'formtheory' ) . '</p>' : '';
 		}
-		wp_enqueue_style( 'formtheory' );
-		wp_enqueue_script( 'formtheory' );
-		if ( in_array( 'signature', array_column( $form['config']['fields'], 'type' ), true ) ) {
-			wp_enqueue_script( 'formtheory-signature' );
+		return $this->render_form( $form );
+	}
+
+	/**
+	 * Form markup. $preview (block editor): no scripts or styles enqueued, no nonce
+	 * or time stamp exposed, no captcha, and every control inert and disabled.
+	 */
+	public function render_form( array $form, $preview = false ) {
+		$form_id = (int) $form['id'];
+		if ( ! $preview ) {
+			wp_enqueue_style( 'formtheory' );
+			wp_enqueue_script( 'formtheory' );
+			if ( in_array( 'signature', array_column( $form['config']['fields'], 'type' ), true ) ) {
+				wp_enqueue_script( 'formtheory-signature' );
+			}
 		}
 
 		$anchor = 'formtheory-' . $form_id;
-		if ( isset( $_GET['ft_done'] ) && absint( $_GET['ft_done'] ) === $form_id ) {
+		if ( ! $preview && isset( $_GET['ft_done'] ) && absint( $_GET['ft_done'] ) === $form_id ) {
 			$entry = $this->done_entry( $form_id );
 			$html  = self::confirmation_html( $form, $entry ? $entry['data'] : array(), $entry ? (int) $entry['id'] : 0 );
 			return '<div id="' . esc_attr( $anchor ) . '" class="ft-confirmation" role="status" tabindex="-1">' . $html . '</div>';
@@ -859,7 +937,7 @@ class FormTheory_Frontend {
 		$save   = ! empty( $form['config']['save_resume'] );
 		$notice = '';
 		$start  = 0;
-		if ( $save && ! isset( self::$state[ $form_id ] ) && isset( $_GET['ft_resume'] ) ) {
+		if ( ! $preview && $save && ! isset( self::$state[ $form_id ] ) && isset( $_GET['ft_resume'] ) ) {
 			$rs     = $this->resume_state( $form, wp_unslash( $_GET['ft_resume'] ) ); // phpcs:ignore -- format-checked in resume_state().
 			$notice = $rs['notice'];
 			$start  = $rs['page'];
@@ -867,7 +945,7 @@ class FormTheory_Frontend {
 				self::$state[ $form_id ] = array( 'errors' => array(), 'values' => $rs['values'], 'resume' => $rs['token'] );
 			}
 		}
-		$state  = self::$state[ $form_id ] ?? array( 'errors' => array(), 'values' => array() );
+		$state  = $preview ? array( 'errors' => array(), 'values' => array() ) : ( self::$state[ $form_id ] ?? array( 'errors' => array(), 'values' => array() ) );
 		$resume = $save ? (string) ( $state['resume'] ?? '' ) : '';
 		$errors = $state['errors'];
 		$values = $state['values'];
@@ -900,8 +978,10 @@ class FormTheory_Frontend {
 			echo '<input type="hidden" name="ft_resume" value="' . esc_attr( $resume ) . '">';
 		}
 		echo $notice; // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_html__() in resume_state().
-		wp_nonce_field( 'formtheory_submit_' . $form_id, '_ft_nonce', false );
-		echo '<input type="hidden" name="ft_ts" value="' . esc_attr( FormTheory_Spam::stamp() ) . '">';
+		if ( ! $preview ) {
+			wp_nonce_field( 'formtheory_submit_' . $form_id, '_ft_nonce', false );
+			echo '<input type="hidden" name="ft_ts" value="' . esc_attr( FormTheory_Spam::stamp() ) . '">';
+		}
 		echo '<div class="ft-hp" aria-hidden="true"><label>' . esc_html__( 'Leave empty', 'formtheory' ) . '<input type="text" name="ft_hp" tabindex="-1" autocomplete="off"></label></div>';
 
 		if ( $errors ) {
@@ -932,7 +1012,9 @@ class FormTheory_Frontend {
 				$this->render_field( $form_id, $f, $values[ $f['id'] ] ?? ( 'checkbox' === $f['type'] ? array() : '' ), $errors[ $f['id'] ] ?? '' );
 			}
 			if ( $i === count( $pages ) - 1 ) {
-				echo FormTheory_Recaptcha::render(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in render().
+				if ( ! $preview ) {
+					echo FormTheory_Recaptcha::render(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in render().
+				}
 			}
 			echo '<div class="ft-nav">';
 			if ( $save ) {
@@ -945,7 +1027,7 @@ class FormTheory_Frontend {
 			if ( $multi && $i < count( $pages ) - 1 ) {
 				echo '<button type="button" class="ft-btn ft-next" data-ft-next>' . esc_html__( 'Next', 'formtheory' ) . '</button>';
 			} else {
-				if ( FormTheory_Spam::turnstile_enabled() ) {
+				if ( ! $preview && FormTheory_Spam::turnstile_enabled() ) {
 					wp_enqueue_script( 'formtheory-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js', array(), null, array( 'strategy' => 'defer' ) );
 					echo '<div class="cf-turnstile ft-turnstile" data-sitekey="' . esc_attr( FormTheory_Spam::settings()['turnstile_site'] ) . '"></div>';
 					echo '<noscript><p class="ft-help">' . esc_html__( 'This form needs JavaScript enabled for its spam check.', 'formtheory' ) . '</p></noscript>';
@@ -972,7 +1054,13 @@ class FormTheory_Frontend {
 			echo '</div>';
 		}
 		echo '</form>';
-		return ob_get_clean();
+		$html = ob_get_clean();
+		if ( $preview ) {
+			// Static preview: inert form, every control disabled, nothing can submit.
+			$html = preg_replace( '/<(input|select|textarea|button)\b/', '<$1 disabled', $html );
+			$html = preg_replace( '/<form\b/', '<form inert', $html, 1 );
+		}
+		return $html;
 	}
 
 	/** One repeater row ($i is the row index, or the __ROW__ placeholder in the template): a labelled group of cells plus a hidden-until-JS remove button. */
