@@ -451,7 +451,7 @@ class FormTheory_Frontend {
 		if ( $error ) {
 			$desc[] = $id . '-err';
 		}
-		// aria-required is not allowed on a plain group (checkbox group / consent): those get a visually hidden "required" in the legend instead.
+		// aria-required is not allowed on a plain group (checkbox group / consent): those get a visually hidden "required" in the legend; consent puts all aria on its checkbox.
 		$aria_base = ( $desc ? ' aria-describedby="' . esc_attr( implode( ' ', $desc ) ) . '"' : '' )
 			. ( $error ? ' aria-invalid="true"' : '' );
 		$aria      = $aria_base . ( $f['required'] ? ' aria-required="true"' : '' );
@@ -486,8 +486,8 @@ class FormTheory_Frontend {
 			}
 			echo '</fieldset>';
 		} elseif ( 'consent' === $f['type'] ) {
-			echo '<fieldset' . $aria_base . '><legend>' . esc_html( $f['label'] ) . $req . $req_sr . '</legend>'; // phpcs:ignore -- static/escaped.
-			echo '<div class="ft-choice"><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1"' . checked( '' !== (string) $value, true, false ) . ( $f['required'] ? ' aria-required="true"' : '' ) . '><label for="' . esc_attr( $id ) . '">' . wp_kses_post( $f['text'] ? $f['text'] : $f['label'] ) . '</label></div>';
+			echo '<fieldset><legend>' . esc_html( $f['label'] ) . $req . $req_sr . '</legend>'; // phpcs:ignore -- static/escaped.
+			echo '<div class="ft-choice"><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1"' . checked( '' !== (string) $value, true, false ) . $aria . '><label for="' . esc_attr( $id ) . '">' . wp_kses_post( $f['text'] ? $f['text'] : $f['label'] ) . '</label></div>';
 			echo '</fieldset>';
 		} else {
 			echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $f['label'] ) . $req . '</label>'; // phpcs:ignore

@@ -59,7 +59,7 @@
 
 	function setError(wrap, msg) {
 		var err = wrap.querySelector('.ft-error');
-		var ctl = wrap.querySelector('fieldset') || wrap.querySelector('input, select, textarea');
+		var ctl = wrap.getAttribute('data-ft-type') === 'consent' ? wrap.querySelector('input') : (wrap.querySelector('fieldset') || wrap.querySelector('input, select, textarea'));
 		err.textContent = msg;
 		err.hidden = !msg;
 		wrap.classList.toggle('ft-has-error', !!msg);

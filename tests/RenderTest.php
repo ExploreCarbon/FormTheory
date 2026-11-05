@@ -100,4 +100,17 @@ class RenderTest extends TestCase {
 		$this->assertStringContainsString( 'autocomplete="email"', $this->render( array( 'type' => 'email' ) ) );
 		$this->assertStringContainsString( 'autocomplete="tel"', $this->render( array( 'type' => 'phone' ) ) );
 	}
+
+	public function test_consent_error_state_is_on_the_checkbox_not_the_fieldset() {
+		$html = $this->render( array( 'type' => 'consent', 'label' => 'Agree', 'required' => true, 'help' => 'Hint', 'text' => 'I agree' ), '', 'Required' );
+		$this->assertMatchesRegularExpression( '/<input type="checkbox" id="ft-7-f1"[^>]*aria-describedby="ft-7-f1-help ft-7-f1-err"[^>]*aria-invalid="true"/', $html );
+		$this->assertStringContainsString( '<fieldset><legend>', $html );
+		$this->assertStringContainsString( 'id="ft-7-f1-err">Required</p>', $html );
+	}
+
+	public function test_checkbox_group_error_state_is_on_the_fieldset() {
+		$html = $this->render( array( 'type' => 'checkbox', 'label' => 'Pick', 'required' => true, 'options' => array( 'A' ) ), array(), 'Required' );
+		$this->assertStringContainsString( '<fieldset aria-describedby="ft-7-f1-err" aria-invalid="true"><legend>', $html );
+		$this->assertDoesNotMatchRegularExpression( '/<input type="checkbox"[^>]*aria-invalid/', $html );
+	}
 }
