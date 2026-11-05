@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-05T15:39:13+00:00\n"
+"POT-Creation-Date: 2026-11-05T17:53:54+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: formtheory\n"
@@ -1011,12 +1011,16 @@ msgstr ""
 msgid "This form needs JavaScript enabled for its spam check."
 msgstr ""
 
-#: includes/class-frontend.php:495
+#: includes/class-frontend.php:458
+msgid "(required)"
+msgstr ""
+
+#: includes/class-frontend.php:500
 msgid "— Select —"
 msgstr ""
 
 #. translators: 1: extensions, 2: MB
-#: includes/class-frontend.php:507
+#: includes/class-frontend.php:512
 #, php-format
 msgid "Allowed: %1$s. Max %2$d MB."
 msgstr ""

@@ -74,8 +74,14 @@
 		return s;
 	}
 
+	var live = document.createElement('div');
+	live.id = 'ftb-live';
+	live.className = 'screen-reader-text';
+	live.setAttribute('role', 'status');
+	live.setAttribute('aria-live', 'polite');
+	root.parentNode.insertBefore(live, root.nextSibling);
+
 	function announce(msg) {
-		var live = document.getElementById('ftb-live');
 		live.textContent = '';
 		setTimeout(function () { live.textContent = msg; }, 30);
 	}
@@ -99,7 +105,7 @@
 			box.appendChild(check(t('enable_cond', 'Enable conditional logic'), f.cond.enabled, function (v) {
 				f.cond.enabled = v;
 				if (v && !f.cond.rules.length && Object.keys(others).length) f.cond.rules.push({ field: Object.keys(others)[0], op: 'is', value: '' });
-				draw();
+				draw(); refocus(box, 'toggle');
 			}));
 			if (!f.cond.enabled) return;
 			if (!Object.keys(others).length) { box.appendChild(el('p', { text: t('add_fields_first', 'Add other fields first.') })); return; }
@@ -117,15 +123,24 @@
 				var os = select(OPS, r.op, function (v) { r.op = v; val.hidden = v === 'empty' || v === 'notempty'; });
 				os.setAttribute('aria-label', t('operator', 'Operator'));
 				box.appendChild(el('p', { class: 'ftb-inline' }, [fs, ' ', os, ' ', val, ' ',
-					el('button', { type: 'button', class: 'button-link ftb-danger', 'aria-label': fmt(t('remove_rule', 'Remove rule %d'), i + 1), onclick: function () { f.cond.rules.splice(i, 1); draw(); } }, [t('remove', 'Remove')])
+					el('button', { type: 'button', class: 'button-link ftb-danger', 'aria-label': fmt(t('remove_rule', 'Remove rule %d'), i + 1), onclick: function () { f.cond.rules.splice(i, 1); draw(); refocus(box, 'add'); } }, [t('remove', 'Remove')])
 				]));
 			});
 			box.appendChild(el('button', { type: 'button', class: 'button', text: t('add_rule', 'Add rule'), onclick: function () {
-				f.cond.rules.push({ field: Object.keys(others)[0], op: 'is', value: '' }); draw();
+				f.cond.rules.push({ field: Object.keys(others)[0], op: 'is', value: '' }); draw(); refocus(box, 'lastrule');
 			} }));
 		}
 		draw();
 		return box;
+	}
+
+	// Redrawing a panel destroys the focused control; put focus back (WCAG 2.4.3).
+	function refocus(box, where) {
+		var target = null;
+		if (where === 'toggle') target = box.querySelector('input[type=checkbox]');
+		else if (where === 'add') target = box.querySelector(':scope > button');
+		else if (where === 'lastrule') { var rows = box.querySelectorAll('.ftb-inline'); target = rows.length ? rows[rows.length - 1].querySelector('select') : null; }
+		if (target) target.focus();
 	}
 
 	var TAG_HINT = fmt(t('merge_tags', 'Merge tags: %s'), '{field:ID}, {all_fields}, {form_title}, {entry_id}, {date}, {site_name}, {admin_email}');
@@ -143,7 +158,7 @@
 			box.appendChild(check(labelText, item.cond.enabled, function (v) {
 				item.cond.enabled = v;
 				if (v && !item.cond.rules.length && Object.keys(others).length) item.cond.rules.push({ field: Object.keys(others)[0], op: 'is', value: '' });
-				draw();
+				draw(); refocus(box, 'toggle');
 			}));
 			if (!item.cond.enabled || !Object.keys(others).length) return;
 			box.appendChild(el('p', { class: 'ftb-inline' }, sentence(t('when_sentence', 'When %s of these match:'), [select({ all: t('all', 'all'), any: t('any', 'any') }, item.cond.logic, function (v) { item.cond.logic = v; })])));
@@ -154,9 +169,9 @@
 				var fs = select(others, r.field, function (v) { r.field = v; }); fs.setAttribute('aria-label', t('field', 'Field'));
 				var os = select(OPS, r.op, function (v) { r.op = v; val.hidden = v === 'empty' || v === 'notempty'; }); os.setAttribute('aria-label', t('operator', 'Operator'));
 				box.appendChild(el('p', { class: 'ftb-inline' }, [fs, ' ', os, ' ', val, ' ',
-					el('button', { type: 'button', class: 'button-link ftb-danger', 'aria-label': fmt(t('remove_rule', 'Remove rule %d'), i + 1), onclick: function () { item.cond.rules.splice(i, 1); draw(); } }, [t('remove', 'Remove')])]));
+					el('button', { type: 'button', class: 'button-link ftb-danger', 'aria-label': fmt(t('remove_rule', 'Remove rule %d'), i + 1), onclick: function () { item.cond.rules.splice(i, 1); draw(); refocus(box, 'add'); } }, [t('remove', 'Remove')])]));
 			});
-			box.appendChild(el('button', { type: 'button', class: 'button', text: t('add_rule', 'Add rule'), onclick: function () { item.cond.rules.push({ field: Object.keys(others)[0], op: 'is', value: '' }); draw(); } }));
+			box.appendChild(el('button', { type: 'button', class: 'button', text: t('add_rule', 'Add rule'), onclick: function () { item.cond.rules.push({ field: Object.keys(others)[0], op: 'is', value: '' }); draw(); refocus(box, 'lastrule'); } }));
 		}
 		draw();
 		return box;
@@ -171,12 +186,12 @@
 			cfg[key].forEach(function (item, i) {
 				var body = el('div', { class: 'ftb-body' });
 				drawItem(item, body);
-				body.appendChild(el('button', { type: 'button', class: 'button ftb-danger', text: t('remove', 'Remove'), 'aria-label': fmt(L.removeN, i + 1), onclick: function () { cfg[key].splice(i, 1); draw(); announce(L.removed); } }));
+				body.appendChild(el('button', { type: 'button', class: 'button ftb-danger', text: t('remove', 'Remove'), 'aria-label': fmt(L.removeN, i + 1), onclick: function () { cfg[key].splice(i, 1); draw(); fs.lastChild.focus(); announce(L.removed); } }));
 				var d = el('details', { class: 'ftb-card' }, [el('summary', { text: fmt(L.itemN, i + 1) }), body]);
 				d.open = true;
 				fs.appendChild(d);
 			});
-			fs.appendChild(el('button', { type: 'button', class: 'button', text: L.add, onclick: function () { cfg[key].push(make()); draw(); announce(L.added); } }));
+			fs.appendChild(el('button', { type: 'button', class: 'button', text: L.add, onclick: function () { cfg[key].push(make()); draw(); var sm = fs.querySelectorAll('summary'); if (sm.length) sm[sm.length - 1].focus(); announce(L.added); } }));
 		}
 		draw();
 		return fs;
@@ -260,7 +275,11 @@
 				if (!window.confirm(t('confirm_delete', 'Delete this field?'))) return;
 				cfg.fields.splice(i, 1);
 				cfg.fields.forEach(function (o) { if (o.cond) o.cond.rules = (o.cond.rules || []).filter(function (r) { return r.field !== f.id; }); });
-				render(); announce(t('field_deleted', 'Field deleted'));
+				render();
+				var cards = root.querySelectorAll('.ftb-list > details.ftb-card > summary');
+				var nx = cards[Math.min(i, cards.length - 1)] || root.querySelector('.ftb-palette button');
+				if (nx) nx.focus();
+				announce(t('field_deleted', 'Field deleted'));
 			} })
 		]);
 
@@ -300,7 +319,9 @@
 		conf.value = cfg.confirmation || '';
 		settings.appendChild(labelled(t('confirmation_msg', 'Confirmation message'), conf));
 		settings.appendChild(check(t('ajax', 'Submit without page reload (AJAX)'), cfg.ajax !== false, function (v) { cfg.ajax = v; }));
-		settings.appendChild(labelled(t('after_submit', 'After submit'), select({ message: t('show_message', 'Show message'), page: t('go_to_page', 'Go to page (ID)'), redirect: t('redirect_to_url', 'Redirect to URL') }, cfg.confirmation_type || 'message', function (v) { cfg.confirmation_type = v; render(); })));
+		var afterSel = select({ message: t('show_message', 'Show message'), page: t('go_to_page', 'Go to page (ID)'), redirect: t('redirect_to_url', 'Redirect to URL') }, cfg.confirmation_type || 'message', function (v) { cfg.confirmation_type = v; render(); var again = root.querySelector('[data-ftb-after]'); if (again) again.focus(); });
+		afterSel.setAttribute('data-ftb-after', '1');
+		settings.appendChild(labelled(t('after_submit', 'After submit'), afterSel));
 		if (cfg.confirmation_type === 'page') {
 			settings.appendChild(labelled(t('page_id', 'Page ID'), textIn(cfg.confirmation_page || '', function (v) { cfg.confirmation_page = parseInt(v, 10) || 0; }, 'number')));
 		}
@@ -313,7 +334,6 @@
 		root.appendChild(settings);
 		root.appendChild(notificationsEditor());
 		root.appendChild(webhooksEditor());
-		root.appendChild(el('div', { id: 'ftb-live', class: 'screen-reader-text', 'aria-live': 'polite' }));
 
 		if (focusId) {
 			var target = root.querySelector('details[data-id="' + focusId + '"]');

@@ -4,7 +4,10 @@
 .ftb-list { display: flex; flex-direction: column; gap: .5rem; max-width: 52rem; }
 .ftb-card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; }
 .ftb-card.ftb-page { border-left: 4px solid #2271b1; }
-.ftb-card > summary { padding: .75rem 1rem; cursor: pointer; display: flex; justify-content: space-between; gap: 1rem; font-weight: 600; }
+.ftb-card > summary { padding: .75rem 1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-weight: 600; min-height: 24px; }
+.ftb-card > summary::before { content: "\25B8"; content: "\25B8" / ""; flex: none; }
+.ftb-card[open] > summary::before { content: "\25BE"; content: "\25BE" / ""; }
+.ftb-card > summary .ftb-title { flex: 1 1 auto; }
 .ftb-card > summary:focus-visible, .ftb-card button:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
 .ftb-id { font-weight: 400; }
 .ftb-body { padding: 0 1rem; }
@@ -12,6 +15,8 @@
 .ftb-check { display: flex; align-items: center; gap: .4rem; }
 .ftb-check label { display: inline; margin: 0; }
 .ftb-inline { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+.ftb-inline .button-link, .ftb-card .button-link { min-height: 24px; min-width: 24px; padding: 0 .4rem; }
+.ftb-check input[type="checkbox"] { min-width: 24px; min-height: 24px; }
 .ftb-cond { border-top: 1px solid #dcdcde; padding-top: .5rem; margin-bottom: .5rem; }
 .ftb-tools { display: flex; flex-wrap: wrap; gap: .4rem; padding: .75rem 1rem; border-top: 1px solid #dcdcde; }
 .ftb-settings { max-width: 52rem; margin-top: 1.5rem; padding: 1rem; background: #fff; border: 1px solid #c3c4c7; }

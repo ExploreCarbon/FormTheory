@@ -204,7 +204,7 @@ class FormTheory_Admin {
 		foreach ( $forms as $f ) {
 			$id = (int) $f['id'];
 			printf(
-				'<tr><td><a href="%1$s"><strong>%2$s</strong></a></td><td><code>[formtheory id="%3$d"]</code></td><td><a href="%4$s">%5$d</a></td><td>%6$s</td><td><a href="%1$s">%13$s</a> | <a href="%4$s">%14$s</a> | <a href="%9$s">%11$s<span class="screen-reader-text"> %2$s</span></a> | <a href="%10$s">%12$s<span class="screen-reader-text"> %2$s</span></a> | <a class="ft-danger"href="%7$s" data-ft-confirm="%8$s">%15$s<span class="screen-reader-text"> %2$s</span></a></td></tr>',
+				'<tr><td><a href="%1$s"><strong>%2$s</strong></a></td><td><code>[formtheory id="%3$d"]</code></td><td><a href="%4$s">%5$d</a></td><td>%6$s</td><td><a href="%1$s">%13$s<span class="screen-reader-text"> %2$s</span></a> | <a href="%4$s">%14$s<span class="screen-reader-text"> %2$s</span></a> | <a href="%9$s">%11$s<span class="screen-reader-text"> %2$s</span></a> | <a href="%10$s">%12$s<span class="screen-reader-text"> %2$s</span></a> | <a class="ft-danger" href="%7$s" data-ft-confirm="%8$s">%15$s<span class="screen-reader-text"> %2$s</span></a></td></tr>',
 				esc_url( $this->admin_url( 'formtheory-edit', array( 'id' => $id ) ) ),
 				esc_html( $f['title'] ? $f['title'] : __( '(untitled)', 'formtheory' ) ),
 				$id,

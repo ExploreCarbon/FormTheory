@@ -445,12 +445,17 @@ class FormTheory_Frontend {
 		if ( $f['help'] ) {
 			$desc[] = $id . '-help';
 		}
+		if ( 'file' === $f['type'] ) {
+			$desc[] = $id . '-hint';
+		}
 		if ( $error ) {
 			$desc[] = $id . '-err';
 		}
-		$aria = ( $desc ? ' aria-describedby="' . esc_attr( implode( ' ', $desc ) ) . '"' : '' )
-			. ( $error ? ' aria-invalid="true"' : '' )
-			. ( $f['required'] ? ' aria-required="true"' : '' );
+		// aria-required is not allowed on a plain group (checkbox group / consent): those get a visually hidden "required" in the legend instead.
+		$aria_base = ( $desc ? ' aria-describedby="' . esc_attr( implode( ' ', $desc ) ) . '"' : '' )
+			. ( $error ? ' aria-invalid="true"' : '' );
+		$aria      = $aria_base . ( $f['required'] ? ' aria-required="true"' : '' );
+		$req_sr    = $f['required'] ? '<span class="ft-sr"> ' . esc_html__( '(required)', 'formtheory' ) . '</span>' : '';
 
 		echo '<div class="' . esc_attr( $classes ) . '" data-ft-field="' . esc_attr( $f['id'] ) . '" data-ft-required="' . ( $f['required'] ? '1' : '0' ) . '" data-ft-type="' . esc_attr( $f['type'] ) . '"' . $cond . '>'; // phpcs:ignore -- $cond escaped above.
 
@@ -465,7 +470,7 @@ class FormTheory_Frontend {
 		}
 		$group = in_array( $f['type'], array( 'radio', 'checkbox' ), true );
 		if ( $group ) {
-			echo '<fieldset' . $aria . '><legend>' . esc_html( $f['label'] ) . $req . '</legend>'; // phpcs:ignore -- $aria/$req static/escaped.
+			echo '<fieldset' . ( 'radio' === $f['type'] ? ' role="radiogroup"' . $aria : $aria_base ) . '><legend>' . esc_html( $f['label'] ) . $req . ( 'radio' === $f['type'] ? '' : $req_sr ) . '</legend>'; // phpcs:ignore -- $aria/$req static/escaped.
 			foreach ( $f['options'] as $n => $opt ) {
 				$oid     = $id . '-' . $n;
 				$checked = 'checkbox' === $f['type'] ? in_array( $opt, (array) $value, true ) : $opt === $value;
@@ -481,8 +486,8 @@ class FormTheory_Frontend {
 			}
 			echo '</fieldset>';
 		} elseif ( 'consent' === $f['type'] ) {
-			echo '<fieldset' . $aria . '><legend>' . esc_html( $f['label'] ) . $req . '</legend>'; // phpcs:ignore -- static/escaped.
-			echo '<div class="ft-choice"><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1"' . checked( '' !== (string) $value, true, false ) . '><label for="' . esc_attr( $id ) . '">' . wp_kses_post( $f['text'] ? $f['text'] : $f['label'] ) . '</label></div>';
+			echo '<fieldset' . $aria_base . '><legend>' . esc_html( $f['label'] ) . $req . $req_sr . '</legend>'; // phpcs:ignore -- static/escaped.
+			echo '<div class="ft-choice"><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1"' . checked( '' !== (string) $value, true, false ) . ( $f['required'] ? ' aria-required="true"' : '' ) . '><label for="' . esc_attr( $id ) . '">' . wp_kses_post( $f['text'] ? $f['text'] : $f['label'] ) . '</label></div>';
 			echo '</fieldset>';
 		} else {
 			echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $f['label'] ) . $req . '</label>'; // phpcs:ignore
@@ -504,7 +509,7 @@ class FormTheory_Frontend {
 					}, array_filter( explode( ',', $f['allowed'] ) ) ) );
 					echo '<input type="file" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" accept="' . esc_attr( $accept ) . '" data-ft-maxmb="' . (int) $f['max_mb'] . '"' . $aria . '>'; // phpcs:ignore
 					/* translators: 1: extensions, 2: MB */
-					echo '<p class="ft-help">' . esc_html( sprintf( __( 'Allowed: %1$s. Max %2$d MB.', 'formtheory' ), str_replace( ',', ', ', $f['allowed'] ), $f['max_mb'] ) ) . '</p>';
+					echo '<p class="ft-help" id="' . esc_attr( $id ) . '-hint">' . esc_html( sprintf( __( 'Allowed: %1$s. Max %2$d MB.', 'formtheory' ), str_replace( ',', ', ', $f['allowed'] ), $f['max_mb'] ) ) . '</p>';
 					break;
 				default:
 					$map  = array( 'text' => 'text', 'email' => 'email', 'phone' => 'tel', 'number' => 'number', 'date' => 'date' );
