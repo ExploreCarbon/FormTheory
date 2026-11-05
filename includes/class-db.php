@@ -78,7 +78,7 @@ class FormTheory_DB {
 			return null;
 		}
 		$cfg           = json_decode( $row['config'], true );
-		$row['config'] = wp_parse_args( is_array( $cfg ) ? $cfg : array(), self::default_config() );
+		$row['config'] = FormTheory_Fields::migrate_config( wp_parse_args( is_array( $cfg ) ? $cfg : array(), self::default_config() ) );
 		return $row;
 	}
 

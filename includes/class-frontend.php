@@ -109,7 +109,7 @@ class FormTheory_Frontend {
 		}
 
 		$entry_id = FormTheory_DB::insert_entry( $form_id, $data );
-		$this->notify( $form, $fields, $data, $entry_id );
+		FormTheory_Notify::send( $form, $data, $entry_id );
 		do_action( 'formtheory_after_submission', $entry_id, $form, $data );
 		$this->redirect_done( $form_id, $entry_id );
 	}
@@ -252,34 +252,6 @@ class FormTheory_Frontend {
 			'name' => sanitize_file_name( $file['name'] ),
 			'size' => (int) $file['size'],
 		);
-	}
-
-	private function notify( $form, $fields, $data, $entry_id ) {
-		$to = $form['config']['notify_to'];
-		if ( ! $to ) {
-			return;
-		}
-		$lines = array();
-		foreach ( $fields as $f ) {
-			if ( ! array_key_exists( $f['id'], $data ) ) {
-				continue;
-			}
-			$v       = $data[ $f['id'] ];
-			$v       = is_array( $v ) ? ( isset( $v['file'] ) ? $v['name'] . ' (attached in admin)' : implode( ', ', $v ) ) : $v;
-			$lines[] = $f['label'] . ': ' . $v;
-		}
-		$lines[] = '';
-		$lines[] = 'View: ' . add_query_arg( array( 'page' => 'formtheory-entries', 'entry' => $entry_id ), admin_url( 'admin.php' ) );
-
-		$headers = array();
-		foreach ( $fields as $f ) {
-			if ( 'email' === $f['type'] && ! empty( $data[ $f['id'] ] ) && is_email( $data[ $f['id'] ] ) ) {
-				$headers[] = 'Reply-To: ' . $data[ $f['id'] ];
-				break;
-			}
-		}
-		$subject = $form['config']['notify_subject'] ? $form['config']['notify_subject'] : 'New submission: ' . $form['title'];
-		wp_mail( $to, wp_strip_all_tags( $subject ), implode( "\n", $lines ), $headers );
 	}
 
 	/* ---------- Render ---------- */

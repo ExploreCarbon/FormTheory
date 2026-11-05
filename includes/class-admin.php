@@ -83,7 +83,7 @@ class FormTheory_Admin {
 			wp_die( esc_html__( 'Form not found.', 'formtheory' ) );
 		}
 		$title  = $form ? $form['title'] : '';
-		$config = $form ? $form['config'] : FormTheory_DB::default_config();
+		$config = $form ? $form['config'] : FormTheory_Fields::migrate_config( FormTheory_DB::default_config() );
 		echo '<div class="wrap"><h1>' . ( $id ? 'Edit Form' : 'New Form' ) . '</h1>';
 		$this->notice();
 		if ( $id ) {

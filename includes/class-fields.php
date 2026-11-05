@@ -88,7 +88,85 @@ class FormTheory_Fields {
 			}
 		}
 		$cfg['fields'] = $fields;
+
+		if ( array_key_exists( 'notifications', $raw ) ) {
+			$cfg['notifications'] = array();
+			foreach ( array_values( (array) $raw['notifications'] ) as $i => $n ) {
+				if ( is_array( $n ) ) {
+					$cfg['notifications'][] = self::sanitize_notification( $n, $i, $ids );
+				}
+			}
+		}
+		return self::migrate_config( $cfg );
+	}
+
+	/** Recipient list: emails or {field:ID} tags, comma separated. */
+	private static function sanitize_recipients( $raw ) {
+		$out = array();
+		foreach ( explode( ',', (string) $raw ) as $r ) {
+			$r = trim( $r );
+			if ( preg_match( '/^\{(field:[a-z0-9_]+|admin_email)\}$/', $r ) || is_email( $r ) ) {
+				$out[] = $r;
+			}
+		}
+		return implode( ',', $out );
+	}
+
+	private static function sanitize_notification( array $n, $i, array $ids ) {
+		$cond          = self::sanitize_cond( $n['cond'] ?? array() );
+		$cond['rules'] = array_values( array_filter( $cond['rules'], function ( $r ) use ( $ids ) {
+			return isset( $ids[ $r['field'] ] );
+		} ) );
+		$cond['enabled'] = $cond['enabled'] && $cond['rules'];
+		$id              = preg_replace( '/[^a-z0-9_]/', '', strtolower( (string) ( $n['id'] ?? '' ) ) );
+		return array(
+			'id'           => '' !== $id ? $id : 'n' . ( $i + 1 ),
+			'to'           => self::sanitize_recipients( $n['to'] ?? '' ),
+			'subject'      => sanitize_text_field( $n['subject'] ?? '' ),
+			'body'         => sanitize_textarea_field( $n['body'] ?? '' ),
+			'reply_to'     => self::sanitize_recipients( $n['reply_to'] ?? '' ),
+			'attach_files' => ! empty( $n['attach_files'] ),
+			'cond'         => $cond,
+		);
+	}
+
+	/** Upgrade 1.0 configs (single notify_to/notify_subject) to the notifications list. */
+	public static function migrate_config( array $cfg ) {
+		if ( isset( $cfg['notifications'] ) && is_array( $cfg['notifications'] ) ) {
+			return $cfg;
+		}
+		$cfg['notifications'] = array();
+		if ( ! empty( $cfg['notify_to'] ) ) {
+			$reply = '';
+			foreach ( $cfg['fields'] ?? array() as $f ) {
+				if ( 'email' === $f['type'] ) {
+					$reply = '{field:' . $f['id'] . '}';
+					break;
+				}
+			}
+			$cfg['notifications'][] = array(
+				'id'           => 'n1',
+				'to'           => (string) $cfg['notify_to'],
+				'subject'      => (string) ( $cfg['notify_subject'] ?? '' ),
+				'body'         => '{all_fields}',
+				'reply_to'     => $reply,
+				'attach_files' => false,
+				'cond'         => array( 'enabled' => false, 'action' => 'show', 'logic' => 'all', 'rules' => array() ),
+			);
+		}
 		return $cfg;
+	}
+
+	/** True when the condition's rules match (ignores action). Disabled = true. */
+	public static function cond_matches( array $cond, array $values ) {
+		if ( empty( $cond['enabled'] ) || empty( $cond['rules'] ) ) {
+			return true;
+		}
+		$hits = array();
+		foreach ( $cond['rules'] as $r ) {
+			$hits[] = self::rule_matches( $r, $values[ $r['field'] ] ?? '' );
+		}
+		return 'any' === ( $cond['logic'] ?? 'all' ) ? in_array( true, $hits, true ) : ! in_array( false, $hits, true );
 	}
 
 	/** Data-bearing fields (excludes page breaks and HTML blocks). */
