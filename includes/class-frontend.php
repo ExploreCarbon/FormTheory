@@ -189,25 +189,28 @@ class FormTheory_Frontend {
 			return $result;
 		}
 
+		// Files written by this submission; removed again if a later store fails (no orphans).
+		$written = array();
 		foreach ( $fields as $f ) {
-			if ( 'file' === $f['type'] && ! empty( $visible[ $f['id'] ] ) ) {
-				$stored = $this->store_file( $f );
-				if ( is_wp_error( $stored ) ) {
-					$result['errors'] = array( $f['id'] => $stored->get_error_message() );
-					return $result;
-				}
-				if ( $stored ) {
-					$data[ $f['id'] ] = $stored;
-				}
+			$stored = null;
+			if ( empty( $visible[ $f['id'] ] ) ) {
+				continue;
 			}
-			$sig_data = $this->sig_data[ $f['id'] ] ?? '';
-			if ( 'signature' === $f['type'] && ! empty( $visible[ $f['id'] ] ) && '' !== $sig_data ) {
-				$stored = $this->store_signature( $f, $sig_data ); // Drawn wins over typed.
-				if ( is_wp_error( $stored ) ) {
-					$result['errors'] = array( $f['id'] => $stored->get_error_message() );
-					return $result;
+			if ( 'file' === $f['type'] ) {
+				$stored = $this->store_file( $f );
+			} elseif ( 'signature' === $f['type'] && '' !== ( $this->sig_data[ $f['id'] ] ?? '' ) ) {
+				$stored = $this->store_signature( $f, $this->sig_data[ $f['id'] ] ); // Drawn wins over typed.
+			}
+			if ( is_wp_error( $stored ) ) {
+				foreach ( $written as $path ) {
+					@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 				}
+				$result['errors'] = array( $f['id'] => $stored->get_error_message() );
+				return $result;
+			}
+			if ( $stored ) {
 				$data[ $f['id'] ] = $stored;
+				$written[]        = FormTheory_DB::upload_dir() . '/' . basename( $stored['file'] ?? $stored['sig'] );
 			}
 		}
 
@@ -452,7 +455,39 @@ class FormTheory_Frontend {
 			|| $info[0] < 1 || $info[1] < 1 || $info[0] > self::SIG_MAX_W || $info[1] > self::SIG_MAX_H ) {
 			return $bad;
 		}
-		return $bytes;
+		$end = self::png_end( $bytes );
+		return null === $end ? $bad : substr( $bytes, 0, $end );
+	}
+
+	/**
+	 * Offset just past the IEND chunk's CRC, found by walking chunk lengths
+	 * from offset 8 (no decoding). Null if the chunk structure is broken.
+	 * Bytes after IEND (polyglot payloads) are dropped by the caller.
+	 */
+	public static function png_end( $bytes ) {
+		$len = strlen( $bytes );
+		$off = 8;
+		while ( $off + 12 <= $len ) {
+			$n    = unpack( 'N', substr( $bytes, $off, 4 ) )[1];
+			$type = substr( $bytes, $off + 4, 4 );
+			if ( $n > $len || ! preg_match( '/^[A-Za-z]{4}$/', $type ) ) {
+				return null;
+			}
+			$next = $off + 12 + $n;
+			if ( $next > $len ) {
+				return null;
+			}
+			if ( 'IEND' === $type ) {
+				return $next;
+			}
+			$off = $next;
+		}
+		return null;
+	}
+
+	/** Seam for tests: write bytes, return bytes written or false. */
+	protected function write_bytes( $path, $bytes ) {
+		return @file_put_contents( $path, $bytes, LOCK_EX ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 	}
 
 	/**
@@ -467,7 +502,9 @@ class FormTheory_Frontend {
 		}
 		FormTheory_DB::protect_upload_dir();
 		$stored = bin2hex( random_bytes( 16 ) ) . '.png';
-		if ( strlen( $bytes ) !== file_put_contents( FormTheory_DB::upload_dir() . '/' . $stored, $bytes, LOCK_EX ) ) {
+		$path   = FormTheory_DB::upload_dir() . '/' . $stored;
+		if ( strlen( $bytes ) !== $this->write_bytes( $path, $bytes ) ) {
+			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- partial write may or may not exist.
 			return new WP_Error( 'ft_sig_write', __( 'Upload failed.', 'formtheory' ) );
 		}
 		return array( 'sig' => $stored, 'name' => 'signature.png' );

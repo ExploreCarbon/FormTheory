@@ -301,6 +301,79 @@ class SignatureTest extends TestCase {
 		$this->assertContains( 'X-Content-Type-Options: nosniff', $h );
 	}
 
+	/* ---------- Fix round 1 ---------- */
+
+	/** Frontend whose writer writes half the bytes on the Nth call (1-based) and reports the short count. */
+	private function failing_front( $fail_on ) {
+		return new class( $fail_on ) extends \FormTheory_Frontend {
+			private $fail_on;
+			private $calls = 0;
+			public function __construct( $fail_on ) {
+				$this->fail_on = $fail_on;
+			}
+			protected function write_bytes( $path, $bytes ) {
+				if ( ++$this->calls === $this->fail_on ) {
+					return file_put_contents( $path, substr( $bytes, 0, 10 ) );
+				}
+				return parent::write_bytes( $path, $bytes );
+			}
+		};
+	}
+
+	public function test_short_write_returns_error_and_leaves_nothing() {
+		$r = $this->failing_front( 1 )->store_signature( array( 'id' => 'sig' ), $this->url( $this->png() ) );
+		$this->assertInstanceOf( \WP_Error::class, $r );
+		$this->assertSame( array(), $this->pngs() );
+	}
+
+	public function test_later_store_failure_removes_earlier_written_files() {
+		$form = $this->form( array( 'id' => 's1' ), array( array( 'id' => 's2', 'type' => 'signature', 'label' => 'Two' ) ) );
+		$url  = $this->url( $this->png() );
+		$r    = $this->failing_front( 2 )->process( $form, array( '_ft_nonce' => 'good', 'ft_ts' => \FormTheory_Spam::stamp( time() - 10 ), 'ft' => array( 's1' => array( 'data' => $url ), 's2' => array( 'data' => $url ) ) ), array() );
+		$this->assertFalse( $r['ok'] );
+		$this->assertArrayHasKey( 's2', $r['errors'] );
+		$this->assertSame( array(), $this->pngs() );
+		$this->assertCount( 0, $GLOBALS['wpdb']->inserts );
+	}
+
+	public function test_polyglot_tail_after_iend_is_dropped() {
+		$r = $this->front->store_signature( array( 'id' => 'sig' ), $this->url( $this->png() . "<?php system('x'); ?>" ) );
+		$this->assertIsArray( $r );
+		$saved = file_get_contents( $this->dir() . '/' . $r['sig'] );
+		$this->assertSame( $this->png(), $saved );
+		$this->assertStringNotContainsString( '<?php', $saved );
+		$this->assertSame( 'IEND', substr( $saved, -8, 4 ) );
+	}
+
+	public function test_png_without_iend_rejected() {
+		$this->assert_rejected( $this->url( substr( $this->png(), 0, -12 ) ) );
+	}
+
+	public function test_png_with_bad_chunk_length_rejected() {
+		$bytes = $this->png();
+		$bytes = substr( $bytes, 0, 33 ) . pack( 'N', 0x7FFFFFFF ) . substr( $bytes, 37 );
+		$this->assert_rejected( $this->url( $bytes ) );
+	}
+
+	public function test_privacy_erase_unlinks_signature_file() {
+		$r  = $this->front->store_signature( array( 'id' => 'sig' ), $this->url( $this->png() ) );
+		$db = \Mockery::mock( 'wpdb' );
+		$db->prefix = 'wp_';
+		$db->shouldReceive( 'prepare' )->andReturnUsing( function ( $q ) {
+			return $q;
+		} );
+		$db->shouldReceive( 'esc_like' )->andReturnUsing( function ( $s ) {
+			return $s;
+		} );
+		$db->shouldReceive( 'get_results' )->andReturn( array( array( 'id' => 9, 'data' => json_encode( array( 'em' => 'a@b.co', 'sig' => $r ) ) ) ) );
+		$db->shouldReceive( 'get_row' )->andReturn( array( 'id' => 9, 'data' => json_encode( array( 'em' => 'a@b.co', 'sig' => $r ) ) ) );
+		$db->shouldReceive( 'delete' )->andReturn( 1 );
+		$GLOBALS['wpdb'] = $db;
+		$out = \FormTheory_Privacy::erase( 'a@b.co' );
+		$this->assertSame( 1, $out['items_removed'] );
+		$this->assertFileDoesNotExist( $this->dir() . '/' . $r['sig'] );
+	}
+
 	public function test_webhook_payload_omits_stored_signature_filename() {
 		$p = \FormTheory_Webhooks::payload( array( 'id' => 1, 'title' => 'T' ), array( 'sig' => array( 'sig' => 'abc123.png', 'name' => 'signature.png' ) ), 1 );
 		$this->assertStringNotContainsString( 'abc123', json_encode( $p ) );
