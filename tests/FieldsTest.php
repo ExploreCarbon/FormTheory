@@ -56,6 +56,12 @@ class FieldsTest extends TestCase {
 		$this->assertSame( 7, $this->one( array( 'type' => 'rating', 'max' => '7' ) )['max'] );
 	}
 
+	public function test_rating_max_sanitize_edge_values() {
+		$this->assertSame( 3, $this->one( array( 'type' => 'rating', 'max' => -4 ) )['max'] );
+		$this->assertSame( 6, $this->one( array( 'type' => 'rating', 'max' => '6.9' ) )['max'] );
+		$this->assertSame( 10, $this->one( array( 'type' => 'rating', 'max' => '99999999999999999999' ) )['max'] );
+	}
+
 	public function test_rating_validate_range() {
 		\Brain\Monkey\Functions\stubs( array( 'add_shortcode' => null, 'add_action' => null ) );
 		$front = new \FormTheory_Frontend();
@@ -68,6 +74,11 @@ class FieldsTest extends TestCase {
 		$this->assertSame( 'Choose a valid rating.', $m->invoke( $front, $f, '2.5' ) );
 		$this->assertSame( '', $m->invoke( $front, $f, '3' ) );
 		$this->assertSame( '', $m->invoke( $front, $f, '5' ) );
+		$this->assertSame( 'Choose a valid rating.', $m->invoke( $front, $f, '05' ) );
+		$this->assertSame( 'Choose a valid rating.', $m->invoke( $front, $f, '3abc' ) );
+		$this->assertSame( 'Choose a valid rating.', $m->invoke( $front, $f, array( '3' ) ) );
+		$this->assertSame( '', $m->invoke( $front, $f, ' 3' ) );
+		$this->assertSame( 'Choose a valid rating.', $m->invoke( $front, array( 'max' => 3 ) + $f, '4' ) );
 		$this->assertSame( 'This field is required.', $m->invoke( $front, $f, '' ) );
 		$f['required'] = false;
 		$this->assertSame( '', $m->invoke( $front, $f, '' ) );

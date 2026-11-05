@@ -304,12 +304,12 @@ class FormTheory_Fields {
 		return implode( ', ', $parts );
 	}
 
-	/** Mirror of assets/front.js evaluateRule(). */
 	/** Rating scale size: integer 3-10, default 5 for missing or non-numeric input. */
 	public static function rating_max( $v ) {
 		return is_numeric( $v ) ? max( 3, min( 10, (int) $v ) ) : 5;
 	}
 
+	/** Mirror of assets/front.js evaluateRule(). */
 	public static function rule_matches( $rule, $value ) {
 		$vals = is_array( $value ) ? array_map( 'strval', $value ) : array( (string) $value );
 		$vals = array_values( array_filter( $vals, 'strlen' ) );

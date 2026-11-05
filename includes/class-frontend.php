@@ -291,7 +291,7 @@ class FormTheory_Frontend {
 				return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $v ) ? '' : __( 'Enter a valid date.', 'formtheory' );
 			case 'rating':
 				$max = FormTheory_Fields::rating_max( $f['max'] ?? 5 );
-				return preg_match( '/^[0-9]{1,2}$/', $v ) && (int) $v >= 1 && (int) $v <= $max ? '' : __( 'Choose a valid rating.', 'formtheory' );
+				return is_string( $v ) && preg_match( '/^[1-9][0-9]?$/', trim( $v ) ) && (int) $v <= $max ? '' : __( 'Choose a valid rating.', 'formtheory' );
 			case 'select':
 			case 'radio':
 				return in_array( $v, $f['options'], true ) ? '' : __( 'Choose a valid option.', 'formtheory' );
