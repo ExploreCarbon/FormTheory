@@ -140,8 +140,10 @@ class FormTheory_DB {
 				'ip'         => self::client_ip(),
 				'user_id'    => get_current_user_id(),
 				'created_at' => current_time( 'mysql' ),
+				'status'     => 'unread',
+				'notes'      => '',
 			),
-			array( '%d', '%s', '%s', '%d', '%s' )
+			array( '%d', '%s', '%s', '%d', '%s', '%s', '%s' )
 		);
 		return (int) $wpdb->insert_id;
 	}
@@ -167,7 +169,8 @@ class FormTheory_DB {
 		$search = isset( $args['search'] ) ? trim( (string) $args['search'] ) : '';
 		if ( '' !== $search ) {
 			$where   .= ' AND data LIKE %s';
-			$params[] = '%' . $wpdb->esc_like( $search ) . '%';
+			// data is stored as JSON: match the JSON-escaped form of the term.
+			$params[] = '%' . $wpdb->esc_like( substr( wp_json_encode( $search ), 1, -1 ) ) . '%';
 		}
 
 		return array( $where, $params );
@@ -200,7 +203,7 @@ class FormTheory_DB {
 
 	/** Sanitize an id list: positive unique ints only. */
 	private static function clean_ids( array $ids ) {
-		return array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+		return array_values( array_unique( array_filter( array_map( 'absint', array_filter( $ids, 'is_scalar' ) ) ) ) );
 	}
 
 	/** @return int rows changed. */
