@@ -14,6 +14,9 @@ class FormTheory_Admin {
 		add_action( 'admin_post_formtheory_bulk', array( $this, 'handle_bulk' ) );
 		add_action( 'admin_post_formtheory_note', array( $this, 'handle_note' ) );
 		add_action( 'admin_post_formtheory_export', array( $this, 'handle_export' ) );
+		add_action( 'admin_post_formtheory_duplicate', array( $this, 'handle_duplicate' ) );
+		add_action( 'admin_post_formtheory_export_form', array( $this, 'handle_export_form' ) );
+		add_action( 'admin_post_formtheory_import', array( $this, 'handle_import' ) );
 		add_action( 'admin_post_formtheory_file', array( $this, 'handle_file' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_init', array( 'FormTheory_Recaptcha', 'register_setting' ) );
@@ -67,7 +70,7 @@ class FormTheory_Admin {
 		foreach ( $forms as $f ) {
 			$id = (int) $f['id'];
 			printf(
-				'<tr><td><a href="%1$s"><strong>%2$s</strong></a></td><td><code>[formtheory id="%3$d"]</code></td><td><a href="%4$s">%5$d</a></td><td>%6$s</td><td><a href="%1$s">Edit</a> | <a href="%4$s">Entries</a> | <a class="ft-danger" href="%7$s" data-ft-confirm="%8$s">Delete<span class="screen-reader-text"> %2$s</span></a></td></tr>',
+				'<tr><td><a href="%1$s"><strong>%2$s</strong></a></td><td><code>[formtheory id="%3$d"]</code></td><td><a href="%4$s">%5$d</a></td><td>%6$s</td><td><a href="%1$s">Edit</a> | <a href="%4$s">Entries</a> | <a href="%9$s">%11$s<span class="screen-reader-text"> %2$s</span></a> | <a href="%10$s">%12$s<span class="screen-reader-text"> %2$s</span></a> | <a class="ft-danger"href="%7$s" data-ft-confirm="%8$s">Delete<span class="screen-reader-text"> %2$s</span></a></td></tr>',
 				esc_url( $this->admin_url( 'formtheory-edit', array( 'id' => $id ) ) ),
 				esc_html( $f['title'] ? $f['title'] : '(untitled)' ),
 				$id,
@@ -75,10 +78,22 @@ class FormTheory_Admin {
 				FormTheory_DB::count_entries( $id ),
 				esc_html( $f['updated_at'] ),
 				esc_url( $this->action_url( 'formtheory_delete_form', array( 'id' => $id ) ) ),
-				esc_attr__( 'Delete form and all its entries?', 'formtheory' )
+				esc_attr__( 'Delete form and all its entries?', 'formtheory' ),
+				esc_url( $this->action_url( 'formtheory_duplicate', array( 'id' => $id ) ) ),
+				esc_url( $this->action_url( 'formtheory_export_form', array( 'id' => $id ) ) ),
+				esc_html__( 'Duplicate', 'formtheory' ),
+				esc_html__( 'Export JSON', 'formtheory' )
 			);
 		}
-		echo '</tbody></table></div>';
+		echo '</tbody></table>';
+		echo '<h2>' . esc_html__( 'Import form', 'formtheory' ) . '</h2>';
+		echo '<form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="ft-import">';
+		wp_nonce_field( 'formtheory_import' );
+		echo '<input type="hidden" name="action" value="formtheory_import">';
+		echo '<p><label for="ft-import-file">' . esc_html__( 'JSON file (max 1 MB)', 'formtheory' ) . '</label><br><input type="file" id="ft-import-file" name="ft_import" accept=".json,application/json"></p>';
+		echo '<p><label for="ft-import-json">' . esc_html__( 'Or paste JSON', 'formtheory' ) . '</label><br><textarea id="ft-import-json" name="ft_import_json" rows="6" class="large-text code"></textarea></p>';
+		submit_button( __( 'Import', 'formtheory' ), 'secondary' );
+		echo '</form></div>';
 	}
 
 	public function page_edit() {
@@ -297,7 +312,22 @@ class FormTheory_Admin {
 			'deleted' => 'Deleted.',
 			'bulk'    => __( 'Bulk action applied.', 'formtheory' ),
 			'note'    => __( 'Note saved.', 'formtheory' ),
+			'imported'   => __( 'Form imported.', 'formtheory' ),
+			'duplicated' => __( 'Form duplicated.', 'formtheory' ),
 		);
+		if ( 'import_error' === $msg ) {
+			$err    = isset( $_GET['ft_err'] ) ? sanitize_key( $_GET['ft_err'] ) : '';
+			$errors = array(
+				'ft_import_size'   => __( 'Import file is larger than 1 MB.', 'formtheory' ),
+				'ft_import_json'   => __( 'Import file is not valid JSON.', 'formtheory' ),
+				'ft_import_marker' => __( 'This is not a FormTheory export file.', 'formtheory' ),
+				'ft_import_empty'  => __( 'No import data was provided.', 'formtheory' ),
+				'ft_import_upload' => __( 'The file could not be uploaded.', 'formtheory' ),
+			);
+			$text   = $errors[ $err ] ?? __( 'Import failed.', 'formtheory' );
+			echo '<div class="notice notice-error is-dismissible" role="alert"><p>' . esc_html( $text ) . '</p></div>';
+			return;
+		}
 		if ( 'bulk_none' === $msg ) {
 			echo '<div class="notice notice-warning is-dismissible" role="status"><p>' . esc_html__( 'No entries were changed.', 'formtheory' ) . '</p></div>';
 			return;
@@ -324,6 +354,64 @@ class FormTheory_Admin {
 		$this->guard( 'formtheory_delete_form' );
 		FormTheory_DB::delete_form( isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0 );
 		wp_safe_redirect( $this->admin_url( 'formtheory', array( 'ft_msg' => 'deleted' ) ) );
+		exit;
+	}
+
+	public function handle_duplicate() {
+		$this->guard( 'formtheory_duplicate' );
+		$new = FormTheory_DB::duplicate_form( isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0 );
+		if ( ! $new ) {
+			wp_die( esc_html__( 'Form not found.', 'formtheory' ) );
+		}
+		wp_safe_redirect( $this->admin_url( 'formtheory', array( 'ft_msg' => 'duplicated' ) ) );
+		exit;
+	}
+
+	public function handle_export_form() {
+		$this->guard( 'formtheory_export_form' );
+		$id   = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
+		$form = FormTheory_DB::get_form( $id );
+		if ( ! $form ) {
+			wp_die( esc_html__( 'Form not found.', 'formtheory' ) );
+		}
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="formtheory-form-' . $id . '-' . gmdate( 'Ymd' ) . '.json"' );
+		echo FormTheory_Portable::export( $form ); // phpcs:ignore WordPress.Security.EscapeOutput -- JSON download.
+		exit;
+	}
+
+	public function handle_import() {
+		$this->guard( 'formtheory_import' );
+		$json = '';
+		$err  = '';
+		$file = isset( $_FILES['ft_import'] ) && is_array( $_FILES['ft_import'] ) ? $_FILES['ft_import'] : null;
+		if ( $file && isset( $file['error'] ) && UPLOAD_ERR_NO_FILE !== (int) $file['error'] ) {
+			$tmp = isset( $file['tmp_name'] ) && is_string( $file['tmp_name'] ) ? $file['tmp_name'] : '';
+			if ( UPLOAD_ERR_OK !== (int) $file['error'] || '' === $tmp || ! is_uploaded_file( $tmp ) ) {
+				$err = 'ft_import_upload';
+			} elseif ( (int) ( $file['size'] ?? 0 ) > FormTheory_Portable::MAX_BYTES || filesize( $tmp ) > FormTheory_Portable::MAX_BYTES ) {
+				$err = 'ft_import_size';
+			} else {
+				$json = (string) file_get_contents( $tmp );
+			}
+		} elseif ( isset( $_POST['ft_import_json'] ) ) {
+			$json = (string) wp_unslash( $_POST['ft_import_json'] ); // phpcs:ignore -- validated and sanitized in FormTheory_Portable::import.
+		}
+		if ( '' === $err && '' === trim( $json ) ) {
+			$err = 'ft_import_empty';
+		}
+		if ( '' === $err ) {
+			$res = FormTheory_Portable::import( $json );
+			if ( is_wp_error( $res ) ) {
+				$err = $res->get_error_code();
+			} else {
+				$id = FormTheory_DB::save_form( 0, $res['title'], $res['config'] );
+				wp_safe_redirect( $this->admin_url( 'formtheory-edit', array( 'id' => $id, 'ft_msg' => 'imported' ) ) );
+				exit;
+			}
+		}
+		wp_safe_redirect( $this->admin_url( 'formtheory', array( 'ft_msg' => 'import_error', 'ft_err' => $err ) ) );
 		exit;
 	}
 

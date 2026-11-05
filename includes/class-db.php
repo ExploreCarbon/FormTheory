@@ -122,6 +122,16 @@ class FormTheory_DB {
 		return (int) $wpdb->insert_id;
 	}
 
+	public static function duplicate_form( $id ) {
+		$form = self::get_form( (int) $id );
+		if ( ! $form ) {
+			return 0;
+		}
+		/* translators: %s: original form title */
+		$title = sprintf( __( '%s (copy)', 'formtheory' ), $form['title'] );
+		return self::save_form( 0, $title, $form['config'] );
+	}
+
 	public static function delete_form( $id ) {
 		global $wpdb;
 		foreach ( self::get_entries( $id, 0, 0 ) as $e ) {

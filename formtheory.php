@@ -23,6 +23,7 @@ require_once FORMTHEORY_DIR . 'includes/class-spam.php';
 require_once FORMTHEORY_DIR . 'includes/class-notify.php';
 require_once FORMTHEORY_DIR . 'includes/class-webhooks.php';
 require_once FORMTHEORY_DIR . 'includes/class-recaptcha.php';
+require_once FORMTHEORY_DIR . 'includes/class-portable.php';
 require_once FORMTHEORY_DIR . 'includes/class-admin.php';
 require_once FORMTHEORY_DIR . 'includes/class-frontend.php';
 
