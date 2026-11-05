@@ -19,6 +19,7 @@ class FormTheory_DB {
 		$charset = $wpdb->get_charset_collate();
 		$forms   = self::forms_table();
 		$entries = self::entries_table();
+		$prev    = get_option( 'formtheory_db_version' );
 
 		dbDelta( "CREATE TABLE $forms (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -36,9 +37,16 @@ class FormTheory_DB {
 			ip varchar(45) NOT NULL DEFAULT '',
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_at datetime NOT NULL,
+			status varchar(10) NOT NULL DEFAULT 'unread',
+			notes text NOT NULL,
 			PRIMARY KEY  (id),
 			KEY form_id (form_id)
 		) $charset;" );
+
+		// Upgrading from < 1.2.0: entries that predate the status column count as read.
+		if ( $prev && version_compare( (string) $prev, '1.2.0', '<' ) ) {
+			$wpdb->query( "UPDATE $entries SET status = 'read'" );
+		}
 
 		self::protect_upload_dir();
 		update_option( 'formtheory_db_version', FORMTHEORY_VERSION );
@@ -138,14 +146,44 @@ class FormTheory_DB {
 		return (int) $wpdb->insert_id;
 	}
 
-	/** $limit 0 = all. */
-	public static function get_entries( $form_id, $limit = 50, $offset = 0 ) {
+	/**
+	 * Build the WHERE clause for entry listing.
+	 *
+	 * @param int   $form_id Form id.
+	 * @param array $args    search (string), status ('' | unread | read).
+	 * @return array [ string $where_sql (placeholders), array $params ]
+	 */
+	public static function entries_query( $form_id, array $args = array() ) {
 		global $wpdb;
-		$sql = 'SELECT * FROM ' . self::entries_table() . ' WHERE form_id = %d ORDER BY id DESC';
+		$where  = 'form_id = %d';
+		$params = array( (int) $form_id );
+
+		$status = isset( $args['status'] ) ? (string) $args['status'] : '';
+		if ( in_array( $status, array( 'unread', 'read' ), true ) ) {
+			$where   .= ' AND status = %s';
+			$params[] = $status;
+		}
+
+		$search = isset( $args['search'] ) ? trim( (string) $args['search'] ) : '';
+		if ( '' !== $search ) {
+			$where   .= ' AND data LIKE %s';
+			$params[] = '%' . $wpdb->esc_like( $search ) . '%';
+		}
+
+		return array( $where, $params );
+	}
+
+	/** $limit 0 = all. */
+	public static function get_entries( $form_id, $limit = 50, $offset = 0, array $args = array() ) {
+		global $wpdb;
+		list( $where, $params ) = self::entries_query( $form_id, $args );
+		$sql = 'SELECT * FROM ' . self::entries_table() . ' WHERE ' . $where . ' ORDER BY id DESC';
 		if ( $limit > 0 ) {
-			$rows = $wpdb->get_results( $wpdb->prepare( $sql . ' LIMIT %d OFFSET %d', $form_id, $limit, $offset ), ARRAY_A );
+			$params[] = (int) $limit;
+			$params[] = (int) $offset;
+			$rows     = $wpdb->get_results( $wpdb->prepare( $sql . ' LIMIT %d OFFSET %d', $params ), ARRAY_A );
 		} else {
-			$rows = $wpdb->get_results( $wpdb->prepare( $sql, $form_id ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A );
 		}
 		foreach ( $rows as &$r ) {
 			$d         = json_decode( $r['data'], true );
@@ -154,9 +192,57 @@ class FormTheory_DB {
 		return $rows;
 	}
 
-	public static function count_entries( $form_id ) {
+	public static function count_entries( $form_id, array $args = array() ) {
 		global $wpdb;
-		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::entries_table() . ' WHERE form_id = %d', $form_id ) );
+		list( $where, $params ) = self::entries_query( $form_id, $args );
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::entries_table() . ' WHERE ' . $where, $params ) );
+	}
+
+	/** Sanitize an id list: positive unique ints only. */
+	private static function clean_ids( array $ids ) {
+		return array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+	}
+
+	/** @return int rows changed. */
+	public static function set_entries_status( $form_id, array $ids, $status ) {
+		global $wpdb;
+		$ids = self::clean_ids( $ids );
+		if ( ! $ids || ! in_array( $status, array( 'unread', 'read' ), true ) ) {
+			return 0;
+		}
+		$in  = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$sql = $wpdb->prepare(
+			'UPDATE ' . self::entries_table() . " SET status = %s WHERE form_id = %d AND id IN ($in)",
+			array_merge( array( $status, (int) $form_id ), $ids )
+		);
+		return (int) $wpdb->query( $sql );
+	}
+
+	/** Deletes via delete_entry() so uploaded files go too. @return int rows deleted. */
+	public static function delete_entries( $form_id, array $ids ) {
+		global $wpdb;
+		$ids = self::clean_ids( $ids );
+		if ( ! $ids ) {
+			return 0;
+		}
+		$in    = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$owned = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT id FROM ' . self::entries_table() . " WHERE form_id = %d AND id IN ($in)",
+				array_merge( array( (int) $form_id ), $ids )
+			)
+		);
+		$n = 0;
+		foreach ( $owned as $id ) {
+			self::delete_entry( (int) $id );
+			$n++;
+		}
+		return $n;
+	}
+
+	public static function update_entry_notes( $id, $notes ) {
+		global $wpdb;
+		$wpdb->update( self::entries_table(), array( 'notes' => (string) $notes ), array( 'id' => (int) $id ), array( '%s' ), array( '%d' ) );
 	}
 
 	public static function get_entry( $id ) {
