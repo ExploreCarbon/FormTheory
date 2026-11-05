@@ -90,4 +90,53 @@ class FieldsTest extends TestCase {
 		$this->assertTrue( \FormTheory_Fields::rule_matches( array( 'op' => 'lt', 'value' => '3' ), '2' ) );
 		$this->assertFalse( \FormTheory_Fields::rule_matches( array( 'op' => 'gt', 'value' => '3' ), '' ) );
 	}
+
+	public function test_sanitize_keeps_points_and_category_for_radio_and_select_only() {
+		$r = $this->one( array( 'type' => 'radio', 'options' => array( 'a', 'b', 'c' ), 'points' => array( '5', 'x', 99999 ), 'category' => ' Debt Plan! ' ) );
+		$this->assertSame( array( 5.0, 0.0, 10000.0 ), $r['points'] );
+		$this->assertSame( 'debtplan', $r['category'] );
+		$s = $this->one( array( 'type' => 'select', 'options' => array( 'a' ), 'points' => array( 2 ), 'category' => 'x' ) );
+		$this->assertSame( array( 2.0 ), $s['points'] );
+		$c = $this->one( array( 'type' => 'checkbox', 'options' => array( 'a' ), 'points' => array( 2 ), 'category' => 'x' ) );
+		$this->assertArrayNotHasKey( 'points', $c );
+		$this->assertArrayNotHasKey( 'category', $c );
+		$t = $this->one( array( 'type' => 'text', 'points' => array( 2 ), 'category' => 'x' ) );
+		$this->assertArrayNotHasKey( 'category', $t );
+	}
+
+	public function test_points_pad_to_option_count() {
+		$r = $this->one( array( 'type' => 'radio', 'options' => array( 'a', 'b' ), 'points' => array( 3 ) ) );
+		$this->assertSame( array( 3.0, 0.0 ), $r['points'] );
+	}
+
+	public function test_sanitize_scoring_clamps_and_drops_unknown_categories() {
+		$cfg = \FormTheory_Fields::sanitize_config( array(
+			'confirmation_type' => 'score',
+			'fields'            => array(
+				array( 'id' => 'q', 'type' => 'radio', 'label' => 'Q', 'options' => array( 'a' ), 'points' => array( 1 ), 'category' => 'debt' ),
+			),
+			'scoring'           => array( 'enabled' => true, 'threshold' => 250, 'overall_page' => '7', 'pages' => array( 'debt' => '5', 'ghost' => '9' ) ),
+		) );
+		$this->assertSame( 'score', $cfg['confirmation_type'] );
+		$this->assertTrue( $cfg['scoring']['enabled'] );
+		$this->assertSame( 100, $cfg['scoring']['threshold'] );
+		$this->assertSame( 7, $cfg['scoring']['overall_page'] );
+		$this->assertSame( array( 'debt' => 5 ), $cfg['scoring']['pages'] );
+	}
+
+	public function test_defaults_include_scoring_store_entries_auto_advance() {
+		$cfg = \FormTheory_Fields::sanitize_config( array() );
+		$this->assertSame( 80, $cfg['scoring']['threshold'] );
+		$this->assertFalse( $cfg['scoring']['enabled'] );
+		$this->assertTrue( $cfg['store_entries'] );
+		$this->assertFalse( $cfg['auto_advance'] );
+	}
+
+	public function test_sanitize_store_entries_and_auto_advance_flags() {
+		$cfg = \FormTheory_Fields::sanitize_config( array( 'fields' => array(), 'store_entries' => false, 'auto_advance' => true ) );
+		$this->assertFalse( $cfg['store_entries'] );
+		$this->assertTrue( $cfg['auto_advance'] );
+		$cfg = \FormTheory_Fields::sanitize_config( array( 'fields' => array() ) );
+		$this->assertTrue( $cfg['store_entries'] );
+	}
 }

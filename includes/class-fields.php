@@ -39,7 +39,9 @@ class FormTheory_Fields {
 		$cfg['notify_subject'] = sanitize_text_field( $raw['notify_subject'] ?? '' );
 		$cfg['ajax']              = ! array_key_exists( 'ajax', $raw ) || ! empty( $raw['ajax'] );
 		$cfg['save_resume']       = ! empty( $raw['save_resume'] );
-		$cfg['confirmation_type'] = in_array( $raw['confirmation_type'] ?? '', array( 'message', 'page', 'redirect' ), true ) ? $raw['confirmation_type'] : 'message';
+		$cfg['store_entries']     = ! array_key_exists( 'store_entries', $raw ) || ! empty( $raw['store_entries'] );
+		$cfg['auto_advance']      = ! empty( $raw['auto_advance'] );
+		$cfg['confirmation_type'] = in_array( $raw['confirmation_type'] ?? '', array( 'message', 'page', 'redirect', 'score' ), true ) ? $raw['confirmation_type'] : 'message';
 		$cfg['confirmation_page'] = absint( $raw['confirmation_page'] ?? 0 );
 		$cfg['confirmation_url']  = self::sanitize_url_template( $raw['confirmation_url'] ?? '' );
 		$to                    = array_filter( array_map( 'sanitize_email', array_map( 'trim', explode( ',', (string) ( $raw['notify_to'] ?? '' ) ) ) ) );
@@ -73,6 +75,15 @@ class FormTheory_Fields {
 						$field['options'][] = $o;
 					}
 				}
+			}
+			if ( in_array( $type, array( 'radio', 'select' ), true ) ) {
+				$field['points'] = array();
+				$given           = array_values( (array) ( $f['points'] ?? array() ) );
+				foreach ( array_keys( $field['options'] ) as $i ) {
+					$p                 = $given[ $i ] ?? 0;
+					$field['points'][] = is_numeric( $p ) ? (float) max( -10000, min( 10000, $p ) ) : 0.0;
+				}
+				$field['category'] = mb_substr( preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) ( $f['category'] ?? '' ) ) ), 0, 40 );
 			}
 			if ( 'file' === $type ) {
 				$exts = array_filter( array_map( function ( $e ) {
@@ -133,6 +144,26 @@ class FormTheory_Fields {
 			}
 		}
 		$cfg['fields'] = $fields;
+
+		$cats    = array();
+		foreach ( $fields as $sf ) {
+			if ( ! empty( $sf['category'] ) ) {
+				$cats[ $sf['category'] ] = true;
+			}
+		}
+		$sraw    = is_array( $raw['scoring'] ?? null ) ? $raw['scoring'] : array();
+		$spages  = array();
+		foreach ( (array) ( $sraw['pages'] ?? array() ) as $cat => $pid ) {
+			if ( isset( $cats[ $cat ] ) && absint( $pid ) ) {
+				$spages[ $cat ] = absint( $pid );
+			}
+		}
+		$cfg['scoring'] = array(
+			'enabled'      => ! empty( $sraw['enabled'] ),
+			'threshold'    => max( 0, min( 100, (int) ( $sraw['threshold'] ?? 80 ) ) ),
+			'overall_page' => absint( $sraw['overall_page'] ?? 0 ),
+			'pages'        => $spages,
+		);
 
 		if ( array_key_exists( 'notifications', $raw ) ) {
 			$cfg['notifications'] = array();
