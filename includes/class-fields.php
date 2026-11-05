@@ -248,6 +248,46 @@ class FormTheory_Fields {
 		return $out;
 	}
 
+	/**
+	 * Plain-text form of any stored value (scalar, list, file, signature,
+	 * address parts, repeater rows).
+	 */
+	public static function value_to_text( $value ) {
+		if ( ! is_array( $value ) ) {
+			return is_scalar( $value ) ? (string) $value : '';
+		}
+		if ( isset( $value['file'] ) ) {
+			return (string) ( $value['name'] ?? '' );
+		}
+		if ( isset( $value['sig'] ) ) {
+			/* translators: %s: name typed by the signer. */
+			return trim( sprintf( __( '[signature] %s', 'formtheory' ), (string) ( $value['name'] ?? '' ) ) );
+		}
+		if ( isset( $value['typed'] ) ) {
+			/* translators: %s: name typed as a signature. */
+			return sprintf( __( '%s (typed)', 'formtheory' ), (string) $value['typed'] );
+		}
+		$is_list = array_keys( $value ) === range( 0, count( $value ) - 1 );
+		if ( $is_list && $value && is_array( reset( $value ) ) ) {
+			$rows = array();
+			foreach ( $value as $row ) {
+				$t = self::value_to_text( $row );
+				if ( '' !== $t ) {
+					$rows[] = $t;
+				}
+			}
+			return implode( '; ', $rows );
+		}
+		$parts = array();
+		foreach ( $value as $v ) {
+			$t = self::value_to_text( $v );
+			if ( '' !== $t ) {
+				$parts[] = $t;
+			}
+		}
+		return implode( ', ', $parts );
+	}
+
 	/** Mirror of assets/front.js evaluateRule(). */
 	public static function rule_matches( $rule, $value ) {
 		$vals = is_array( $value ) ? array_map( 'strval', $value ) : array( (string) $value );

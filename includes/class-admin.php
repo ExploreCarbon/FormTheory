@@ -534,10 +534,7 @@ class FormTheory_Admin {
 	}
 
 	public function plain_value( $val ) {
-		if ( is_array( $val ) ) {
-			return isset( $val['file'] ) ? (string) $val['name'] : implode( ', ', array_map( 'strval', $val ) );
-		}
-		return (string) $val;
+		return FormTheory_Fields::value_to_text( $val );
 	}
 
 	private function notice() {
