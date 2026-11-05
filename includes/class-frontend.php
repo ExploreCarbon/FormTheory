@@ -31,6 +31,17 @@ class FormTheory_Frontend {
 			'invalid_email' => __( 'Enter a valid email address.', 'formtheory' ),
 			'invalid_number' => __( 'Enter a number.', 'formtheory' ),
 			'invalid_phone' => __( 'Enter a valid phone number.', 'formtheory' ),
+			/* translators: %d: row number. */
+			'row_n'        => __( 'Row %d', 'formtheory' ),
+			/* translators: %d: row number. */
+			'remove_row_n' => __( 'Remove row %d', 'formtheory' ),
+			'row_added'    => __( 'Row added', 'formtheory' ),
+			'row_removed'  => __( 'Row removed', 'formtheory' ),
+			'min_row'      => __( 'Add at least 1 row.', 'formtheory' ),
+			/* translators: %d: minimum number of rows (2 or more). */
+			'min_rows'     => __( 'Add at least %d rows.', 'formtheory' ),
+			/* translators: 1: row number, 2: column label, 3: error message. */
+			'row_error'    => __( 'Row %1$d, %2$s: %3$s', 'formtheory' ),
 			/* translators: %d: maximum file size in megabytes. */
 			'file_too_big' => __( 'File must be under %d MB.', 'formtheory' ),
 			/* translators: 1: current step number, 2: total number of steps. */
@@ -309,10 +320,18 @@ class FormTheory_Frontend {
 			$this->sig_data[ $f['id'] ] = $data;
 			return '' !== $typed ? array( 'typed' => $typed ) : '';
 		}
+		if ( 'repeater' === $f['type'] ) {
+			return self::sanitize_repeater( $f, $v );
+		}
 		if ( is_array( $v ) ) {
 			return '';
 		}
-		switch ( $f['type'] ) {
+		return self::sanitize_scalar( $f['type'], $v );
+	}
+
+	/** Per-type sanitizing of one posted scalar; shared by top-level fields and repeater cells. */
+	private static function sanitize_scalar( $type, $v ) {
+		switch ( $type ) {
 			case 'consent':
 				return '1' === (string) $v ? __( 'Accepted', 'formtheory' ) : '';
 			case 'textarea':
@@ -324,12 +343,81 @@ class FormTheory_Frontend {
 		}
 	}
 
+	/** Most posted repeater rows examined (bounds work and memory on hostile input). */
+	const REPEATER_SCAN_ROWS = 100;
+
+	/**
+	 * Posted ft[ID][ROW][COL] to a re-indexed list of rows keyed only by the
+	 * configured column ids. Fully empty rows are dropped; rows beyond max_rows
+	 * are kept so validate() can report them. Non-array rows and non-string
+	 * cells count as empty. Nothing filled in => ''.
+	 */
+	public static function sanitize_repeater( array $f, $raw ) {
+		$cols = is_array( $f['columns'] ?? null ) ? $f['columns'] : array();
+		if ( ! is_array( $raw ) || ! $cols ) {
+			return '';
+		}
+		$rows    = array();
+		$scanned = 0;
+		foreach ( $raw as $r ) {
+			if ( ++$scanned > self::REPEATER_SCAN_ROWS ) {
+				break;
+			}
+			if ( ! is_array( $r ) ) {
+				continue;
+			}
+			$row = array();
+			$any = false;
+			foreach ( $cols as $c ) {
+				$cell = $r[ $c['id'] ] ?? '';
+				$cell = is_string( $cell ) ? self::sanitize_scalar( $c['type'], $cell ) : '';
+				if ( '' !== $cell ) {
+					$any = true;
+				}
+				$row[ $c['id'] ] = $cell;
+			}
+			if ( $any ) {
+				$rows[] = $row;
+			}
+		}
+		return $rows ? $rows : '';
+	}
+
+	/** Row count, per-cell type and per-column required checks; the first problem is reported with its row number. */
+	private function validate_repeater( $f, array $rows ) {
+		$max  = (int) ( $f['max_rows'] ?? 5 );
+		$min  = (int) ( $f['min_rows'] ?? 1 );
+		$need = max( $f['required'] ? 1 : 0, $min );
+		if ( count( $rows ) > $max ) {
+			return __( 'Too many rows.', 'formtheory' );
+		}
+		if ( count( $rows ) < $need ) {
+			/* translators: %d: minimum number of rows (2 or more). */
+			return 1 === $need ? __( 'Add at least 1 row.', 'formtheory' ) : sprintf( __( 'Add at least %d rows.', 'formtheory' ), $need );
+		}
+		foreach ( array_values( $rows ) as $n => $row ) {
+			foreach ( (array) ( $f['columns'] ?? array() ) as $c ) {
+				$cell = is_array( $row ) && isset( $row[ $c['id'] ] ) ? $row[ $c['id'] ] : '';
+				$err  = $this->validate( array( 'type' => $c['type'], 'required' => ! empty( $c['required'] ), 'options' => $c['options'] ?? array() ), $cell );
+				if ( $err ) {
+					$label = '' !== (string) $c['label'] ? $c['label'] : $c['id'];
+					/* translators: 1: row number, 2: column label, 3: error message. */
+					return sprintf( __( 'Row %1$d, %2$s: %3$s', 'formtheory' ), $n + 1, $label, $err );
+				}
+			}
+		}
+		return '';
+	}
+
 	private function validate( $f, $v ) {
 		$empty = is_array( $v ) ? ! $v : '' === trim( $v );
 		if ( $empty ) {
 			return $f['required'] ? __( 'This field is required.', 'formtheory' ) : '';
 		}
 		if ( is_array( $v ) ) {
+			if ( 'repeater' === $f['type'] ) {
+				return $this->validate_repeater( $f, $v );
+			}
 			if ( 'address' === $f['type'] ) {
 				// Required: every enabled part except street2 must be filled. Optional: any subset is fine.
 				if ( $f['required'] ) {
@@ -632,6 +720,41 @@ class FormTheory_Frontend {
 		return ob_get_clean();
 	}
 
+	/** One repeater row ($i is the row index, or the __ROW__ placeholder in the template): a labelled group of cells plus a hidden-until-JS remove button. */
+	private function render_repeater_row( $id, $name, $f, $i, array $vals ) {
+		$label_id = $id . '-r' . $i . '-label';
+		$n        = is_int( $i ) ? $i + 1 : 1;
+		echo '<div class="ft-rep-row" role="group" aria-labelledby="' . esc_attr( $label_id ) . '" data-ft-rep-row data-ft-rep-idx="' . esc_attr( $i ) . '">';
+		/* translators: %d: row number. */
+		echo '<span class="ft-rep-title" id="' . esc_attr( $label_id ) . '" data-ft-rep-title>' . esc_html( sprintf( __( 'Row %d', 'formtheory' ), $n ) ) . '</span>';
+		$map  = array( 'text' => 'text', 'email' => 'email', 'phone' => 'tel', 'number' => 'number', 'date' => 'date' );
+		$auto = array( 'email' => ' autocomplete="email"', 'phone' => ' autocomplete="tel"' );
+		foreach ( $f['columns'] as $c ) {
+			$cid  = $id . '-' . $i . '-' . $c['id'];
+			$cn   = $name . '[' . $i . '][' . $c['id'] . ']';
+			$cv   = isset( $vals[ $c['id'] ] ) && is_string( $vals[ $c['id'] ] ) ? $vals[ $c['id'] ] : '';
+			$creq = ! empty( $c['required'] );
+			$lab  = '' !== (string) $c['label'] ? $c['label'] : $c['id'];
+			$ar   = $creq ? ' aria-required="true"' : '';
+			echo '<div class="ft-rep-cell"><label for="' . esc_attr( $cid ) . '">' . esc_html( $lab ) . ( $creq ? ' <span class="ft-req" aria-hidden="true">*</span>' : '' ) . '</label>'; // phpcs:ignore -- static markup.
+			if ( 'textarea' === $c['type'] ) {
+				echo '<textarea id="' . esc_attr( $cid ) . '" name="' . esc_attr( $cn ) . '" rows="3"' . $ar . '>' . esc_textarea( $cv ) . '</textarea>'; // phpcs:ignore -- $ar static.
+			} elseif ( 'select' === $c['type'] ) {
+				echo '<select id="' . esc_attr( $cid ) . '" name="' . esc_attr( $cn ) . '"' . $ar . '><option value="">' . esc_html__( '— Select —', 'formtheory' ) . '</option>'; // phpcs:ignore -- $ar static.
+				foreach ( $c['options'] as $opt ) {
+					echo '<option value="' . esc_attr( $opt ) . '"' . selected( $cv, $opt, false ) . '>' . esc_html( $opt ) . '</option>';
+				}
+				echo '</select>';
+			} else {
+				echo '<input type="' . esc_attr( $map[ $c['type'] ] ) . '" id="' . esc_attr( $cid ) . '" name="' . esc_attr( $cn ) . '" value="' . esc_attr( $cv ) . '"' . ( 'number' === $c['type'] ? ' step="any"' : '' ) . ( $auto[ $c['type'] ] ?? '' ) . $ar . '>'; // phpcs:ignore -- static attributes.
+			}
+			echo '</div>';
+		}
+		/* translators: %d: row number. */
+		echo '<button type="button" class="ft-btn ft-rep-remove" data-ft-rep-remove aria-label="' . esc_attr( sprintf( __( 'Remove row %d', 'formtheory' ), $n ) ) . '" hidden>' . esc_html__( 'Remove row', 'formtheory' ) . '</button>';
+		echo '</div>';
+	}
+
 	private function render_field( $form_id, $f, $value, $error ) {
 		$id      = 'ft-' . $form_id . '-' . $f['id'];
 		$name    = 'ft[' . $f['id'] . ']';
@@ -724,6 +847,30 @@ class FormTheory_Frontend {
 				echo '<input type="text" id="' . esc_attr( $pid ) . '" name="' . esc_attr( $name . '[' . $part . ']' ) . '" value="' . esc_attr( $pv ) . '" autocomplete="' . esc_attr( $tokens[ $part ] ) . '"' . $preq . '></div>'; // phpcs:ignore -- $preq static.
 			}
 			echo '</fieldset>';
+		} elseif ( 'repeater' === $f['type'] ) {
+			// Fieldset of row groups. Without JS the server-rendered rows are fixed (>= 1); front.js unhides Add/Remove and clones the template.
+			if ( $f['columns'] ) {
+				$rows = is_array( $value ) ? array_values( $value ) : array();
+				$min  = (int) $f['min_rows'];
+				$max  = (int) $f['max_rows'];
+				$cnt  = max( 1, $min, count( $rows ) );
+				$add  = '' !== (string) $f['add_label'] ? $f['add_label'] : __( 'Add row', 'formtheory' );
+				/* translators: %d: maximum number of rows. */
+				$maxmsg = sprintf( __( 'Maximum of %d rows reached.', 'formtheory' ), $max );
+				echo '<fieldset class="ft-repeater"' . $aria_base . ' data-ft-repeater data-ft-min="' . (int) $min . '" data-ft-max="' . (int) $max . '" data-ft-rep-prefix="' . esc_attr( $id ) . '" data-ft-rep-name="' . esc_attr( $name ) . '"><legend>' . esc_html( $f['label'] ) . $req . $req_sr . '</legend>'; // phpcs:ignore -- $aria_base/$req static/escaped.
+				echo '<div class="ft-rep-rows" data-ft-rep-rows>';
+				for ( $i = 0; $i < $cnt; $i++ ) {
+					$this->render_repeater_row( $id, $name, $f, $i, is_array( $rows[ $i ] ?? null ) ? $rows[ $i ] : array() );
+				}
+				echo '</div>';
+				echo '<template data-ft-rep-template>';
+				$this->render_repeater_row( $id, $name, $f, '__ROW__', array() );
+				echo '</template>';
+				echo '<button type="button" class="ft-btn ft-rep-add" data-ft-rep-add hidden>' . esc_html( $add ) . '</button>';
+				echo '<p class="ft-help ft-rep-max" id="' . esc_attr( $id ) . '-maxmsg" data-ft-rep-max hidden>' . esc_html( $maxmsg ) . '</p>';
+				echo '<div class="ft-sr" role="status" aria-live="polite" data-ft-rep-live></div>';
+				echo '</fieldset>';
+			}
 		} elseif ( 'signature' === $f['type'] ) {
 			// Canvas is an optional pointer-only aid; the labelled typed-name input is the keyboard/accessible path (WCAG 2.5.7).
 			$typed = is_array( $value ) && isset( $value['typed'] ) && is_string( $value['typed'] ) ? $value['typed'] : '';

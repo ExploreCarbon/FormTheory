@@ -79,6 +79,38 @@
 	}
 	// calc:end
 
+	// rep:start -- Pure repeater helpers (row re-indexing and limits); exercised from Node, no layout/global access.
+	// Rename one attribute value from row index `from` to `to`: name `ft[ID][from]...`, id/for `PREFIX-from-...`, row label id `PREFIX-rfrom-...`.
+	function repRename(val, prefix, name, from, to) {
+		var pairs = [
+			[name + '[' + from + ']', name + '[' + to + ']'],
+			[prefix + '-' + from + '-', prefix + '-' + to + '-'],
+			[prefix + '-r' + from + '-', prefix + '-r' + to + '-']
+		];
+		for (var i = 0; i < pairs.length; i++) {
+			if (val.indexOf(pairs[i][0]) === 0) return pairs[i][1] + val.slice(pairs[i][0].length);
+		}
+		return val;
+	}
+	// Re-index a row element (and its descendants) from index `from` to `to`; DOM use limited to get/setAttribute + querySelectorAll.
+	function repReindexRow(row, prefix, name, from, to) {
+		var nodes = [row].concat(Array.prototype.slice.call(row.querySelectorAll('[name],[id],[for],[aria-labelledby]')));
+		nodes.forEach(function (n) {
+			['name', 'id', 'for', 'aria-labelledby'].forEach(function (a) {
+				var v = n.getAttribute(a);
+				if (v != null) n.setAttribute(a, repRename(v, prefix, name, from, to));
+			});
+		});
+		row.setAttribute('data-ft-rep-idx', String(to));
+	}
+	function repCanAdd(count, max) { return count < max; }
+	function repCanRemove(count, min) { return count > Math.max(1, min); }
+	// Rows a (possibly required) repeater needs: mirrors FormTheory_Frontend::validate_repeater().
+	function repNeed(required, min) { return Math.max(required ? 1 : 0, min); }
+	// After removing the row at `idx` leaving `count` rows: index of the row to focus, or -1 for the Add button.
+	function repFocusAfterRemove(idx, count) { return idx < count ? idx : -1; }
+	// rep:end
+
 	// Recompute every calc output in field order; later/unknown calc refs read as 0 (matches the server).
 	function updateCalcs(form) {
 		var outs = Array.prototype.slice.call(form.querySelectorAll('output[data-ft-calc]'));
@@ -162,12 +194,49 @@
 		if (ids.length) ctl.setAttribute('aria-describedby', ids.join(' ')); else ctl.removeAttribute('aria-describedby');
 	}
 
+	// Type-specific format message for one non-empty value, or ''.
+	function valueMsg(type, v) {
+		if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return t('invalid_email', 'Enter a valid email address.');
+		if (type === 'number' && isNaN(v)) return t('invalid_number', 'Enter a number.');
+		if (type === 'phone' && !/^[0-9 +().\-]{5,25}$/.test(v)) return t('invalid_phone', 'Enter a valid phone number.');
+		return '';
+	}
+
+	// Basic mirror of the server repeater rules: row count, per-column required, per-cell email/number/phone. First problem wins.
+	function repeaterMsg(wrap) {
+		var fs = wrap.querySelector('[data-ft-repeater]');
+		if (!fs) return '';
+		var isReq = wrap.getAttribute('data-ft-required') === '1';
+		var filled = Array.prototype.filter.call(fs.querySelectorAll('[data-ft-rep-row]'), function (r) {
+			return Array.prototype.some.call(r.querySelectorAll('input, select, textarea'), function (c) { return c.value.trim() !== ''; });
+		});
+		if (!filled.length) return isReq ? t('required', 'This field is required.') : '';
+		var need = repNeed(isReq, parseInt(fs.getAttribute('data-ft-min'), 10) || 0);
+		if (filled.length < need) return need === 1 ? t('min_row', 'Add at least 1 row.') : fmt(t('min_rows', 'Add at least %d rows.'), need);
+		var kinds = { email: 'email', number: 'number', tel: 'phone' };
+		for (var i = 0; i < filled.length; i++) {
+			var ctls = filled[i].querySelectorAll('input, select, textarea');
+			for (var j = 0; j < ctls.length; j++) {
+				var c = ctls[j], v = c.value.trim(), m = '';
+				if (v === '') { if (c.getAttribute('aria-required') === 'true') m = t('required', 'This field is required.'); }
+				else m = valueMsg(kinds[c.type] || '', v);
+				if (m) {
+					var lab = filled[i].querySelector('label[for="' + c.id + '"]');
+					return fmt(t('row_error', 'Row %1$d, %2$s: %3$s'), i + 1, lab && lab.firstChild ? lab.firstChild.textContent.trim() : '', m);
+				}
+			}
+		}
+		return '';
+	}
+
 	function validateWrap(wrap) {
 		if (wrap.hidden) { setError(wrap, ''); return true; }
 		var type = wrap.getAttribute('data-ft-type');
 		var vals = fieldValue(wrap.closest('form'), wrap.getAttribute('data-ft-field'));
 		var msg = '';
-		if (type === 'address') {
+		if (type === 'repeater') {
+			msg = repeaterMsg(wrap);
+		} else if (type === 'address') {
 			// Mirror of the server rule: required = every part marked aria-required (all enabled parts but street2) filled.
 			var isReq = wrap.getAttribute('data-ft-required') === '1';
 			var anyFilled = vals.some(function (v) { return v.trim() !== ''; });
@@ -178,12 +247,8 @@
 			}
 		} else if (!vals.length) {
 			if (wrap.getAttribute('data-ft-required') === '1') msg = type === 'file' ? t('attach_file', 'Please attach a file.') : t('required', 'This field is required.');
-		} else if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vals[0])) {
-			msg = t('invalid_email', 'Enter a valid email address.');
-		} else if (type === 'number' && isNaN(vals[0])) {
-			msg = t('invalid_number', 'Enter a number.');
-		} else if (type === 'phone' && !/^[0-9 +().\-]{5,25}$/.test(vals[0])) {
-			msg = t('invalid_phone', 'Enter a valid phone number.');
+		} else if (valueMsg(type, vals[0])) {
+			msg = valueMsg(type, vals[0]);
 		} else if (type === 'file') {
 			var input = wrap.querySelector('input[type=file]');
 			var max = parseInt(input.getAttribute('data-ft-maxmb'), 10) || 0;
@@ -205,7 +270,68 @@
 		return !first;
 	}
 
+	// Progressive enhancement: reveals Add/Remove, clones the server-rendered <template>, keeps indexes contiguous.
+	function initRepeater(fs) {
+		var rowsBox = fs.querySelector('[data-ft-rep-rows]');
+		var tpl = fs.querySelector('template[data-ft-rep-template]');
+		var addBtn = fs.querySelector('[data-ft-rep-add]');
+		var maxMsg = fs.querySelector('[data-ft-rep-max]');
+		var live = fs.querySelector('[data-ft-rep-live]');
+		if (!rowsBox || !tpl || !tpl.content || !tpl.content.firstElementChild || !addBtn || !maxMsg || !live) return; // No template support: rows stay fixed.
+		var prefix = fs.getAttribute('data-ft-rep-prefix');
+		var name = fs.getAttribute('data-ft-rep-name');
+		var min = parseInt(fs.getAttribute('data-ft-min'), 10) || 0;
+		var max = parseInt(fs.getAttribute('data-ft-max'), 10) || 1;
+
+		function rows() { return Array.prototype.slice.call(rowsBox.querySelectorAll(':scope > [data-ft-rep-row]')); }
+		function say(msg) { live.textContent = ''; setTimeout(function () { live.textContent = msg; }, 30); }
+		function focusFirst(row) { var c = row.querySelector('input, select, textarea'); if (c) c.focus(); }
+		function sync() {
+			var rs = rows(), n = rs.length;
+			rs.forEach(function (r, i) {
+				var cur = r.getAttribute('data-ft-rep-idx');
+				if (cur !== String(i)) repReindexRow(r, prefix, name, cur, i);
+				r.querySelector('[data-ft-rep-title]').textContent = fmt(t('row_n', 'Row %d'), i + 1);
+				var rb = r.querySelector('[data-ft-rep-remove]');
+				rb.hidden = false;
+				rb.setAttribute('aria-label', fmt(t('remove_row_n', 'Remove row %d'), i + 1));
+				if (repCanRemove(n, min)) rb.removeAttribute('aria-disabled'); else rb.setAttribute('aria-disabled', 'true');
+			});
+			var full = !repCanAdd(n, max);
+			addBtn.hidden = false;
+			if (full) { addBtn.setAttribute('aria-disabled', 'true'); addBtn.setAttribute('aria-describedby', maxMsg.id); }
+			else { addBtn.removeAttribute('aria-disabled'); addBtn.removeAttribute('aria-describedby'); }
+			maxMsg.hidden = !full;
+		}
+
+		fs.addEventListener('click', function (e) {
+			var rm = e.target.closest('[data-ft-rep-remove]');
+			if (rm) {
+				if (rm.getAttribute('aria-disabled') === 'true') return;
+				var row = rm.closest('[data-ft-rep-row]');
+				var idx = rows().indexOf(row);
+				row.parentNode.removeChild(row);
+				sync();
+				var rs = rows(), j = repFocusAfterRemove(idx, rs.length);
+				if (j >= 0) focusFirst(rs[j]); else addBtn.focus();
+				say(t('row_removed', 'Row removed'));
+				return;
+			}
+			if (e.target.closest('[data-ft-rep-add]')) {
+				if (addBtn.getAttribute('aria-disabled') === 'true') return;
+				var fresh = tpl.content.firstElementChild.cloneNode(true);
+				rowsBox.appendChild(fresh);
+				repReindexRow(fresh, prefix, name, '__ROW__', rows().length - 1);
+				sync();
+				focusFirst(fresh);
+				say(t('row_added', 'Row added'));
+			}
+		});
+		sync();
+	}
+
 	function init(form) {
+		form.querySelectorAll('[data-ft-repeater]').forEach(initRepeater);
 		var pages = Array.prototype.slice.call(form.querySelectorAll('[data-ft-page]'));
 		var progress = form.querySelector('[data-ft-progress]');
 		var current = 0;

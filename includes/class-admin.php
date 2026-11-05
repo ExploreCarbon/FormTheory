@@ -69,6 +69,7 @@ class FormTheory_Admin {
 				'rating'   => __( 'Rating', 'formtheory' ),
 				'address'  => __( 'Address', 'formtheory' ),
 				'signature' => __( 'Signature', 'formtheory' ),
+				'repeater' => __( 'Repeater', 'formtheory' ),
 			),
 			'ops'              => array(
 				'is'       => __( 'is', 'formtheory' ),
@@ -115,6 +116,20 @@ class FormTheory_Admin {
 			'part_state'       => __( 'State / Province', 'formtheory' ),
 			'part_zip'         => __( 'ZIP / Postal code', 'formtheory' ),
 			'part_country'     => __( 'Country', 'formtheory' ),
+			'repeater_columns' => __( 'Columns (1-6)', 'formtheory' ),
+			/* translators: %d: column number. */
+			'column_n'         => __( 'Column %d', 'formtheory' ),
+			/* translators: %d: column number. */
+			'remove_column_n'  => __( 'Remove column %d', 'formtheory' ),
+			'column_label'     => __( 'Column label', 'formtheory' ),
+			'column_type'      => __( 'Column type', 'formtheory' ),
+			'column_choices'   => __( 'Dropdown choices (one per line)', 'formtheory' ),
+			'add_column'       => __( 'Add column', 'formtheory' ),
+			'column_added'     => __( 'Column added', 'formtheory' ),
+			'column_removed'   => __( 'Column removed', 'formtheory' ),
+			'min_rows_label'   => __( 'Minimum rows (0-20)', 'formtheory' ),
+			'max_rows_label'   => __( 'Maximum rows (1-20)', 'formtheory' ),
+			'add_row_label'    => __( 'Add button text', 'formtheory' ),
 			'prefix'           => __( 'Prefix (for example $)', 'formtheory' ),
 			'suffix'           => __( 'Suffix (for example kg)', 'formtheory' ),
 			'notifications'    => __( 'Notifications', 'formtheory' ),

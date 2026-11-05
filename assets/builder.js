@@ -26,12 +26,14 @@
 		});
 		return out;
 	}
-	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation', rating: 'Rating', address: 'Address', signature: 'Signature' }, I18N.types || {});
+	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation', rating: 'Rating', address: 'Address', signature: 'Signature', repeater: 'Repeater' }, I18N.types || {});
+	var COL_TYPES = ['text', 'email', 'number', 'phone', 'date', 'textarea', 'select'];
+	var MAX_COLS = 6;
 	var ADDRESS_PARTS = ['street', 'street2', 'city', 'state', 'zip', 'country'];
 	var ADDRESS_DEFAULT = ['street', 'city', 'state', 'zip', 'country'];
 	var PART_LABELS = { street: 'Street address', street2: 'Apartment, suite, etc.', city: 'City', state: 'State / Province', zip: 'ZIP / Postal code', country: 'Country' };
 	// Structured types (mirror FormTheory_Fields::NON_COND_SOURCE) cannot be conditional-logic sources.
-	var NON_COND_SOURCE = ['address', 'signature'];
+	var NON_COND_SOURCE = ['address', 'signature', 'repeater'];
 	var OPS = Object.assign({ is: 'is', isnot: 'is not', contains: 'contains', gt: 'greater than', lt: 'less than', empty: 'is empty', notempty: 'is not empty' }, I18N.ops || {});
 	var uid = 0;
 
@@ -229,6 +231,52 @@
 		});
 	}
 
+	// Repeater columns: label, type, dropdown choices, required; focus is restored after every redraw (WCAG 2.4.3).
+	function columnsEditor(f) {
+		f.columns = Array.isArray(f.columns) ? f.columns : [];
+		var typeOpts = {};
+		COL_TYPES.forEach(function (k) { typeOpts[k] = LABELS[k] || k; });
+		var fs = el('fieldset', { class: 'ftb-cols' }, [el('legend', { text: t('repeater_columns', 'Columns (1-6)') })]);
+		function nextColId() {
+			var max = 0;
+			f.columns.forEach(function (c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10); if (n > max) max = n; });
+			return 'c' + (max + 1);
+		}
+		function draw(focus) {
+			while (fs.childNodes.length > 1) fs.removeChild(fs.lastChild);
+			f.columns.forEach(function (c, i) {
+				var lab = textIn(c.label, function (v) { c.label = v; });
+				lab.setAttribute('data-ftb-col', i + ':label');
+				var typ = select(typeOpts, c.type || 'text', function (v) { c.type = v; if (v === 'select' && !(c.options || []).length) c.options = [t('option_1', 'Option 1'), t('option_2', 'Option 2')]; draw(i + ':type'); });
+				typ.setAttribute('data-ftb-col', i + ':type');
+				var kids = [labelled(t('column_label', 'Column label'), lab), labelled(t('column_type', 'Column type'), typ)];
+				if (c.type === 'select') {
+					var ta = el('textarea', { rows: 3, class: 'large-text', oninput: function (e) { c.options = e.target.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); } });
+					ta.value = (c.options || []).join('\n');
+					kids.push(labelled(t('column_choices', 'Dropdown choices (one per line)'), ta));
+				}
+				kids.push(check(t('required', 'Required'), c.required, function (v) { c.required = v; }));
+				var rm = el('button', { type: 'button', class: 'button ftb-danger', text: t('remove', 'Remove'), 'aria-label': fmt(t('remove_column_n', 'Remove column %d'), i + 1), 'data-ftb-col': i + ':remove', onclick: function () {
+					if (f.columns.length <= 1) return;
+					f.columns.splice(i, 1); draw(Math.min(i, f.columns.length - 1) + ':label'); announce(t('column_removed', 'Column removed'));
+				} });
+				if (f.columns.length <= 1) rm.setAttribute('aria-disabled', 'true');
+				kids.push(rm);
+				fs.appendChild(el('div', { class: 'ftb-col', role: 'group', 'aria-label': fmt(t('column_n', 'Column %d'), i + 1) }, kids));
+			});
+			var add = el('button', { type: 'button', class: 'button', text: t('add_column', 'Add column'), 'data-ftb-col': 'add', onclick: function () {
+				if (f.columns.length >= MAX_COLS) return;
+				f.columns.push({ id: nextColId(), label: '', type: 'text', options: [], required: false });
+				draw((f.columns.length - 1) + ':label'); announce(t('column_added', 'Column added'));
+			} });
+			if (f.columns.length >= MAX_COLS) add.setAttribute('aria-disabled', 'true');
+			fs.appendChild(add);
+			if (focus) { var tg = fs.querySelector('[data-ftb-col="' + focus + '"]'); if (tg) tg.focus(); }
+		}
+		draw();
+		return fs;
+	}
+
 	function card(f, i) {
 		var n = cfg.fields.length;
 		function cardTitle(label) { var tl = LABELS[f.type] || f.type; return label ? fmt(t('card_title', '%1$s: %2$s'), tl, label) : tl; }
@@ -270,6 +318,25 @@
 			var rm = textIn(f.max == null ? 5 : f.max, function (v) { var n = parseInt(v, 10); f.max = isNaN(n) ? 5 : Math.max(3, Math.min(10, n)); }, 'number');
 			rm.min = 3; rm.max = 10;
 			body.appendChild(labelled(t('rating_max', 'Number of stars (3-10)'), rm));
+		}
+		if (f.type === 'repeater') {
+			body.appendChild(columnsEditor(f));
+			var minIn = textIn(f.min_rows == null ? 1 : f.min_rows, function () {}, 'number');
+			var maxIn = textIn(f.max_rows == null ? 5 : f.max_rows, function () {}, 'number');
+			minIn.min = 0; minIn.max = 20; maxIn.min = 1; maxIn.max = 20;
+			minIn.addEventListener('input', function (e) {
+				var n = parseInt(e.target.value, 10);
+				f.min_rows = isNaN(n) ? 1 : Math.max(0, Math.min(20, n));
+				if ((f.max_rows == null ? 5 : f.max_rows) < f.min_rows) { f.max_rows = f.min_rows; maxIn.value = String(f.max_rows); }
+			});
+			maxIn.addEventListener('input', function (e) {
+				var n = parseInt(e.target.value, 10);
+				f.max_rows = Math.max(f.min_rows == null ? 1 : f.min_rows, isNaN(n) ? 5 : Math.max(1, Math.min(20, n)));
+			});
+			body.appendChild(labelled(t('min_rows_label', 'Minimum rows (0-20)'), minIn));
+			body.appendChild(labelled(t('max_rows_label', 'Maximum rows (1-20)'), maxIn));
+			var addIn = textIn(f.add_label, function (v) { f.add_label = v; }); addIn.maxLength = 60;
+			body.appendChild(labelled(t('add_row_label', 'Add button text'), addIn));
 		}
 		if (f.type === 'address') {
 			if (!Array.isArray(f.parts) || !f.parts.length) f.parts = ADDRESS_DEFAULT.slice();
@@ -338,6 +405,7 @@
 				var f = { id: nextId(), type: tp, label: tp === 'page' ? '' : LABELS[tp], required: false, options: ['select', 'radio', 'checkbox'].indexOf(tp) !== -1 ? [t('option_1', 'Option 1'), t('option_2', 'Option 2')] : [], cond: { enabled: false, action: 'show', logic: 'all', rules: [] } };
 				if (tp === 'file') { f.allowed = 'jpg,jpeg,png,pdf'; f.max_mb = 5; }
 				if (tp === 'rating') f.max = 5;
+				if (tp === 'repeater') { f.columns = [{ id: 'c1', label: fmt(t('column_n', 'Column %d'), 1), type: 'text', options: [], required: false }]; f.min_rows = 1; f.max_rows = 5; f.add_label = ''; }
 				if (tp === 'address') { f.parts = ADDRESS_DEFAULT.slice(); f.country_default = ''; }
 				if (tp === 'calc') { f.formula = ''; f.decimals = 2; f.prefix = ''; f.suffix = ''; }
 				cfg.fields.push(f);
