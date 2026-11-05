@@ -18,6 +18,7 @@ class FormTheory_Admin {
 		add_action( 'admin_post_formtheory_export_form', array( $this, 'handle_export_form' ) );
 		add_action( 'admin_post_formtheory_import', array( $this, 'handle_import' ) );
 		add_action( 'admin_post_formtheory_file', array( $this, 'handle_file' ) );
+		add_action( 'admin_post_formtheory_webhook_retry', array( $this, 'handle_webhook_retry' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_init', array( 'FormTheory_Recaptcha', 'register_setting' ) );
 	}
@@ -27,6 +28,7 @@ class FormTheory_Admin {
 		add_submenu_page( 'formtheory', 'Forms', 'Forms', self::CAP, 'formtheory', array( $this, 'page_forms' ) );
 		add_submenu_page( 'formtheory', 'New Form', 'New Form', self::CAP, 'formtheory-edit', array( $this, 'page_edit' ) );
 		add_submenu_page( 'formtheory', 'Entries', 'Entries', self::CAP, 'formtheory-entries', array( $this, 'page_entries' ) );
+		add_submenu_page( 'formtheory', __( 'Webhook Log', 'formtheory' ), __( 'Webhook Log', 'formtheory' ), self::CAP, 'formtheory-webhooks', array( $this, 'page_webhooks' ) );
 		add_submenu_page( 'formtheory', 'Settings', 'Settings', self::CAP, 'formtheory-settings', array( $this, 'page_settings' ) );
 	}
 
@@ -287,6 +289,86 @@ class FormTheory_Admin {
 		return $out;
 	}
 
+	public function page_webhooks() {
+		if ( ! current_user_can( self::CAP ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'formtheory' ), 403 );
+		}
+		$status = isset( $_GET['status'] ) ? sanitize_key( $_GET['status'] ) : '';
+		$status = in_array( $status, array( 'pending', 'ok', 'failed' ), true ) ? $status : '';
+		$per    = 50;
+		$paged  = max( 1, isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1 );
+		$total  = FormTheory_DB::count_webhook_log( $status );
+		$rows   = FormTheory_DB::list_webhook_log( $per, ( $paged - 1 ) * $per, $status );
+		$tabs   = array(
+			''        => __( 'All', 'formtheory' ),
+			'pending' => __( 'Pending', 'formtheory' ),
+			'ok'      => __( 'OK', 'formtheory' ),
+			'failed'  => __( 'Failed', 'formtheory' ),
+		);
+
+		echo '<div class="wrap"><h1 class="wp-heading-inline">' . esc_html__( 'Webhook Log', 'formtheory' ) . '</h1>';
+		$this->notice();
+		echo '<ul class="subsubsub ft-status">';
+		$i = 0;
+		foreach ( $tabs as $key => $label ) {
+			printf(
+				'<li><a href="%s"%s>%s</a>%s</li>',
+				esc_url( $this->admin_url( 'formtheory-webhooks', '' === $key ? array() : array( 'status' => $key ) ) ),
+				$status === $key ? ' class="current" aria-current="page"' : '',
+				esc_html( $label ),
+				++$i < count( $tabs ) ? ' |' : ''
+			);
+		}
+		echo '</ul>';
+
+		echo '<table class="widefat striped ft-table"><caption class="screen-reader-text">' . esc_html__( 'Webhook deliveries', 'formtheory' ) . '</caption><thead><tr>';
+		foreach ( array( __( 'Time', 'formtheory' ), __( 'Form', 'formtheory' ), __( 'URL', 'formtheory' ), __( 'Status', 'formtheory' ), __( 'Code', 'formtheory' ), __( 'Attempts', 'formtheory' ) ) as $h ) {
+			echo '<th scope="col">' . esc_html( $h ) . '</th>';
+		}
+		echo '<th scope="col"><span class="screen-reader-text">' . esc_html__( 'Actions', 'formtheory' ) . '</span></th></tr></thead><tbody>';
+		if ( ! $rows ) {
+			echo '<tr><td colspan="7">' . esc_html__( 'No webhook deliveries.', 'formtheory' ) . '</td></tr>';
+		}
+		$titles = array();
+		foreach ( $rows as $r ) {
+			$fid = (int) $r['form_id'];
+			if ( ! isset( $titles[ $fid ] ) ) {
+				$f              = FormTheory_DB::get_form( $fid );
+				$titles[ $fid ] = $f ? (string) $f['title'] : '#' . $fid;
+			}
+			$st = (string) $r['status'];
+			echo '<tr><td>' . esc_html( $r['updated_at'] ) . '</td><td>' . esc_html( $titles[ $fid ] ) . '</td>';
+			echo '<td>' . esc_html( FormTheory_Webhooks::display_url( $r['url'] ) ) . '</td>';
+			echo '<td>' . esc_html( $st );
+			if ( '' !== (string) $r['error'] ) {
+				echo '<span class="screen-reader-text"> ' . esc_html( $r['error'] ) . '</span>';
+			}
+			echo '</td><td>' . ( (int) $r['http_code'] ? (int) $r['http_code'] : '&ndash;' ) . '</td><td>' . (int) $r['attempts'] . '</td><td>';
+			if ( 'failed' === $st ) {
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+				wp_nonce_field( 'formtheory_webhook_retry' );
+				echo '<input type="hidden" name="action" value="formtheory_webhook_retry"><input type="hidden" name="log" value="' . (int) $r['id'] . '">';
+				/* translators: %d: webhook log id. */
+				echo '<button type="submit" class="button" aria-label="' . esc_attr( sprintf( __( 'Retry webhook %d', 'formtheory' ), (int) $r['id'] ) ) . '">' . esc_html__( 'Retry', 'formtheory' ) . '</button></form>';
+			}
+			echo '</td></tr>';
+		}
+		echo '</tbody></table>';
+
+		$pages = (int) ceil( $total / $per );
+		if ( $pages > 1 ) {
+			echo '<nav class="tablenav" aria-label="' . esc_attr__( 'Pagination', 'formtheory' ) . '"><div class="tablenav-pages">';
+			echo wp_kses_post( paginate_links( array(
+				'base'    => add_query_arg( 'paged', '%#%' ),
+				'format'  => '',
+				'current' => $paged,
+				'total'   => $pages,
+			) ) );
+			echo '</div></nav>';
+		}
+		echo '</div>';
+	}
+
 	public function page_settings() {
 		if ( ! current_user_can( self::CAP ) ) {
 			return;
@@ -326,6 +408,7 @@ class FormTheory_Admin {
 			'note'    => __( 'Note saved.', 'formtheory' ),
 			'imported'   => __( 'Form imported.', 'formtheory' ),
 			'duplicated' => __( 'Form duplicated.', 'formtheory' ),
+			'webhook_retry' => __( 'Webhook retry scheduled.', 'formtheory' ),
 		);
 		if ( 'import_error' === $msg ) {
 			$err    = isset( $_GET['ft_err'] ) ? sanitize_key( $_GET['ft_err'] ) : '';
@@ -359,6 +442,14 @@ class FormTheory_Admin {
 		$cfg   = FormTheory_Fields::sanitize_config( $raw );
 		$id    = FormTheory_DB::save_form( $id, $title, $cfg );
 		wp_safe_redirect( $this->admin_url( 'formtheory-edit', array( 'id' => $id, 'ft_msg' => 'saved' ) ) );
+		exit;
+	}
+
+	public function handle_webhook_retry() {
+		$this->guard( 'formtheory_webhook_retry' );
+		$id = isset( $_POST['log'] ) ? absint( $_POST['log'] ) : 0;
+		FormTheory_Webhooks::retry( $id );
+		wp_safe_redirect( $this->admin_url( 'formtheory-webhooks', array( 'ft_msg' => 'webhook_retry' ) ) );
 		exit;
 	}
 

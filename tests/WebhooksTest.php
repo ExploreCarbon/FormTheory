@@ -1,15 +1,43 @@
 <?php
 namespace FormTheory\Tests;
 
+use Mockery;
 use Brain\Monkey\Functions;
 
 class WebhooksTest extends TestCase {
 
 	private $calls = array();
 	private $events = array();
+	private $log = array();
+
+	protected function tearDown(): void {
+		unset( $GLOBALS['wpdb'] );
+		parent::tearDown();
+	}
 
 	protected function setUp(): void {
 		parent::setUp();
+		$log                   = &$this->log;
+		$wpdb                  = Mockery::mock( 'stdClass' );
+		$wpdb->prefix          = 'wp_';
+		$wpdb->insert_id       = 0;
+		$wpdb->shouldReceive( 'prepare' )->andReturnUsing( function ( $sql, ...$a ) {
+			return $sql;
+		} );
+		$wpdb->shouldReceive( 'insert' )->andReturnUsing( function ( $t, $d ) use ( &$log, $wpdb ) {
+			$d['id']          = count( $log ) + 1;
+			$log[ $d['id'] ]  = $d;
+			$wpdb->insert_id  = $d['id'];
+			return 1;
+		} );
+		$wpdb->shouldReceive( 'get_row' )->andReturnUsing( function () use ( &$log ) {
+			return end( $log );
+		} );
+		$wpdb->shouldReceive( 'update' )->andReturn( 1 );
+		$GLOBALS['wpdb'] = $wpdb;
+		Functions\when( 'current_time' )->justReturn( '2026-01-01 00:00:00' );
+		Functions\when( 'wp_remote_retrieve_response_code' )->justReturn( 200 );
+		Functions\when( 'is_wp_error' )->justReturn( false );
 		$calls = &$this->calls;
 		Functions\when( 'wp_safe_remote_post' )->alias( function ( $url, $args ) use ( &$calls ) {
 			$calls[] = compact( 'url', 'args' );
@@ -26,7 +54,7 @@ class WebhooksTest extends TestCase {
 	private function fire( $entry_id, $form, $data ) {
 		\FormTheory_Webhooks::dispatch( $entry_id, $form, $data );
 		foreach ( $this->events as $e ) {
-			\FormTheory_Webhooks::send( ...$e['args'] );
+			\FormTheory_Webhooks::deliver( ...$e['args'] );
 		}
 	}
 
@@ -34,8 +62,10 @@ class WebhooksTest extends TestCase {
 		\FormTheory_Webhooks::dispatch( 12, $this->form( array( $this->hook() ) ), array( 'name' => 'Ann' ) );
 		$this->assertCount( 0, $this->calls );
 		$this->assertCount( 1, $this->events );
-		$this->assertSame( 'formtheory_send_webhook', $this->events[0]['hook'] );
-		$this->assertSame( 'https://hook.test/in', $this->events[0]['args'][0] );
+		$this->assertSame( 'formtheory_deliver_webhook', $this->events[0]['hook'] );
+		$this->assertSame( array( 1 ), $this->events[0]['args'] );
+		$this->assertSame( 'https://hook.test/in', $this->log[1]['url'] );
+		$this->assertSame( 'pending', $this->log[1]['status'] );
 	}
 
 	private function form( array $hooks ) {
@@ -107,5 +137,16 @@ class WebhooksTest extends TestCase {
 		$cond = array( 'enabled' => true, 'action' => 'show', 'logic' => 'all', 'rules' => array( array( 'field' => 'name', 'op' => 'is', 'value' => 'Bob' ) ) );
 		$this->fire( 12, $this->form( array( $this->hook( array( 'cond' => $cond ) ) ) ), array( 'name' => 'Ann' ) );
 		$this->assertCount( 0, $this->calls );
+	}
+
+	public function test_legacy_send_still_posts() {
+		\FormTheory_Webhooks::send( 'https://hook.test/in', array( 'body' => 'x', 'headers' => array() ) );
+		$this->assertCount( 1, $this->calls );
+	}
+
+	public function test_init_registers_both_hooks() {
+		\FormTheory_Webhooks::init();
+		$this->assertNotFalse( has_action( 'formtheory_deliver_webhook', array( 'FormTheory_Webhooks', 'deliver' ) ) );
+		$this->assertNotFalse( has_action( 'formtheory_send_webhook', array( 'FormTheory_Webhooks', 'send' ) ) );
 	}
 }

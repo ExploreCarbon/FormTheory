@@ -97,6 +97,24 @@ class FormTheory_DB {
 			KEY form_id (form_id)
 		) $charset;" );
 
+		$log = self::webhook_log_table();
+		dbDelta( "CREATE TABLE $log (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			form_id bigint(20) unsigned NOT NULL,
+			entry_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			url varchar(2048) NOT NULL DEFAULT '',
+			request longtext NOT NULL,
+			status varchar(10) NOT NULL DEFAULT 'pending',
+			http_code smallint(5) unsigned NOT NULL DEFAULT 0,
+			attempts tinyint(3) unsigned NOT NULL DEFAULT 0,
+			error varchar(255) NOT NULL DEFAULT '',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			KEY form_id (form_id),
+			KEY status (status)
+		) $charset;" );
+
 		// Upgrading from < 1.2.0: entries that predate the status column count as read.
 		if ( $prev && version_compare( (string) $prev, '1.2.0', '<' ) ) {
 			$wpdb->query( "UPDATE $entries SET status = 'read'" );
@@ -360,7 +378,74 @@ class FormTheory_DB {
 			self::delete_entry( (int) $id );
 			$n++;
 		}
+		// Webhook log rows carry payload copies, so they follow the same retention window.
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM ' . self::webhook_log_table() . ' WHERE created_at < %s', $cutoff ) );
 		return $n;
+	}
+
+	/** @param array $request { body, headers } incl. signature header; never the secret. @return int log id */
+	public static function log_webhook( $form_id, $entry_id, $url, array $request ) {
+		global $wpdb;
+		$now = current_time( 'mysql' );
+		$wpdb->insert(
+			self::webhook_log_table(),
+			array(
+				'form_id'    => (int) $form_id,
+				'entry_id'   => (int) $entry_id,
+				'url'        => (string) $url,
+				'request'    => wp_json_encode( $request ),
+				'status'     => 'pending',
+				'http_code'  => 0,
+				'attempts'   => 0,
+				'error'      => '',
+				'created_at' => $now,
+				'updated_at' => $now,
+			),
+			array( '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s' )
+		);
+		return (int) $wpdb->insert_id;
+	}
+
+	/** Only status, http_code, attempts and error are updatable. */
+	public static function update_webhook_log( $id, array $fields ) {
+		global $wpdb;
+		$formats = array( 'status' => '%s', 'http_code' => '%d', 'attempts' => '%d', 'error' => '%s' );
+		$data    = array_intersect_key( $fields, $formats );
+		if ( ! $data ) {
+			return;
+		}
+		$fmt                = array_values( array_intersect_key( $formats, $data ) );
+		$data['updated_at'] = current_time( 'mysql' );
+		$fmt[]              = '%s';
+		$wpdb->update( self::webhook_log_table(), $data, array( 'id' => (int) $id ), $fmt, array( '%d' ) );
+	}
+
+	public static function get_webhook_log( $id ) {
+		global $wpdb;
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::webhook_log_table() . ' WHERE id = %d', (int) $id ), ARRAY_A );
+		return $row ? $row : null;
+	}
+
+	private static function webhook_where( $status ) {
+		return in_array( $status, array( 'pending', 'ok', 'failed' ), true ) ? array( ' WHERE status = %s', array( $status ) ) : array( '', array() );
+	}
+
+	public static function list_webhook_log( $limit, $offset, $status = '' ) {
+		global $wpdb;
+		list( $where, $params ) = self::webhook_where( (string) $status );
+		$params[]               = max( 1, (int) $limit );
+		$params[]               = max( 0, (int) $offset );
+		return (array) $wpdb->get_results(
+			$wpdb->prepare( 'SELECT * FROM ' . self::webhook_log_table() . $where . ' ORDER BY id DESC LIMIT %d OFFSET %d', $params ),
+			ARRAY_A
+		);
+	}
+
+	public static function count_webhook_log( $status = '' ) {
+		global $wpdb;
+		list( $where, $params ) = self::webhook_where( (string) $status );
+		$sql                    = 'SELECT COUNT(*) FROM ' . self::webhook_log_table() . $where;
+		return (int) $wpdb->get_var( $params ? $wpdb->prepare( $sql, $params ) : $sql );
 	}
 
 	/** Entries whose data has an exact (case-insensitive) scalar value equal to $email. */

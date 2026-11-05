@@ -61,7 +61,15 @@ class PrivacyTest extends TestCase {
 			} ) )->andReturn( array( '3', '4' ) );
 		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
 		$this->wpdb->shouldReceive( 'delete' )->twice()->andReturn( 1 );
+		$sqls = array();
+		$this->wpdb->shouldReceive( 'query' )->once()->andReturnUsing( function ( $sql ) use ( &$sqls ) {
+			$sqls[] = $sql;
+			return 5;
+		} );
 		$this->assertSame( 2, \FormTheory_DB::purge_older_than( 10 ) );
+		$this->assertCount( 1, $sqls );
+		$this->assertStringContainsString( 'DELETE FROM wp_formtheory_webhook_log', $sqls[0] );
+		$this->assertStringContainsString( 'created_at < 2026-01-21 12:00:00', $sqls[0] );
 	}
 
 	public function test_email_match_is_exact_not_substring() {
