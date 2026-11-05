@@ -115,15 +115,6 @@ class FormTheory_Privacy {
 	}
 
 	private static function value_text( $v ) {
-		if ( is_array( $v ) ) {
-			if ( isset( $v['name'] ) && is_scalar( $v['name'] ) ) {
-				return (string) $v['name'];
-			}
-			if ( isset( $v['file'] ) && is_scalar( $v['file'] ) ) {
-				return (string) $v['file'];
-			}
-			return implode( ', ', array_map( 'strval', array_filter( $v, 'is_scalar' ) ) );
-		}
-		return is_scalar( $v ) ? (string) $v : '';
+		return FormTheory_Fields::value_to_text( $v );
 	}
 }

@@ -95,6 +95,32 @@ class PrivacyTest extends TestCase {
 		$this->assertSame( array( 2 ), array_map( function ( $e ) { return (int) $e['id']; }, $found ) );
 	}
 
+	private function export_values( array $data ) {
+		$this->rows( array( array( 'id' => '1', 'form_id' => '1', 'ip' => '1.2.3.4', 'user_id' => '0', 'created_at' => '2026-01-01 00:00:00', 'data' => wp_json_encode( array_merge( array( 'email' => 'a@b.co' ), $data ) ) ) ) );
+		$r    = \FormTheory_Privacy::export( 'a@b.co', 1 );
+		$out  = array();
+		foreach ( $r['data'][0]['data'] as $item ) {
+			$out[ $item['name'] ] = $item['value'];
+		}
+		return $out;
+	}
+
+	public function test_exporter_repeater_includes_row_values() {
+		$v = $this->export_values( array( 'rep' => array( array( 'n' => 'Apple', 'q' => '2' ), array( 'n' => 'Pear', 'q' => '3' ) ) ) );
+		$this->assertSame( 'Apple, 2; Pear, 3', $v['rep'] );
+	}
+
+	public function test_exporter_signature_hides_stored_filename() {
+		$v = $this->export_values( array( 'sig' => array( 'sig' => 'abc.png', 'name' => 'signature.png' ) ) );
+		$this->assertStringContainsString( '[signature]', $v['sig'] );
+		$this->assertStringNotContainsString( 'abc.png', $v['sig'] );
+	}
+
+	public function test_exporter_address_joined() {
+		$v = $this->export_values( array( 'addr' => array( 'street' => '1 A', 'city' => '', 'zip' => '9' ) ) );
+		$this->assertSame( '1 A, 9', $v['addr'] );
+	}
+
 	public function test_exporter_empty_when_no_match() {
 		$this->rows( array() );
 		$r = \FormTheory_Privacy::export( 'nobody@example.com', 1 );
