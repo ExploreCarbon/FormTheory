@@ -280,7 +280,7 @@ class FormTheory_Admin {
 		$out['turnstile_secret']    = sanitize_text_field( $in['turnstile_secret'] ?? '' );
 		$out['delete_on_uninstall'] = ! empty( $in['delete_on_uninstall'] );
 		if ( isset( $in['retention_days'] ) ) {
-			$out['retention_days'] = min( absint( $in['retention_days'] ), 3650 );
+			$out['retention_days'] = max( 0, min( (int) $in['retention_days'], 3650 ) );
 		} elseif ( ! isset( $out['retention_days'] ) ) {
 			$out['retention_days'] = 0;
 		}

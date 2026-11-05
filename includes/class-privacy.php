@@ -24,8 +24,8 @@ class FormTheory_Privacy {
 
 	public static function retention_days() {
 		$s = get_option( 'formtheory_settings', array() );
-		$d = is_array( $s ) && isset( $s['retention_days'] ) ? absint( $s['retention_days'] ) : 0;
-		return min( $d, self::MAX_DAYS );
+		$d = is_array( $s ) && isset( $s['retention_days'] ) ? (int) $s['retention_days'] : 0;
+		return max( 0, min( $d, self::MAX_DAYS ) );
 	}
 
 	public static function run_purge() {
@@ -97,14 +97,15 @@ class FormTheory_Privacy {
 		$all     = FormTheory_DB::find_entries_by_email( (string) $email );
 		$removed = 0;
 		foreach ( array_slice( $all, 0, self::PAGE_SIZE ) as $e ) {
-			FormTheory_DB::delete_entry( (int) $e['id'] );
-			$removed++;
+			if ( FormTheory_DB::delete_entry( (int) $e['id'] ) ) {
+				$removed++;
+			}
 		}
 		return array(
 			'items_removed'  => $removed,
 			'items_retained' => 0,
 			'messages'       => array(),
-			'done'           => count( $all ) <= self::PAGE_SIZE,
+			'done'           => 0 === $removed || count( $all ) <= self::PAGE_SIZE,
 		);
 	}
 

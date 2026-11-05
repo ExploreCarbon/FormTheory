@@ -103,10 +103,42 @@ class PrivacyTest extends TestCase {
 		$this->assertTrue( $r['done'] );
 	}
 
+	public function test_stored_negative_or_junk_retention_yields_zero_and_no_purge() {
+		foreach ( array( -7, 'abc', null ) as $bad ) {
+			Functions\when( 'get_option' )->justReturn( array( 'retention_days' => $bad ) );
+			$this->assertSame( 0, \FormTheory_Privacy::retention_days() );
+		}
+		$this->wpdb->shouldNotReceive( 'get_col' );
+		$this->assertSame( 0, \FormTheory_Privacy::run_purge() );
+	}
+
+	public function test_eraser_done_when_nothing_actually_deleted() {
+		$rows = array();
+		for ( $i = 1; $i <= 60; $i++ ) {
+			$rows[] = $this->row( $i, 'a@b.co' );
+		}
+		$this->rows( $rows );
+		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
+		$this->wpdb->shouldReceive( 'delete' )->andReturn( false );
+		$r = \FormTheory_Privacy::erase( 'a@b.co', 1 );
+		$this->assertSame( 0, $r['items_removed'] );
+		$this->assertTrue( $r['done'] );
+	}
+
+	public function test_email_match_non_ascii_case_insensitive() {
+		$this->rows( array( $this->row( 1, "\u{c9}MILE@example.com" ) ) );
+		$found = \FormTheory_DB::find_entries_by_email( "\u{e9}mile@example.com" );
+		$this->assertCount( 1, $found );
+	}
+
 	public function test_sanitize_retention_days() {
 		Functions\when( 'get_option' )->justReturn( array() );
 		$out = \FormTheory_Admin::sanitize_settings( array( 'retention_days' => '-4' ) );
-		$this->assertSame( 4, $out['retention_days'] );
+		$this->assertSame( 0, $out['retention_days'] );
+		$out = \FormTheory_Admin::sanitize_settings( array( 'retention_days' => 'abc' ) );
+		$this->assertSame( 0, $out['retention_days'] );
+		$out = \FormTheory_Admin::sanitize_settings( array( 'retention_days' => '' ) );
+		$this->assertSame( 0, $out['retention_days'] );
 		$out = \FormTheory_Admin::sanitize_settings( array( 'retention_days' => '99999' ) );
 		$this->assertSame( 3650, $out['retention_days'] );
 		$out = \FormTheory_Admin::sanitize_settings( array() );

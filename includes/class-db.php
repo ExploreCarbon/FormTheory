@@ -335,7 +335,7 @@ class FormTheory_DB {
 				}
 			}
 		}
-		$wpdb->delete( self::entries_table(), array( 'id' => $id ), array( '%d' ) );
+		return (bool) $wpdb->delete( self::entries_table(), array( 'id' => $id ), array( '%d' ) );
 	}
 
 	/**
@@ -366,7 +366,7 @@ class FormTheory_DB {
 	/** Entries whose data has an exact (case-insensitive) scalar value equal to $email. */
 	public static function find_entries_by_email( $email ) {
 		global $wpdb;
-		$email = strtolower( trim( (string) $email ) );
+		$email = mb_strtolower( trim( (string) $email ) );
 		if ( '' === $email ) {
 			return array();
 		}
@@ -377,7 +377,7 @@ class FormTheory_DB {
 			$d = json_decode( $r['data'], true );
 			$d = is_array( $d ) ? $d : array();
 			foreach ( $d as $v ) {
-				if ( is_scalar( $v ) && strtolower( trim( (string) $v ) ) === $email ) {
+				if ( is_scalar( $v ) && mb_strtolower( trim( (string) $v ) ) === $email ) {
 					$r['data'] = $d;
 					$out[]     = $r;
 					break;
