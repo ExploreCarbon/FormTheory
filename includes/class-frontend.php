@@ -26,6 +26,7 @@ class FormTheory_Frontend {
 		return array(
 			'required'     => __( 'This field is required.', 'formtheory' ),
 			'attach_file'  => __( 'Please attach a file.', 'formtheory' ),
+			'complete_address' => __( 'Please complete the address.', 'formtheory' ),
 			'invalid_email' => __( 'Enter a valid email address.', 'formtheory' ),
 			'invalid_number' => __( 'Enter a number.', 'formtheory' ),
 			'invalid_phone' => __( 'Enter a valid phone number.', 'formtheory' ),
@@ -260,6 +261,19 @@ class FormTheory_Frontend {
 			$v = is_array( $v ) ? $v : array();
 			return array_values( array_intersect( array_map( 'sanitize_text_field', $v ), $f['options'] ) );
 		}
+		if ( 'address' === $f['type'] ) {
+			// Stored shape: enabled, non-empty parts only, in canonical order; nothing filled in => '' (keeps entries clean).
+			$v   = is_array( $v ) ? $v : array();
+			$out = array();
+			foreach ( FormTheory_Fields::address_parts( $f['parts'] ?? array() ) as $part ) {
+				$p = $v[ $part ] ?? '';
+				$p = is_string( $p ) ? mb_substr( sanitize_text_field( $p ), 0, 200 ) : '';
+				if ( '' !== $p ) {
+					$out[ $part ] = $p;
+				}
+			}
+			return $out ? $out : '';
+		}
 		if ( is_array( $v ) ) {
 			return '';
 		}
@@ -280,6 +294,24 @@ class FormTheory_Frontend {
 		if ( $empty ) {
 			return $f['required'] ? __( 'This field is required.', 'formtheory' ) : '';
 		}
+		if ( is_array( $v ) ) {
+			if ( 'address' === $f['type'] ) {
+				// Required: every enabled part except street2 must be filled. Optional: any subset is fine.
+				if ( $f['required'] ) {
+					foreach ( FormTheory_Fields::address_parts( $f['parts'] ?? array() ) as $part ) {
+						if ( 'street2' !== $part && empty( $v[ $part ] ) ) {
+							return __( 'Please complete the address.', 'formtheory' );
+						}
+					}
+				}
+				return '';
+			}
+			// Checkbox values were already intersected with the options in sanitize_value().
+			if ( 'checkbox' === $f['type'] ) {
+				return '';
+			}
+			return 'rating' === $f['type'] ? __( 'Choose a valid rating.', 'formtheory' ) : __( 'Invalid value.', 'formtheory' );
+		}
 		switch ( $f['type'] ) {
 			case 'email':
 				return is_email( $v ) ? '' : __( 'Enter a valid email address.', 'formtheory' );
@@ -296,7 +328,7 @@ class FormTheory_Frontend {
 			case 'radio':
 				return in_array( $v, $f['options'], true ) ? '' : __( 'Choose a valid option.', 'formtheory' );
 		}
-		return mb_strlen( $v ) > 10000 ? __( 'Too long.', 'formtheory' ) : '';
+		return is_string( $v ) && mb_strlen( $v ) > 10000 ? __( 'Too long.', 'formtheory' ) : '';
 	}
 
 	private function file_input( $f ) {
@@ -530,6 +562,30 @@ class FormTheory_Frontend {
 					checked( (string) $n, (string) $value, false ),
 					esc_html( $txt )
 				);
+			}
+			echo '</fieldset>';
+		} elseif ( 'address' === $f['type'] ) {
+			// One labelled text input per part inside a fieldset; required state is on each required input (street2 never), error state on the fieldset.
+			$labels = array(
+				'street'  => __( 'Street address', 'formtheory' ),
+				'street2' => __( 'Apartment, suite, etc.', 'formtheory' ),
+				'city'    => __( 'City', 'formtheory' ),
+				'state'   => __( 'State / Province', 'formtheory' ),
+				'zip'     => __( 'ZIP / Postal code', 'formtheory' ),
+				'country' => __( 'Country', 'formtheory' ),
+			);
+			$tokens = array( 'street' => 'address-line1', 'street2' => 'address-line2', 'city' => 'address-level2', 'state' => 'address-level1', 'zip' => 'postal-code', 'country' => 'country-name' );
+			$vals   = is_array( $value ) ? $value : array();
+			echo '<fieldset class="ft-address"' . $aria_base . '><legend>' . esc_html( $f['label'] ) . $req . $req_sr . '</legend>'; // phpcs:ignore -- $aria_base/$req static/escaped.
+			foreach ( FormTheory_Fields::address_parts( $f['parts'] ?? array() ) as $part ) {
+				$pid = $id . '-' . $part;
+				$pv  = isset( $vals[ $part ] ) && is_string( $vals[ $part ] ) ? $vals[ $part ] : '';
+				if ( 'country' === $part && '' === $pv ) {
+					$pv = (string) ( $f['country_default'] ?? '' );
+				}
+				$preq = $f['required'] && 'street2' !== $part ? ' aria-required="true"' : '';
+				echo '<div class="ft-addr-part ft-addr-' . esc_attr( $part ) . '"><label for="' . esc_attr( $pid ) . '">' . esc_html( $labels[ $part ] ) . '</label>';
+				echo '<input type="text" id="' . esc_attr( $pid ) . '" name="' . esc_attr( $name . '[' . $part . ']' ) . '" value="' . esc_attr( $pv ) . '" autocomplete="' . esc_attr( $tokens[ $part ] ) . '"' . $preq . '></div>'; // phpcs:ignore -- $preq static.
 			}
 			echo '</fieldset>';
 		} elseif ( 'consent' === $f['type'] ) {

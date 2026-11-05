@@ -26,7 +26,12 @@
 		});
 		return out;
 	}
-	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation', rating: 'Rating' }, I18N.types || {});
+	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation', rating: 'Rating', address: 'Address' }, I18N.types || {});
+	var ADDRESS_PARTS = ['street', 'street2', 'city', 'state', 'zip', 'country'];
+	var ADDRESS_DEFAULT = ['street', 'city', 'state', 'zip', 'country'];
+	var PART_LABELS = { street: 'Street address', street2: 'Apartment, suite, etc.', city: 'City', state: 'State / Province', zip: 'ZIP / Postal code', country: 'Country' };
+	// Structured types (mirror FormTheory_Fields::NON_COND_SOURCE) cannot be conditional-logic sources.
+	var NON_COND_SOURCE = ['address'];
 	var OPS = Object.assign({ is: 'is', isnot: 'is not', contains: 'contains', gt: 'greater than', lt: 'less than', empty: 'is empty', notempty: 'is not empty' }, I18N.ops || {});
 	var uid = 0;
 
@@ -98,7 +103,7 @@
 		f.cond = f.cond || { enabled: false, action: 'show', logic: 'all', rules: [] };
 		var box = el('div', { class: 'ftb-cond' });
 		var others = {};
-		cfg.fields.forEach(function (o) { if (o.id !== f.id && o.type !== 'page' && o.type !== 'html') others[o.id] = (o.label || t('no_label', '(no label)')) + ' [' + o.id + ']'; });
+		cfg.fields.forEach(function (o) { if (o.id !== f.id && o.type !== 'page' && o.type !== 'html' && NON_COND_SOURCE.indexOf(o.type) === -1) others[o.id] = (o.label || t('no_label', '(no label)')) + ' [' + o.id + ']'; });
 
 		function draw() {
 			box.textContent = '';
@@ -152,7 +157,7 @@
 		item.cond = item.cond || newCond();
 		var box = el('div', { class: 'ftb-cond' });
 		var others = {};
-		cfg.fields.forEach(function (o) { if (o.type !== 'page' && o.type !== 'html') others[o.id] = (o.label || t('no_label', '(no label)')) + ' [' + o.id + ']'; });
+		cfg.fields.forEach(function (o) { if (o.type !== 'page' && o.type !== 'html' && NON_COND_SOURCE.indexOf(o.type) === -1) others[o.id] = (o.label || t('no_label', '(no label)')) + ' [' + o.id + ']'; });
 		function draw() {
 			box.textContent = '';
 			box.appendChild(check(labelText, item.cond.enabled, function (v) {
@@ -266,6 +271,17 @@
 			rm.min = 3; rm.max = 10;
 			body.appendChild(labelled(t('rating_max', 'Number of stars (3-10)'), rm));
 		}
+		if (f.type === 'address') {
+			if (!Array.isArray(f.parts) || !f.parts.length) f.parts = ADDRESS_DEFAULT.slice();
+			var pfs = el('fieldset', { class: 'ftb-parts' }, [el('legend', { text: t('address_parts', 'Address parts to show') })]);
+			ADDRESS_PARTS.forEach(function (part) {
+				pfs.appendChild(check(t('part_' + part, PART_LABELS[part]), f.parts.indexOf(part) !== -1, function (v) {
+					f.parts = ADDRESS_PARTS.filter(function (p) { return p === part ? v : f.parts.indexOf(p) !== -1; });
+				}));
+			});
+			body.appendChild(pfs);
+			body.appendChild(labelled(t('country_default', 'Default country (optional)'), textIn(f.country_default, function (v) { f.country_default = v; })));
+		}
 		if (['page', 'html', 'hidden', 'calc'].indexOf(f.type) === -1) {
 			body.appendChild(check(t('required', 'Required'), f.required, function (v) { f.required = v; }));
 			if (['text', 'email', 'phone', 'number', 'textarea', 'select'].indexOf(f.type) !== -1) {
@@ -322,6 +338,7 @@
 				var f = { id: nextId(), type: tp, label: tp === 'page' ? '' : LABELS[tp], required: false, options: ['select', 'radio', 'checkbox'].indexOf(tp) !== -1 ? [t('option_1', 'Option 1'), t('option_2', 'Option 2')] : [], cond: { enabled: false, action: 'show', logic: 'all', rules: [] } };
 				if (tp === 'file') { f.allowed = 'jpg,jpeg,png,pdf'; f.max_mb = 5; }
 				if (tp === 'rating') f.max = 5;
+				if (tp === 'address') { f.parts = ADDRESS_DEFAULT.slice(); f.country_default = ''; }
 				if (tp === 'calc') { f.formula = ''; f.decimals = 2; f.prefix = ''; f.suffix = ''; }
 				cfg.fields.push(f);
 				render(f.id, null, true);

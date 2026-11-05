@@ -19,6 +19,9 @@
 .ft-choice { display: flex; align-items: center; gap: .5rem; min-height: 1.75rem; margin: .25rem 0; }
 .ft-choice input { width: 1.5rem; height: 1.5rem; min-width: 24px; min-height: 24px; margin: 0; flex: none; }
 .ft-choice label { padding-block: .15rem; }
+/* Address: one labelled text input per part, stacked. */
+.ft-addr-part { margin: 0 0 .75rem; }
+.ft-addr-part label { display: block; font-weight: 400; margin-bottom: .2rem; }
 /* Rating: real radios, visually stars. Filled vs outline glyph shapes (not colour alone); works without JS. */
 .ft-rating { display: flex; flex-wrap: wrap; align-items: center; }
 .ft-rating legend { flex: 0 0 100%; }

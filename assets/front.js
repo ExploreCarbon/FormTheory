@@ -167,7 +167,16 @@
 		var type = wrap.getAttribute('data-ft-type');
 		var vals = fieldValue(wrap.closest('form'), wrap.getAttribute('data-ft-field'));
 		var msg = '';
-		if (!vals.length) {
+		if (type === 'address') {
+			// Mirror of the server rule: required = every part marked aria-required (all enabled parts but street2) filled.
+			var isReq = wrap.getAttribute('data-ft-required') === '1';
+			var anyFilled = vals.some(function (v) { return v.trim() !== ''; });
+			if (!anyFilled) {
+				if (isReq) msg = t('required', 'This field is required.');
+			} else if (isReq && Array.prototype.some.call(wrap.querySelectorAll('input[aria-required="true"]'), function (el) { return el.value.trim() === ''; })) {
+				msg = t('complete_address', 'Please complete the address.');
+			}
+		} else if (!vals.length) {
 			if (wrap.getAttribute('data-ft-required') === '1') msg = type === 'file' ? t('attach_file', 'Please attach a file.') : t('required', 'This field is required.');
 		} else if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vals[0])) {
 			msg = t('invalid_email', 'Enter a valid email address.');

@@ -6,7 +6,13 @@ defined( 'ABSPATH' ) || exit;
  */
 class FormTheory_Fields {
 
-	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html', 'calc', 'rating' );
+	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html', 'calc', 'rating', 'address' );
+	/** Types whose value is structured: never a conditional-logic source. */
+	const NON_COND_SOURCE = array( 'address' );
+	/** Address parts in canonical (render and storage) order. */
+	const ADDRESS_PARTS = array( 'street', 'street2', 'city', 'state', 'zip', 'country' );
+	/** Address parts enabled when none are configured. */
+	const ADDRESS_DEFAULT_PARTS = array( 'street', 'city', 'state', 'zip', 'country' );
 	/** Layout-only types: never validated or stored. */
 	const NON_DATA = array( 'page', 'html' );
 	const OPS   = array( 'is', 'isnot', 'contains', 'gt', 'lt', 'empty', 'notempty' );
@@ -73,6 +79,10 @@ class FormTheory_Fields {
 			if ( 'rating' === $type ) {
 				$field['max'] = self::rating_max( $f['max'] ?? 5 );
 			}
+			if ( 'address' === $type ) {
+				$field['parts']           = self::address_parts( $f['parts'] ?? array() );
+				$field['country_default'] = mb_substr( sanitize_text_field( $f['country_default'] ?? '' ), 0, 100 );
+			}
 			if ( 'hidden' === $type ) {
 				$field['default'] = sanitize_text_field( $f['default'] ?? '' );
 			}
@@ -92,9 +102,9 @@ class FormTheory_Fields {
 			$field['cond'] = self::sanitize_cond( $f['cond'] ?? array() );
 			$fields[]      = $field;
 		}
-		// A calc field with no (valid) formula is never a condition source.
+		// A calc field with no (valid) formula, and structured types (address, ...), are never condition sources.
 		foreach ( $fields as $cf ) {
-			if ( 'calc' === $cf['type'] && '' === $cf['formula'] ) {
+			if ( ( 'calc' === $cf['type'] && '' === $cf['formula'] ) || in_array( $cf['type'], self::NON_COND_SOURCE, true ) ) {
 				unset( $ids[ $cf['id'] ] );
 			}
 		}
@@ -302,6 +312,12 @@ class FormTheory_Fields {
 			}
 		}
 		return implode( ', ', $parts );
+	}
+
+	/** Whitelisted address parts in canonical order; empty or invalid input falls back to the defaults. */
+	public static function address_parts( $raw ) {
+		$parts = array_values( array_intersect( self::ADDRESS_PARTS, is_array( $raw ) ? array_filter( $raw, 'is_string' ) : array() ) );
+		return $parts ? $parts : self::ADDRESS_DEFAULT_PARTS;
 	}
 
 	/** Rating scale size: integer 3-10, default 5 for missing or non-numeric input. */
