@@ -203,6 +203,7 @@ class FormTheory_Admin {
 			'submit_text'      => __( 'Submit button text', 'formtheory' ),
 			'confirmation_msg' => __( 'Confirmation message', 'formtheory' ),
 			'ajax'             => __( 'Submit without page reload (AJAX)', 'formtheory' ),
+			'save_resume'      => __( 'Allow visitors to save and continue later', 'formtheory' ),
 			'after_submit'     => __( 'After submit', 'formtheory' ),
 			'show_message'     => __( 'Show message', 'formtheory' ),
 			'go_to_page'       => __( 'Go to page (ID)', 'formtheory' ),

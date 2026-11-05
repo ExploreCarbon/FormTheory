@@ -64,6 +64,7 @@ class UninstallTest extends TestCase {
 				'DROP TABLE IF EXISTS wp_formtheory_forms',
 				'DROP TABLE IF EXISTS wp_formtheory_entries',
 				'DROP TABLE IF EXISTS wp_formtheory_webhook_log',
+				'DROP TABLE IF EXISTS wp_formtheory_drafts',
 			),
 			$queries
 		);

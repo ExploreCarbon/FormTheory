@@ -33,8 +33,11 @@ class FormTheory_Privacy {
 		return max( 0, min( $d, self::MAX_DAYS ) );
 	}
 
+	/** Entry purge honours retention_days (0 = keep); expired drafts are purged regardless. @return int entries purged */
 	public static function run_purge() {
-		return FormTheory_DB::purge_older_than( self::retention_days() );
+		$n = FormTheory_DB::purge_older_than( self::retention_days() );
+		FormTheory_Drafts::purge_expired();
+		return $n;
 	}
 
 	public static function register_exporter( $exporters ) {
@@ -65,7 +68,8 @@ class FormTheory_Privacy {
 			$ret = __( 'Entries are kept until an administrator deletes them.', 'formtheory' );
 		}
 		$text = '<p>' . esc_html__( 'When a visitor submits a FormTheory form, the site stores the submitted field data (including any uploaded files), the visitor\'s IP address, the WordPress user ID if they are logged in, and the submission date.', 'formtheory' ) . '</p>'
-			. '<p>' . esc_html( $ret ) . '</p>';
+			. '<p>' . esc_html( $ret ) . '</p>'
+			. '<p>' . esc_html__( 'If a form allows saving progress, the answers entered so far (never uploaded files or drawn signatures) are stored with a random link so the visitor can continue later; if they ask for it, the link is emailed to the address they enter. Saved progress is deleted when the form is submitted, and otherwise automatically after it expires (30 days by default).', 'formtheory' ) . '</p>';
 		wp_add_privacy_policy_content( 'FormTheory', wp_kses_post( $text ) );
 	}
 
@@ -100,7 +104,8 @@ class FormTheory_Privacy {
 	/** Erased rows drop out of the match set, so each call erases the first batch; $page is unused. */
 	public static function erase( $email, $page = 1 ) {
 		$all     = FormTheory_DB::find_entries_by_email( (string) $email );
-		$removed = 0;
+		// Saved drafts are anonymous but can hold the same address; erased on the first call only.
+		$removed = (int) $page <= 1 ? FormTheory_Drafts::erase_by_email( (string) $email ) : 0;
 		foreach ( array_slice( $all, 0, self::PAGE_SIZE ) as $e ) {
 			if ( FormTheory_DB::delete_entry( (int) $e['id'] ) ) {
 				$removed++;

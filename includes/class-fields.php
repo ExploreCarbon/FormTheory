@@ -38,6 +38,7 @@ class FormTheory_Fields {
 		$cfg['confirmation']   = wp_kses_post( $raw['confirmation'] ?? '' );
 		$cfg['notify_subject'] = sanitize_text_field( $raw['notify_subject'] ?? '' );
 		$cfg['ajax']              = ! array_key_exists( 'ajax', $raw ) || ! empty( $raw['ajax'] );
+		$cfg['save_resume']       = ! empty( $raw['save_resume'] );
 		$cfg['confirmation_type'] = in_array( $raw['confirmation_type'] ?? '', array( 'message', 'page', 'redirect' ), true ) ? $raw['confirmation_type'] : 'message';
 		$cfg['confirmation_page'] = absint( $raw['confirmation_page'] ?? 0 );
 		$cfg['confirmation_url']  = self::sanitize_url_template( $raw['confirmation_url'] ?? '' );

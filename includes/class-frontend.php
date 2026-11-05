@@ -11,6 +11,9 @@ class FormTheory_Frontend {
 		add_action( 'init', array( $this, 'maybe_submit' ) );
 		add_action( 'wp_ajax_formtheory_submit', array( $this, 'ajax_submit' ) );
 		add_action( 'wp_ajax_nopriv_formtheory_submit', array( $this, 'ajax_submit' ) );
+		add_action( 'wp_ajax_formtheory_save_draft', array( $this, 'ajax_save_draft' ) );
+		add_action( 'wp_ajax_nopriv_formtheory_save_draft', array( $this, 'ajax_save_draft' ) );
+		add_action( 'template_redirect', array( $this, 'resume_headers' ) );
 		add_action( 'init', array( $this, 'register_block' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
 	}
@@ -48,6 +51,10 @@ class FormTheory_Frontend {
 			'step_of'      => __( 'Step %1$d of %2$d', 'formtheory' ),
 			'went_wrong'   => __( 'Something went wrong. Please reload the page before submitting again.', 'formtheory' ),
 			'fix_errors'   => __( 'Please fix the errors below.', 'formtheory' ),
+			'save_saved'   => __( 'Your progress is saved. Copy the link below to continue later.', 'formtheory' ),
+			'save_emailed' => __( 'Your progress is saved and the link was emailed to you. You can also copy it below.', 'formtheory' ),
+			'link_copied'  => __( 'Link copied.', 'formtheory' ),
+			'copy_manual'  => __( 'The link is selected. Copy it with your keyboard or menu.', 'formtheory' ),
 		);
 	}
 
@@ -94,7 +101,8 @@ class FormTheory_Frontend {
 		}
 		$r = $this->process( $form, wp_unslash( $_POST ), $_FILES ); // phpcs:ignore -- sanitized per field in process().
 		if ( ! $r['ok'] ) {
-			self::$state[ $form_id ] = array( 'errors' => $r['errors'], 'values' => $r['values'] );
+			$rt = (string) wp_unslash( $_POST['ft_resume'] ?? '' ); // phpcs:ignore -- format-checked below; only echoed escaped into its own hidden input.
+			self::$state[ $form_id ] = array( 'errors' => $r['errors'], 'values' => $r['values'], 'resume' => FormTheory_Drafts::valid_token( $rt ) ? $rt : '' );
 			return;
 		}
 		if ( $r['redirect'] ) {
@@ -114,6 +122,153 @@ class FormTheory_Frontend {
 		$r = $this->process( $form, wp_unslash( $_POST ), $_FILES ); // phpcs:ignore -- sanitized per field in process().
 		unset( $r['values'] );
 		wp_send_json( $r );
+	}
+
+	/**
+	 * A page opened with ?ft_resume= shows saved answers: keep it out of page
+	 * caches and stop the token leaking as a cross-origin Referer.
+	 */
+	public function resume_headers() {
+		if ( ! isset( $_GET['ft_resume'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- presence check only.
+			return;
+		}
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
+		}
+		if ( ! headers_sent() ) {
+			nocache_headers();
+			header( 'Referrer-Policy: same-origin' );
+		}
+	}
+
+	/** AJAX: save a draft and answer { ok, url, expires, emailed } or { ok: false, error }. */
+	public function ajax_save_draft() {
+		$form = FormTheory_DB::get_form( absint( $_POST['formtheory_id'] ?? 0 ) );
+		$r    = $this->save_draft( $form, wp_unslash( $_POST ) ); // phpcs:ignore -- nonce and per-field sanitizing in save_draft().
+		$code = (int) ( $r['status'] ?? 200 );
+		unset( $r['status'] );
+		wp_send_json( $r, $code );
+	}
+
+	/**
+	 * Save-and-resume pipeline (no exit). Checks, in order: form allows it, honeypot,
+	 * nonce, signed time-trap (Turnstile/reCAPTCHA are left for the real submit:
+	 * their tokens are single use), email format, per-IP rate limits.
+	 *
+	 * @param array|null $form Form row.
+	 * @param array      $post Unslashed POST data.
+	 */
+	public function save_draft( $form, array $post ) {
+		$fail = function ( $msg, $code = 400 ) {
+			return array( 'ok' => false, 'error' => $msg, 'status' => $code );
+		};
+		if ( ! $form || empty( $form['config']['save_resume'] ) ) {
+			return $fail( __( 'Saving is not available for this form.', 'formtheory' ) );
+		}
+		$form_id = (int) $form['id'];
+		if ( ! empty( $post['ft_hp'] ) ) {
+			return $fail( __( 'Spam check failed. Please try again.', 'formtheory' ) );
+		}
+		if ( ! wp_verify_nonce( sanitize_text_field( (string) ( $post['_ft_nonce'] ?? '' ) ), 'formtheory_submit_' . $form_id ) ) {
+			return $fail( __( 'Your session expired. Please reload the page and try again.', 'formtheory' ), 403 );
+		}
+		$spam = FormTheory_Spam::check_stamp( $post );
+		if ( is_wp_error( $spam ) ) {
+			return $fail( $spam->get_error_message() );
+		}
+		$email = is_string( $post['email'] ?? null ) ? trim( $post['email'] ) : '';
+		if ( '' !== $email && ! is_email( $email ) ) {
+			return $fail( __( 'Enter a valid email address.', 'formtheory' ) );
+		}
+		if ( ( '' !== $email && ! FormTheory_Drafts::rate_hit( 'email', FormTheory_Drafts::RL_EMAIL ) )
+			|| ! FormTheory_Drafts::rate_hit( 'create', FormTheory_Drafts::RL_CREATE ) ) {
+			return $fail( __( 'Too many requests.', 'formtheory' ), 429 );
+		}
+
+		$fields = FormTheory_Fields::data_fields( $form['config']['fields'] );
+		$raw    = isset( $post['ft'] ) && is_array( $post['ft'] ) ? $post['ft'] : array();
+		$values = array();
+		foreach ( $fields as $f ) {
+			$v = $this->sanitize_value( $f, $raw[ $f['id'] ] ?? '' );
+			if ( 'consent' === $f['type'] ) {
+				$v = '' !== $v ? '1' : ''; // Stored as the posted form so the load-time re-sanitize maps it back.
+			}
+			$values[ $f['id'] ] = $v;
+		}
+		$this->sig_data = array();
+		$this->rep      = array();
+		$token          = FormTheory_Drafts::create( $form_id, $values, absint( $post['ft_page'] ?? 0 ), $fields );
+		if ( is_wp_error( $token ) ) {
+			return $fail( $token->get_error_message() );
+		}
+		$old = (string) ( $post['ft_resume'] ?? '' );
+		if ( FormTheory_Drafts::valid_token( $old ) && ! hash_equals( $old, $token ) ) {
+			FormTheory_Drafts::delete( $old, $form_id ); // The new save supersedes the draft this visit resumed.
+		}
+
+		$expires = time() + FormTheory_Drafts::ttl();
+		$base    = remove_query_arg( array( 'ft_resume', 'ft_done', 'ft_t' ), wp_validate_redirect( (string) wp_get_raw_referer(), home_url( '/' ) ) );
+		$url     = esc_url_raw( add_query_arg( 'ft_resume', $token, $base ) . '#formtheory-' . $form_id );
+		$emailed = false;
+		if ( '' !== $email ) {
+			$site = wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES );
+			/* translators: %s: site name. */
+			$subject = sprintf( __( 'Your saved form on %s', 'formtheory' ), $site );
+			/* translators: 1: site name, 2: resume link, 3: expiry date. */
+			$body    = sprintf( __( "You saved your progress on a form at %1\$s. Use this link to continue where you left off:\n\n%2\$s\n\nThe link works until %3\$s. Anyone who has this link can see the answers you saved, so do not share it.", 'formtheory' ), $site, $url, wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $expires ) );
+			$emailed = (bool) wp_mail( $email, $subject, $body );
+		}
+		return array(
+			'ok'      => true,
+			'url'     => $url,
+			'expires' => gmdate( 'c', $expires ),
+			'emailed' => $emailed,
+		);
+	}
+
+	/**
+	 * Stored draft values back through the normal per-field sanitizers. Files are
+	 * never restored; signatures only keep the typed name. Calc is recomputed later.
+	 */
+	public function resume_values( array $form, array $stored ) {
+		$out = array();
+		foreach ( FormTheory_Fields::data_fields( $form['config']['fields'] ) as $f ) {
+			if ( 'file' === $f['type'] || 'calc' === $f['type'] || ! array_key_exists( $f['id'], $stored ) ) {
+				continue;
+			}
+			$v = $stored[ $f['id'] ];
+			if ( 'signature' === $f['type'] ) {
+				$v = is_array( $v ) && isset( $v['typed'] ) ? array( 'typed' => $v['typed'] ) : '';
+			}
+			$out[ $f['id'] ] = $this->sanitize_value( $f, $v );
+		}
+		$this->sig_data = array();
+		$this->rep      = array();
+		return $out;
+	}
+
+	/**
+	 * Resolve ?ft_resume=. Every failure (malformed, unknown, expired, other form)
+	 * yields the identical result so links cannot be probed.
+	 *
+	 * @return array { values: array, page: int, token: string, notice: string }
+	 */
+	public function resume_state( array $form, $token ) {
+		$draft = FormTheory_Drafts::valid_token( $token ) ? FormTheory_Drafts::load( (int) $form['id'], $token ) : null;
+		if ( ! $draft ) {
+			return array(
+				'values' => array(),
+				'page'   => 0,
+				'token'  => '',
+				'notice' => '<p class="ft-resume-notice" role="status">' . esc_html__( 'This saved link has expired or is not valid.', 'formtheory' ) . '</p>',
+			);
+		}
+		return array(
+			'values' => $this->resume_values( $form, $draft['values'] ),
+			'page'   => (int) $draft['page'],
+			'token'  => $token,
+			'notice' => '<p class="ft-resume-notice" role="status">' . esc_html__( 'Your saved answers have been restored.', 'formtheory' ) . '</p>',
+		);
 	}
 
 	/**
@@ -236,6 +391,10 @@ class FormTheory_Frontend {
 		}
 
 		$entry_id = FormTheory_DB::insert_entry( $form_id, $data );
+		$resumed  = (string) ( $post['ft_resume'] ?? '' );
+		if ( FormTheory_Drafts::valid_token( $resumed ) ) {
+			FormTheory_Drafts::delete( $resumed, $form_id ); // Submitted: the saved draft is no longer needed.
+		}
 		FormTheory_Notify::send( $form, $data, $entry_id );
 		do_action( 'formtheory_after_submission', $entry_id, $form, $data );
 
@@ -679,7 +838,19 @@ class FormTheory_Frontend {
 			return '<div id="' . esc_attr( $anchor ) . '" class="ft-confirmation" role="status" tabindex="-1">' . $html . '</div>';
 		}
 
+		$save   = ! empty( $form['config']['save_resume'] );
+		$notice = '';
+		$start  = 0;
+		if ( $save && ! isset( self::$state[ $form_id ] ) && isset( $_GET['ft_resume'] ) ) {
+			$rs     = $this->resume_state( $form, wp_unslash( $_GET['ft_resume'] ) ); // phpcs:ignore -- format-checked in resume_state().
+			$notice = $rs['notice'];
+			$start  = $rs['page'];
+			if ( '' !== $rs['token'] ) {
+				self::$state[ $form_id ] = array( 'errors' => array(), 'values' => $rs['values'], 'resume' => $rs['token'] );
+			}
+		}
 		$state  = self::$state[ $form_id ] ?? array( 'errors' => array(), 'values' => array() );
+		$resume = $save ? (string) ( $state['resume'] ?? '' ) : '';
 		$errors = $state['errors'];
 		$values = $state['values'];
 		$fields = $form['config']['fields'];
@@ -697,11 +868,20 @@ class FormTheory_Frontend {
 			$pages[ count( $pages ) - 1 ][] = $f;
 		}
 		$multi = count( $pages ) > 1;
+		$start = max( 0, min( (int) $start, count( $pages ) - 1 ) );
 
 		ob_start();
 		$ajax = ! empty( $form['config']['ajax'] ) ? ' data-ft-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' : '';
+		if ( $save ) {
+			$ajax .= ' data-ft-save-url="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' . ( $start ? ' data-ft-start-page="' . (int) $start . '"' : '' );
+		}
 		echo '<form id="' . esc_attr( $anchor ) . '" class="ft-form" method="post" enctype="multipart/form-data" novalidate data-ft-form' . $ajax . '>'; // phpcs:ignore -- $ajax escaped above.
 		echo '<input type="hidden" name="formtheory_id" value="' . (int) $form_id . '">';
+		if ( '' !== $resume ) {
+			// The only place the resume token is echoed; never logged.
+			echo '<input type="hidden" name="ft_resume" value="' . esc_attr( $resume ) . '">';
+		}
+		echo $notice; // phpcs:ignore WordPress.Security.EscapeOutput -- built from esc_html__() in resume_state().
 		wp_nonce_field( 'formtheory_submit_' . $form_id, '_ft_nonce', false );
 		echo '<input type="hidden" name="ft_ts" value="' . esc_attr( FormTheory_Spam::stamp() ) . '">';
 		echo '<div class="ft-hp" aria-hidden="true"><label>' . esc_html__( 'Leave empty', 'formtheory' ) . '<input type="text" name="ft_hp" tabindex="-1" autocomplete="off"></label></div>';
@@ -737,6 +917,10 @@ class FormTheory_Frontend {
 				echo FormTheory_Recaptcha::render(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in render().
 			}
 			echo '<div class="ft-nav">';
+			if ( $save ) {
+				// Hidden until front.js runs (needs fetch); without JS the form works as before.
+				echo '<button type="button" class="ft-btn ft-save" data-ft-save aria-expanded="false" aria-controls="' . esc_attr( $anchor . '-save' ) . '" hidden>' . esc_html__( 'Save and continue later', 'formtheory' ) . '</button>';
+			}
 			if ( $multi && $i > 0 ) {
 				echo '<button type="button" class="ft-btn ft-prev" data-ft-prev>' . esc_html__( 'Previous', 'formtheory' ) . '</button>';
 			}
@@ -751,6 +935,23 @@ class FormTheory_Frontend {
 				echo '<button type="submit" class="ft-btn ft-submit">' . esc_html( $form['config']['submit_label'] ) . '</button>';
 			}
 			echo '</div></div>';
+		}
+		if ( $save ) {
+			// Panel inputs have no name attribute: they never travel with the real submit.
+			$sid = $anchor . '-save';
+			echo '<div class="ft-save-panel" id="' . esc_attr( $sid ) . '" data-ft-save-panel hidden>';
+			echo '<p class="ft-help">' . esc_html__( 'Get a private link to finish this form later. Uploaded files and drawn signatures are not saved.', 'formtheory' ) . '</p>';
+			echo '<label for="' . esc_attr( $sid . '-email' ) . '">' . esc_html__( 'Email me the link (optional)', 'formtheory' ) . '</label>';
+			echo '<input type="email" id="' . esc_attr( $sid . '-email' ) . '" autocomplete="email" data-ft-save-email>';
+			echo '<button type="button" class="ft-btn" data-ft-save-go>' . esc_html__( 'Save my progress', 'formtheory' ) . '</button>';
+			echo '<p class="ft-error" role="alert" data-ft-save-err hidden></p>';
+			echo '<div class="ft-save-result" data-ft-save-result hidden>';
+			echo '<label for="' . esc_attr( $sid . '-url' ) . '">' . esc_html__( 'Your link', 'formtheory' ) . '</label>';
+			echo '<input type="text" id="' . esc_attr( $sid . '-url' ) . '" readonly data-ft-save-link>';
+			echo '<button type="button" class="ft-btn" data-ft-save-copy>' . esc_html__( 'Copy link', 'formtheory' ) . '</button>';
+			echo '</div>';
+			echo '<p class="ft-save-live" role="status" aria-live="polite" data-ft-save-live></p>';
+			echo '</div>';
 		}
 		echo '</form>';
 		return ob_get_clean();

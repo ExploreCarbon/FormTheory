@@ -365,7 +365,9 @@ class SignatureTest extends TestCase {
 		$db->shouldReceive( 'esc_like' )->andReturnUsing( function ( $s ) {
 			return $s;
 		} );
-		$db->shouldReceive( 'get_results' )->andReturn( array( array( 'id' => 9, 'data' => json_encode( array( 'em' => 'a@b.co', 'sig' => $r ) ) ) ) );
+		$db->shouldReceive( 'get_results' )->andReturnUsing( function ( $sql ) use ( $r ) {
+			return false !== strpos( (string) $sql, 'formtheory_drafts' ) ? array() : array( array( 'id' => 9, 'data' => json_encode( array( 'em' => 'a@b.co', 'sig' => $r ) ) ) );
+		} );
 		$db->shouldReceive( 'get_row' )->andReturn( array( 'id' => 9, 'data' => json_encode( array( 'em' => 'a@b.co', 'sig' => $r ) ) ) );
 		$db->shouldReceive( 'delete' )->andReturn( 1 );
 		$GLOBALS['wpdb'] = $db;

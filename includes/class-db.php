@@ -18,13 +18,18 @@ class FormTheory_DB {
 		return $wpdb->prefix . 'formtheory_webhook_log';
 	}
 
+	public static function drafts_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'formtheory_drafts';
+	}
+
 	/**
 	 * Remove all plugin data. Only called from uninstall.php after the opt-in flag check.
 	 * Single-site scope: multisite per-blog cleanup is not handled.
 	 */
 	public static function uninstall() {
 		global $wpdb;
-		foreach ( array( self::forms_table(), self::entries_table(), self::webhook_log_table() ) as $table ) {
+		foreach ( array( self::forms_table(), self::entries_table(), self::webhook_log_table(), self::drafts_table() ) as $table ) {
 			$wpdb->query( "DROP TABLE IF EXISTS $table" );
 		}
 		foreach ( array( 'formtheory_settings', 'formtheory_recaptcha', 'formtheory_db_version' ) as $opt ) {
@@ -116,6 +121,21 @@ class FormTheory_DB {
 			KEY entry_id (entry_id)
 		) $charset;" );
 
+		$drafts = self::drafts_table();
+		dbDelta( "CREATE TABLE $drafts (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			form_id bigint(20) unsigned NOT NULL,
+			token_hash char(64) NOT NULL,
+			data longtext NOT NULL,
+			page tinyint(3) unsigned NOT NULL DEFAULT 0,
+			created_at datetime NOT NULL,
+			expires_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY token_hash (token_hash),
+			KEY expires_at (expires_at),
+			KEY form_id (form_id)
+		) $charset;" );
+
 		// Upgrading from < 1.2.0: entries that predate the status column count as read.
 		if ( $prev && version_compare( (string) $prev, '1.2.0', '<' ) ) {
 			$wpdb->query( "UPDATE $entries SET status = 'read'" );
@@ -153,6 +173,7 @@ class FormTheory_DB {
 			'confirmation_type' => 'message',
 			'confirmation_page' => 0,
 			'confirmation_url'  => '',
+			'save_resume'       => false,
 		);
 	}
 
@@ -210,6 +231,7 @@ class FormTheory_DB {
 		foreach ( self::get_entries( $id, 0, 0 ) as $e ) {
 			self::delete_entry( $e['id'] );
 		}
+		FormTheory_Drafts::delete_for_form( (int) $id );
 		$wpdb->delete( self::forms_table(), array( 'id' => $id ), array( '%d' ) );
 	}
 
@@ -525,7 +547,8 @@ class FormTheory_DB {
 		return function_exists( 'mb_strtolower' ) ? mb_strtolower( (string) $s, 'UTF-8' ) : strtolower( (string) $s );
 	}
 
-	private static function client_ip() {
+	/** REMOTE_ADDR only; proxy headers are client-controlled and never trusted. */
+	public static function client_ip() {
 		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 		return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
 	}

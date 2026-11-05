@@ -331,6 +331,97 @@
 		sync();
 	}
 
+	// The resume token now lives in the hidden ft_resume input: drop it from the address bar so it is not
+	// kept in history or sent as a Referer by later navigations.
+	function stripResumeParam() {
+		if (!window.history || !history.replaceState || !window.URL) return;
+		try {
+			var u = new URL(window.location.href);
+			if (!u.searchParams.has('ft_resume')) return;
+			u.searchParams.delete('ft_resume');
+			history.replaceState(history.state, '', u.toString());
+		} catch (e) { /* old browser: leave the URL alone */ }
+	}
+
+	// Save and continue later: progressive enhancement (button and panel stay hidden without fetch/FormData).
+	function initSave(form, pages, getCurrent) {
+		var url = form.getAttribute('data-ft-save-url');
+		var panel = form.querySelector('[data-ft-save-panel]');
+		var openers = Array.prototype.slice.call(form.querySelectorAll('[data-ft-save]'));
+		if (!url || !panel || !openers.length || !window.fetch || !window.FormData) return;
+		var email = panel.querySelector('[data-ft-save-email]');
+		var go = panel.querySelector('[data-ft-save-go]');
+		var err = panel.querySelector('[data-ft-save-err]');
+		var result = panel.querySelector('[data-ft-save-result]');
+		var link = panel.querySelector('[data-ft-save-link]');
+		var copy = panel.querySelector('[data-ft-save-copy]');
+		var live = panel.querySelector('[data-ft-save-live]');
+		if (form.querySelector('input[name="ft_resume"]')) stripResumeParam();
+		openers.forEach(function (b) { b.hidden = false; });
+
+		function say(msg) { live.textContent = ''; setTimeout(function () { live.textContent = msg; }, 30); }
+		function showErr(msg) { err.textContent = msg; err.hidden = !msg; }
+
+		openers.forEach(function (b) {
+			b.addEventListener('click', function () {
+				var open = panel.hidden;
+				panel.hidden = !open;
+				openers.forEach(function (o) { o.setAttribute('aria-expanded', open ? 'true' : 'false'); });
+				if (open) {
+					// Keep the panel next to the button that opened it (each page has its own).
+					b.closest('.ft-nav').insertAdjacentElement('afterend', panel);
+					email.focus();
+				}
+			});
+		});
+
+		function save() {
+			var data = new FormData(form);
+			// Never upload files or drawn signatures with a draft.
+			form.querySelectorAll('input[type=file], [data-ft-sig-data]').forEach(function (el) { if (el.name) data.delete(el.name); });
+			data.delete('action');
+			data.append('action', 'formtheory_save_draft');
+			data.append('ft_page', String(getCurrent()));
+			data.append('_wp_http_referer', window.location.href.split('#')[0]);
+			if (email.value.trim()) data.append('email', email.value.trim());
+			showErr('');
+			go.disabled = true;
+			panel.setAttribute('aria-busy', 'true');
+			fetch(url, { method: 'POST', body: data, credentials: 'same-origin' })
+				.then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+				.then(function (res) {
+					go.disabled = false;
+					panel.removeAttribute('aria-busy');
+					if (!res || !res.ok || !res.url) {
+						showErr((res && res.error) || t('went_wrong', 'Something went wrong. Please reload the page before submitting again.'));
+						return;
+					}
+					link.value = res.url;
+					result.hidden = false;
+					say(res.emailed ? t('save_emailed', 'Your progress is saved and the link was emailed to you. You can also copy it below.') : t('save_saved', 'Your progress is saved. Copy the link below to continue later.'));
+					link.focus();
+					link.select();
+				})
+				.catch(function () {
+					go.disabled = false;
+					panel.removeAttribute('aria-busy');
+					showErr(t('went_wrong', 'Something went wrong. Please reload the page before submitting again.'));
+				});
+		}
+
+		go.addEventListener('click', save);
+		// Enter in the email box saves instead of submitting the whole form.
+		email.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+		copy.addEventListener('click', function () {
+			function manual() { link.focus(); link.select(); say(t('copy_manual', 'The link is selected. Copy it with your keyboard or menu.')); }
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(link.value).then(function () { say(t('link_copied', 'Link copied.')); }, manual);
+			} else {
+				manual();
+			}
+		});
+	}
+
 	function init(form) {
 		form.querySelectorAll('[data-ft-repeater]').forEach(initRepeater);
 		var pages = Array.prototype.slice.call(form.querySelectorAll('[data-ft-page]'));
@@ -347,9 +438,11 @@
 			}
 		}
 
-		// Server errors: open first page containing one.
+		// Server errors: open first page containing one; otherwise a resumed draft's saved page.
 		var errPage = pages.findIndex(function (p) { return p.querySelector('.ft-has-error'); });
-		if (pages.length > 1) show(errPage > -1 ? errPage : 0, false);
+		var startPage = Math.min(Math.max(parseInt(form.getAttribute('data-ft-start-page'), 10) || 0, 0), Math.max(pages.length - 1, 0));
+		if (pages.length > 1) show(errPage > -1 ? errPage : startPage, false);
+		initSave(form, pages, function () { return current; });
 		var summary = form.querySelector('.ft-error-summary');
 		if (summary) summary.focus();
 

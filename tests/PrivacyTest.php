@@ -34,8 +34,11 @@ class PrivacyTest extends TestCase {
 		parent::tearDown();
 	}
 
+	/** Rows for the entries table; the drafts table (scanned by the eraser) is empty. */
 	private function rows( array $rows ) {
-		$this->wpdb->shouldReceive( 'get_results' )->andReturn( $rows );
+		$this->wpdb->shouldReceive( 'get_results' )->andReturnUsing( function ( $sql ) use ( $rows ) {
+			return false !== strpos( (string) $sql, 'formtheory_drafts' ) ? array() : $rows;
+		} );
 	}
 
 	private function row( $id, $email ) {
@@ -84,6 +87,7 @@ class PrivacyTest extends TestCase {
 		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
 		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_webhook_log', array( 'entry_id' => 21 ), array( '%d' ) )->once()->andReturn( 1 );
 		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_entries', array( 'id' => 21 ), array( '%d' ) )->once()->andReturn( 1 );
+		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_drafts', array( 'form_id' => 3 ), array( '%d' ) )->once()->andReturn( 0 );
 		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_forms', array( 'id' => 3 ), array( '%d' ) )->once()->andReturn( 1 );
 		\FormTheory_DB::delete_form( 3 );
 		$this->addToAssertionCount( 1 ); // Mockery expectations verify the cascade.
@@ -161,6 +165,8 @@ class PrivacyTest extends TestCase {
 			$this->assertSame( 0, \FormTheory_Privacy::retention_days() );
 		}
 		$this->wpdb->shouldNotReceive( 'get_col' );
+		// Expired drafts are still purged when entry retention is off (only the drafts DELETE runs).
+		$this->wpdb->shouldReceive( 'query' )->once()->with( \Mockery::pattern( '/^DELETE FROM wp_formtheory_drafts WHERE expires_at <= /' ) )->andReturn( 0 );
 		$this->assertSame( 0, \FormTheory_Privacy::run_purge() );
 	}
 

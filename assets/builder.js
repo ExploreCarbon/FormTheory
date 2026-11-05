@@ -442,6 +442,7 @@
 		conf.value = cfg.confirmation || '';
 		settings.appendChild(labelled(t('confirmation_msg', 'Confirmation message'), conf));
 		settings.appendChild(check(t('ajax', 'Submit without page reload (AJAX)'), cfg.ajax !== false, function (v) { cfg.ajax = v; }));
+		settings.appendChild(check(t('save_resume', 'Allow visitors to save and continue later'), !!cfg.save_resume, function (v) { cfg.save_resume = v; }));
 		var afterSel = select({ message: t('show_message', 'Show message'), page: t('go_to_page', 'Go to page (ID)'), redirect: t('redirect_to_url', 'Redirect to URL') }, cfg.confirmation_type || 'message', function (v) { cfg.confirmation_type = v; render(); var again = root.querySelector('[data-ftb-after]'); if (again) again.focus(); });
 		afterSel.setAttribute('data-ftb-after', '1');
 		settings.appendChild(labelled(t('after_submit', 'After submit'), afterSel));

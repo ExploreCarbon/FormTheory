@@ -74,3 +74,10 @@
 .ft-repeater .ft-rep-add[aria-disabled="true"], .ft-repeater .ft-rep-remove[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
 .ft-repeater .ft-rep-add:focus-visible, .ft-repeater .ft-rep-remove:focus-visible { outline: 3px solid var(--ft-accent); outline-offset: 2px; }
 .ft-repeater .ft-rep-max[hidden], .ft-repeater .ft-btn[hidden] { display: none; }
+.ft-save, .ft-save-panel .ft-btn { background: #fff; color: var(--ft-accent); }
+.ft-save:focus-visible, .ft-save-panel .ft-btn:focus-visible, .ft-save-panel input:focus-visible { outline: 3px solid var(--ft-accent); outline-offset: 2px; }
+.ft-save[hidden], .ft-save-panel[hidden], .ft-save-panel [hidden] { display: none; }
+.ft-save-panel { margin-top: 1rem; padding: .75rem; border: 1px solid currentColor; border-radius: 4px; }
+.ft-save-panel label { display: block; margin: .5rem 0 .25rem; }
+.ft-save-panel input { min-height: 44px; width: 100%; max-width: 32rem; box-sizing: border-box; margin-bottom: .5rem; }
+.ft-resume-notice { padding: .75rem; border: 2px solid currentColor; border-radius: 4px; }
