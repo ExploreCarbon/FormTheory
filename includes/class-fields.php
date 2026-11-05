@@ -6,7 +6,9 @@ defined( 'ABSPATH' ) || exit;
  */
 class FormTheory_Fields {
 
-	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page' );
+	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html' );
+	/** Layout-only types: never validated or stored. */
+	const NON_DATA = array( 'page', 'html' );
 	const OPS   = array( 'is', 'isnot', 'contains', 'gt', 'lt', 'empty', 'notempty' );
 
 	/** Hard-blocked extensions regardless of form config. */
@@ -44,7 +46,7 @@ class FormTheory_Fields {
 				'id'          => $id,
 				'type'        => $type,
 				'label'       => sanitize_text_field( $f['label'] ?? '' ),
-				'required'    => ! empty( $f['required'] ) && 'page' !== $type,
+				'required'    => ! empty( $f['required'] ) && ! in_array( $type, array( 'page', 'html', 'hidden' ), true ),
 				'placeholder' => sanitize_text_field( $f['placeholder'] ?? '' ),
 				'help'        => sanitize_text_field( $f['help'] ?? '' ),
 				'options'     => array(),
@@ -64,6 +66,15 @@ class FormTheory_Fields {
 				$field['allowed'] = implode( ',', array_diff( $exts, self::BLOCKED_EXT ) );
 				$field['max_mb']  = max( 1, min( 100, (int) ( $f['max_mb'] ?? 5 ) ) );
 			}
+			if ( 'hidden' === $type ) {
+				$field['default'] = sanitize_text_field( $f['default'] ?? '' );
+			}
+			if ( 'consent' === $type ) {
+				$field['text'] = wp_kses_post( $f['text'] ?? '' );
+			}
+			if ( 'html' === $type ) {
+				$field['content'] = wp_kses_post( $f['content'] ?? '' );
+			}
 			$field['cond'] = self::sanitize_cond( $f['cond'] ?? array() );
 			$fields[]      = $field;
 		}
@@ -78,6 +89,21 @@ class FormTheory_Fields {
 		}
 		$cfg['fields'] = $fields;
 		return $cfg;
+	}
+
+	/** Data-bearing fields (excludes page breaks and HTML blocks). */
+	public static function data_fields( array $fields ) {
+		return array_values( array_filter( $fields, function ( $f ) {
+			return ! in_array( $f['type'], self::NON_DATA, true );
+		} ) );
+	}
+
+	/** Dynamic population: replaces {query:KEY} with the sanitized GET param. */
+	public static function populate( $text ) {
+		return preg_replace_callback( '/\{query:([A-Za-z0-9_\-]+)\}/', function ( $m ) {
+			$v = $_GET[ $m[1] ] ?? ''; // phpcs:ignore -- read-only, sanitized.
+			return is_string( $v ) ? sanitize_text_field( wp_unslash( $v ) ) : '';
+		}, (string) $text );
 	}
 
 	private static function sanitize_cond( $c ) {

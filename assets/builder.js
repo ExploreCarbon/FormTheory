@@ -9,7 +9,7 @@
 	var cfg = JSON.parse(store.value || '{}');
 	cfg.fields = cfg.fields || [];
 	var TYPES = JSON.parse(root.getAttribute('data-types'));
-	var LABELS = { text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break' };
+	var LABELS = { text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block' };
 	var OPS = { is: 'is', isnot: 'is not', contains: 'contains', gt: 'greater than', lt: 'less than', empty: 'is empty', notempty: 'is not empty' };
 	var uid = 0;
 
@@ -75,7 +75,7 @@
 		f.cond = f.cond || { enabled: false, action: 'show', logic: 'all', rules: [] };
 		var box = el('div', { class: 'ftb-cond' });
 		var others = {};
-		cfg.fields.forEach(function (o) { if (o.id !== f.id && o.type !== 'page') others[o.id] = (o.label || '(no label)') + ' [' + o.id + ']'; });
+		cfg.fields.forEach(function (o) { if (o.id !== f.id && o.type !== 'page' && o.type !== 'html') others[o.id] = (o.label || '(no label)') + ' [' + o.id + ']'; });
 
 		function draw() {
 			box.textContent = '';
@@ -123,7 +123,16 @@
 			f.label = v; summary.textContent = (LABELS[f.type] || f.type) + (v ? ': ' + v : '');
 		})));
 
-		if (f.type !== 'page') {
+		if (f.type === 'hidden') {
+			body.appendChild(labelled('Default value (use {query:param} to fill from URL)', textIn(f.default, function (v) { f.default = v; })));
+		}
+		if (f.type === 'consent' || f.type === 'html') {
+			var key = f.type === 'consent' ? 'text' : 'content';
+			var rich = el('textarea', { rows: 3, class: 'large-text', oninput: function (e) { f[key] = e.target.value; } });
+			rich.value = f[key] || '';
+			body.appendChild(labelled(f.type === 'consent' ? 'Consent text (HTML links allowed)' : 'HTML content', rich));
+		}
+		if (['page', 'html', 'hidden'].indexOf(f.type) === -1) {
 			body.appendChild(check('Required', f.required, function (v) { f.required = v; }));
 			if (['text', 'email', 'phone', 'number', 'textarea', 'select'].indexOf(f.type) !== -1) {
 				body.appendChild(labelled('Placeholder', textIn(f.placeholder, function (v) { f.placeholder = v; })));

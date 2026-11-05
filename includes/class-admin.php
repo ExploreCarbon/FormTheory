@@ -193,9 +193,7 @@ class FormTheory_Admin {
 	}
 
 	private function data_fields( $form ) {
-		return array_values( array_filter( $form['config']['fields'], function ( $f ) {
-			return 'page' !== $f['type'];
-		} ) );
+		return FormTheory_Fields::data_fields( $form['config']['fields'] );
 	}
 
 	public function plain_value( $val ) {

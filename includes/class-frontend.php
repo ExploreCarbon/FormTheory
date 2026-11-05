@@ -52,9 +52,7 @@ class FormTheory_Frontend {
 		}
 
 		$raw    = isset( $_POST['ft'] ) && is_array( $_POST['ft'] ) ? wp_unslash( $_POST['ft'] ) : array(); // phpcs:ignore -- sanitized per field.
-		$fields = array_values( array_filter( $form['config']['fields'], function ( $f ) {
-			return 'page' !== $f['type'];
-		} ) );
+		$fields = FormTheory_Fields::data_fields( $form['config']['fields'] );
 
 		$values = array();
 		foreach ( $fields as $f ) {
@@ -149,6 +147,8 @@ class FormTheory_Frontend {
 			return '';
 		}
 		switch ( $f['type'] ) {
+			case 'consent':
+				return '1' === (string) $v ? __( 'Accepted', 'formtheory' ) : '';
 			case 'textarea':
 				return sanitize_textarea_field( $v );
 			case 'email':
@@ -370,6 +370,15 @@ class FormTheory_Frontend {
 
 		echo '<div class="' . esc_attr( $classes ) . '" data-ft-field="' . esc_attr( $f['id'] ) . '" data-ft-required="' . ( $f['required'] ? '1' : '0' ) . '" data-ft-type="' . esc_attr( $f['type'] ) . '"' . $cond . '>'; // phpcs:ignore -- $cond escaped above.
 
+		if ( 'html' === $f['type'] ) {
+			echo '<div class="ft-field ft-type-html"' . $cond . '>' . wp_kses_post( $f['content'] ) . '</div>'; // phpcs:ignore -- $cond escaped above.
+			return;
+		}
+		if ( 'hidden' === $f['type'] ) {
+			$v = '' !== (string) $value ? $value : FormTheory_Fields::populate( $f['default'] );
+			echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $v ) . '">';
+			return;
+		}
 		$group = in_array( $f['type'], array( 'radio', 'checkbox' ), true );
 		if ( $group ) {
 			echo '<fieldset' . $aria . '><legend>' . esc_html( $f['label'] ) . $req . '</legend>'; // phpcs:ignore -- $aria/$req static/escaped.
@@ -386,6 +395,10 @@ class FormTheory_Frontend {
 					esc_html( $opt )
 				);
 			}
+			echo '</fieldset>';
+		} elseif ( 'consent' === $f['type'] ) {
+			echo '<fieldset' . $aria . '><legend>' . esc_html( $f['label'] ) . $req . '</legend>'; // phpcs:ignore -- static/escaped.
+			echo '<div class="ft-choice"><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1"' . checked( '' !== (string) $value, true, false ) . '><label for="' . esc_attr( $id ) . '">' . wp_kses_post( $f['text'] ? $f['text'] : $f['label'] ) . '</label></div>';
 			echo '</fieldset>';
 		} else {
 			echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $f['label'] ) . $req . '</label>'; // phpcs:ignore
