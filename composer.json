@@ -13,5 +13,8 @@
     "scripts": {
         "test": "phpunit"
     },
-    "config": { "sort-packages": true }
+    "config": {
+        "sort-packages": true,
+        "platform": { "php": "7.4.33" }
+    }
 }

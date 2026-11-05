@@ -1,6 +1,15 @@
 (function () {
 	'use strict';
 
+	// Strings come from wp_localize_script (FormTheoryI18n); English literals are the fallback.
+	var I18N = window.FormTheoryI18n || {};
+	function t(key, fallback) { return I18N[key] || fallback; }
+	function fmt(str) {
+		var args = Array.prototype.slice.call(arguments, 1);
+		var n = 0;
+		return str.replace(/%(?:(\d+)\$)?[sd]/g, function (m, pos) { return args[pos ? pos - 1 : n++]; });
+	}
+
 	function fieldValue(form, id) {
 		var wrap = form.querySelector('[data-ft-field="' + id + '"]');
 		if (!wrap || wrap.hidden) return [];
@@ -50,7 +59,7 @@
 
 	function setError(wrap, msg) {
 		var err = wrap.querySelector('.ft-error');
-		var ctl = wrap.querySelector('fieldset') || wrap.querySelector('input, select, textarea');
+		var ctl = wrap.getAttribute('data-ft-type') === 'consent' ? wrap.querySelector('input') : (wrap.querySelector('fieldset') || wrap.querySelector('input, select, textarea'));
 		err.textContent = msg;
 		err.hidden = !msg;
 		wrap.classList.toggle('ft-has-error', !!msg);
@@ -67,17 +76,17 @@
 		var vals = fieldValue(wrap.closest('form'), wrap.getAttribute('data-ft-field'));
 		var msg = '';
 		if (!vals.length) {
-			if (wrap.getAttribute('data-ft-required') === '1') msg = type === 'file' ? 'Please attach a file.' : 'This field is required.';
+			if (wrap.getAttribute('data-ft-required') === '1') msg = type === 'file' ? t('attach_file', 'Please attach a file.') : t('required', 'This field is required.');
 		} else if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vals[0])) {
-			msg = 'Enter a valid email address.';
+			msg = t('invalid_email', 'Enter a valid email address.');
 		} else if (type === 'number' && isNaN(vals[0])) {
-			msg = 'Enter a number.';
+			msg = t('invalid_number', 'Enter a number.');
 		} else if (type === 'phone' && !/^[0-9 +().\-]{5,25}$/.test(vals[0])) {
-			msg = 'Enter a valid phone number.';
+			msg = t('invalid_phone', 'Enter a valid phone number.');
 		} else if (type === 'file') {
 			var input = wrap.querySelector('input[type=file]');
 			var max = parseInt(input.getAttribute('data-ft-maxmb'), 10) || 0;
-			if (max && input.files[0].size > max * 1048576) msg = 'File must be under ' + max + ' MB.';
+			if (max && input.files[0].size > max * 1048576) msg = fmt(t('file_too_big', 'File must be under %d MB.'), max);
 		}
 		setError(wrap, msg);
 		return !msg;
@@ -103,7 +112,7 @@
 		function show(i, focus) {
 			current = i;
 			pages.forEach(function (p, n) { p.hidden = n !== i; });
-			if (progress) progress.textContent = 'Step ' + (i + 1) + ' of ' + pages.length;
+			if (progress) progress.textContent = fmt(t('step_of', 'Step %1$d of %2$d'), i + 1, pages.length);
 			if (focus) {
 				var target = pages[i].querySelector('.ft-page-title, input:not([type=hidden]), select, textarea');
 				if (target) { if (target.classList.contains('ft-page-title')) target.tabIndex = -1; target.focus(); }
@@ -143,7 +152,7 @@
 			}
 			summary.textContent = '';
 			var p = document.createElement('p');
-			p.textContent = errors._form || 'Please fix the errors below.';
+			p.textContent = errors._form || t('fix_errors', 'Please fix the errors below.');
 			summary.appendChild(p);
 			var firstWrap = null;
 			form.querySelectorAll('[data-ft-field]').forEach(function (w) {
@@ -166,7 +175,7 @@
 			form.setAttribute('aria-busy', 'true');
 			fetch(form.getAttribute('data-ft-ajax'), { method: 'POST', body: data, credentials: 'same-origin' })
 				.then(function (r) {
-					return r.json().catch(function () { return { ok: false, unparsable: true, errors: { _form: 'Something went wrong. Please reload the page before submitting again.' } }; });
+					return r.json().catch(function () { return { ok: false, unparsable: true, errors: { _form: t('went_wrong', 'Something went wrong. Please reload the page before submitting again.') } }; });
 				})
 				.then(function (res) {
 					form.removeAttribute('aria-busy');
