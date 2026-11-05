@@ -89,12 +89,12 @@
 			var wrap = o.closest('[data-ft-field]');
 			var id = wrap.getAttribute('data-ft-field');
 			var r = evaluateFormula(o.getAttribute('data-ft-calc'), function (ref) {
-				if (calcIds[ref]) return done[ref] || '';
+				if (calcIds[ref]) return done[ref] || ''; // '' when hidden (set below).
 				var v = fieldValue(form, ref);
 				return v.length ? v[0] : '';
 			});
 			var val = r === null ? '' : formatCalc(r, o.getAttribute('data-ft-decimals'));
-			done[id] = val;
+			done[id] = wrap.hidden ? '' : val; // Hidden calc feeds 0 into later formulas (server: compute() with $visible).
 			o.setAttribute('data-ft-value', val);
 			o.textContent = val === '' ? '' : (o.getAttribute('data-ft-prefix') || '') + val + (o.getAttribute('data-ft-suffix') || '');
 		});

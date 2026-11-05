@@ -44,6 +44,17 @@ class RenderTest extends TestCase {
 		return ob_get_clean();
 	}
 
+	public function test_calc_output_is_labelled_and_escaped() {
+		$html = $this->render( array( 'type' => 'calc', 'label' => 'Total', 'formula' => '{field:qty}*2', 'decimals' => 2, 'prefix' => '<b>$', 'suffix' => '"x' ), '4.00' );
+		$this->assertStringContainsString( '<label for="ft-7-f1">Total</label>', $html );
+		$this->assertStringContainsString( '<output id="ft-7-f1"', $html );
+		$this->assertStringContainsString( 'for="ft-7-qty"', $html );
+		$this->assertStringContainsString( 'aria-live="off"', $html );
+		$this->assertStringContainsString( '&lt;b&gt;$4.00&quot;x</output>', $html );
+		$this->assertStringContainsString( 'data-ft-prefix="&lt;b&gt;$"', $html );
+		$this->assertStringNotContainsString( '<b>', $html );
+	}
+
 	public function test_label_is_associated_with_input() {
 		$html = $this->render( array() );
 		$this->assertStringContainsString( '<label for="ft-7-f1">Name</label>', $html );

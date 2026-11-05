@@ -62,6 +62,30 @@ class CalcTest extends TestCase {
 		$this->assertSame( 1.0, \FormTheory_Calc::evaluate( str_repeat( '(', 50 ) . '1' . str_repeat( ')', 50 ), array() ) );
 	}
 
+	public function test_zero_over_zero_and_overflow_null() {
+		$this->assertNull( \FormTheory_Calc::evaluate( '0/0', array() ) );
+		$this->assertNull( \FormTheory_Calc::evaluate( '{field:a}*10', array( 'a' => '1e308' ) ) );
+		$v = \FormTheory_Calc::compute( array( array( 'id' => 'c', 'type' => 'calc', 'formula' => '{field:a}*10', 'decimals' => 2 ) ), array( 'a' => '1e308' ) );
+		$this->assertSame( '', $v['c'] );
+	}
+
+	/** Repeated unary minus is accepted by design: --5 is -(-5). */
+	public function test_double_unary_minus_accepted() {
+		$this->assertSame( 5.0, \FormTheory_Calc::evaluate( '--5', array() ) );
+	}
+
+	public function test_hidden_calc_feeds_zero_into_later_calc() {
+		$fields = array(
+			array( 'id' => 'a', 'type' => 'calc', 'formula' => '5', 'decimals' => 2 ),
+			array( 'id' => 'b', 'type' => 'calc', 'formula' => '{field:a}+1', 'decimals' => 2 ),
+		);
+		$hidden = \FormTheory_Calc::compute( $fields, array(), array( 'a' => false, 'b' => true ) );
+		$this->assertSame( '', $hidden['a'] );
+		$this->assertSame( '1.00', $hidden['b'] );
+		$shown = \FormTheory_Calc::compute( $fields, array(), array( 'a' => true, 'b' => true ) );
+		$this->assertSame( '6.00', $shown['b'] );
+	}
+
 	public function test_format_matches_js_vectors() {
 		$this->assertSame( '6.00', \FormTheory_Calc::format( 6, 2 ) );
 		$this->assertSame( '1.01', \FormTheory_Calc::format( 1.005, 2 ) );
@@ -157,6 +181,24 @@ class CalcTest extends TestCase {
 		$r = $front->process( $form, $this->post( array( 'n' => 'no', 'total' => '5' ) ), array() );
 		$this->assertTrue( $r['ok'] );
 		$this->assertArrayNotHasKey( 'total', $this->stored() );
+	}
+
+	public function test_process_hidden_calc_is_zero_for_later_calc() {
+		$front = $this->front();
+		$cond  = array( 'enabled' => true, 'action' => 'show', 'logic' => 'all', 'rules' => array( array( 'field' => 'n', 'op' => 'is', 'value' => 'yes' ) ) );
+		$fields = array(
+			array( 'id' => 'n', 'type' => 'text', 'label' => 'N', 'required' => false, 'options' => array(), 'cond' => $this->off() ),
+			array( 'id' => 'a', 'type' => 'calc', 'label' => 'A', 'required' => false, 'options' => array(), 'formula' => '5', 'decimals' => 2, 'cond' => $cond ),
+			array( 'id' => 'b', 'type' => 'calc', 'label' => 'B', 'required' => false, 'options' => array(), 'formula' => '{field:a}+1', 'decimals' => 2, 'cond' => $this->off() ),
+		);
+		$front->process( $this->form( $fields ), $this->post( array( 'n' => 'no' ) ), array() );
+		$this->assertSame( '1.00', $this->stored()['b'] );
+		$this->assertArrayNotHasKey( 'a', $this->stored() );
+
+		$front = $this->front();
+		$front->process( $this->form( $fields ), $this->post( array( 'n' => 'yes' ) ), array() );
+		$this->assertSame( '5.00', $this->stored()['a'] );
+		$this->assertSame( '6.00', $this->stored()['b'] );
 	}
 
 	public function test_calc_value_drives_condition() {

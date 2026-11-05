@@ -77,8 +77,12 @@ class FormTheory_Calc {
 	 * comes later (or does not exist) reads as 0, so cycles are impossible.
 	 * Results are plain dot-decimal strings with exactly `decimals` places,
 	 * or '' when the formula fails.
+	 *
+	 * @param array      $visible Optional field id => bool map. A calc field
+	 *                            hidden by its condition is '' (reads as 0 in
+	 *                            later formulas) and is not evaluated.
 	 */
-	public static function compute( array $fields, array $values ) {
+	public static function compute( array $fields, array $values, $visible = null ) {
 		$env = $values;
 		foreach ( $fields as $f ) {
 			if ( 'calc' === $f['type'] ) {
@@ -87,6 +91,10 @@ class FormTheory_Calc {
 		}
 		foreach ( $fields as $f ) {
 			if ( 'calc' !== $f['type'] ) {
+				continue;
+			}
+			if ( is_array( $visible ) && empty( $visible[ $f['id'] ] ) ) {
+				$values[ $f['id'] ] = '';
 				continue;
 			}
 			$r                  = self::evaluate( $f['formula'] ?? '', $env );

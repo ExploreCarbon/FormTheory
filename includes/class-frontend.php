@@ -136,14 +136,16 @@ class FormTheory_Frontend {
 		}
 		// Calc fields: posted values are ignored and recomputed. Pass 1 uses all
 		// sanitized values so calc results can drive conditions; pass 2 (stored)
-		// treats fields hidden by those conditions as empty, like front.js does.
+		// treats fields hidden by those conditions (calc included) as empty, like
+		// front.js does. One-shot: if pass 2 changes a calc value that a
+		// condition reads, visibility is not re-evaluated (pass 1 decides it).
 		$values  = FormTheory_Calc::compute( $fields, $values );
 		$visible = FormTheory_Fields::visible_map( $fields, $values );
 		$shown   = array();
 		foreach ( $values as $vid => $v ) {
 			$shown[ $vid ] = empty( $visible[ $vid ] ) ? '' : $v;
 		}
-		foreach ( FormTheory_Calc::compute( $fields, $shown ) as $vid => $v ) {
+		foreach ( FormTheory_Calc::compute( $fields, $shown, $visible ) as $vid => $v ) {
 			if ( ! empty( $visible[ $vid ] ) ) {
 				$values[ $vid ] = $v;
 			}
