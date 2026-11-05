@@ -96,6 +96,17 @@ class FormTheory_Frontend {
 			$spam = FormTheory_Spam::check( $post );
 			if ( is_wp_error( $spam ) ) {
 				$errors['_form'] = $spam->get_error_message();
+			} else {
+				$captcha = FormTheory_Recaptcha::verify();
+				if ( $captcha ) {
+					$errors['_form'] = $captcha;
+				}
+			}
+		}
+		if ( ! $errors ) {
+			$captcha = FormTheory_Recaptcha::verify();
+			if ( $captcha ) {
+				$errors['_form'] = $captcha;
 			}
 		}
 
@@ -156,8 +167,8 @@ class FormTheory_Frontend {
 
 	/** Redirect back with a short-lived token so the confirmation can resolve merge tags. */
 	private function redirect_done( $form_id, $entry_id = 0 ) {
-		$ref   = wp_get_referer();
-		$url   = remove_query_arg( array( 'ft_done', 'ft_t' ), $ref ? $ref : home_url( '/' ) );
+		// wp_get_referer() is false when the form posts back to its own URL (the normal case), so validate the raw referer instead.
+		$url   = remove_query_arg( array( 'ft_done', 'ft_t' ), wp_validate_redirect( (string) wp_get_raw_referer(), home_url( '/' ) ) );
 		$args  = array( 'ft_done' => $form_id );
 		if ( $entry_id ) {
 			$token = wp_generate_password( 20, false );
@@ -382,6 +393,9 @@ class FormTheory_Frontend {
 			}
 			foreach ( $page as $f ) {
 				$this->render_field( $form_id, $f, $values[ $f['id'] ] ?? ( 'checkbox' === $f['type'] ? array() : '' ), $errors[ $f['id'] ] ?? '' );
+			}
+			if ( $i === count( $pages ) - 1 ) {
+				echo FormTheory_Recaptcha::render(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in render().
 			}
 			echo '<div class="ft-nav">';
 			if ( $multi && $i > 0 ) {

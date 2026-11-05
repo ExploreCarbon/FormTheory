@@ -14,6 +14,7 @@ class FormTheory_Admin {
 		add_action( 'admin_post_formtheory_export', array( $this, 'handle_export' ) );
 		add_action( 'admin_post_formtheory_file', array( $this, 'handle_file' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
+		add_action( 'admin_init', array( 'FormTheory_Recaptcha', 'register_setting' ) );
 	}
 
 	public function menu() {
@@ -214,6 +215,7 @@ class FormTheory_Admin {
 		$s = FormTheory_Spam::settings();
 		echo '<div class="wrap"><h1>FormTheory Settings</h1><form method="post" action="options.php">';
 		settings_fields( 'formtheory_settings' );
+		FormTheory_Recaptcha::fields();
 		echo '<h2>Cloudflare Turnstile</h2><p>Leave both blank to disable. A signed time-trap and honeypot are always on.</p>';
 		echo '<table class="form-table" role="presentation">';
 		echo '<tr><th scope="row"><label for="ft-ts-site">Site key</label></th><td><input type="text" class="regular-text" id="ft-ts-site" name="formtheory_settings[turnstile_site]" value="' . esc_attr( $s['turnstile_site'] ) . '"></td></tr>';

@@ -183,6 +183,8 @@
 						return;
 					}
 					if (btn) btn.disabled = false;
+					var rcv3 = form.querySelector('[data-ft-recaptcha-v3]');
+					if (rcv3) rcv3.value = ''; // v3 tokens are single use.
 					if (window.turnstile) { try { window.turnstile.reset(); } catch (e) { /* no widget */ } }
 					showServerErrors(res.errors || {});
 				})
@@ -201,6 +203,21 @@
 			}
 			if (!ok) { e.preventDefault(); return; }
 			var btn = form.querySelector('.ft-submit');
+			var rc = form.querySelector('[data-ft-recaptcha-v3]');
+			if (rc && !rc.value && window.grecaptcha) {
+				// v3: fetch a fresh token, then submit for real (form.submit() skips this handler).
+				e.preventDefault();
+				if (btn) btn.disabled = true;
+				window.grecaptcha.ready(function () {
+					window.grecaptcha.execute(rc.getAttribute('data-ft-recaptcha-v3'), { action: rc.getAttribute('data-ft-recaptcha-action') }).then(function (token) {
+						rc.value = token;
+						if (form.getAttribute('data-ft-ajax') && window.fetch && window.FormData) ajaxSubmit(btn); else form.submit();
+					}, function () {
+						if (btn) btn.disabled = false;
+					});
+				});
+				return;
+			}
 			if (btn) btn.disabled = true;
 			if (form.getAttribute('data-ft-ajax') && window.fetch && window.FormData) {
 				e.preventDefault();

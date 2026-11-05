@@ -106,6 +106,11 @@ PHPUnit needs the `mbstring` extension (`php -d extension=mbstring vendor/bin/ph
     location ^~ /wp-content/uploads/formtheory-private/ { deny all; }
     ```
 - CSV export cells escaped against formula injection.
+- Optional Google reCAPTCHA (v2 checkbox or v3 score) on every form: FormTheory > Settings. Verified server-side (fails closed); v3 also checks action and score threshold (filter `formtheory_recaptcha_threshold`). Keys can be set in `wp-config.php` instead:
+  ```php
+  define( 'FORMTHEORY_RECAPTCHA_SITE_KEY', '...' );
+  define( 'FORMTHEORY_RECAPTCHA_SECRET_KEY', '...' );
+  ```
 
 ## Structure
 
@@ -113,6 +118,7 @@ PHPUnit needs the `mbstring` extension (`php -d extension=mbstring vendor/bin/ph
 formtheory.php               Bootstrap, constants, activation hook
 includes/class-db.php        Tables, CRUD, private upload dir
 includes/class-fields.php    Field schema, config sanitizing, conditional logic, validation
+includes/class-recaptcha.php Google reCAPTCHA settings, render, verify
 includes/class-admin.php     Admin menus, builder, entries, CSV export, file download
 includes/class-frontend.php  Shortcode, block, rendering, submission pipeline, AJAX, uploads
 includes/class-merge.php     Merge tags
