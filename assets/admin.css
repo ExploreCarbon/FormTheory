@@ -18,3 +18,9 @@
 .ftb-settings legend { font-weight: 600; font-size: 1.1em; padding: 0 .3rem; }
 .ftb-empty { font-style: italic; }
 .ft-entry th { width: 220px; }
+.ft-unread td { font-weight: 600; }
+.ft-bulk, .ft-filter { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.ft-status { float: none; margin: .5rem 0; }
+#ft-bulk-form .check-column { width: 2.5rem; padding: .5rem; }
+#ft-bulk-form input[type="checkbox"] { min-width: 24px; min-height: 24px; }
+.ft-notes textarea:focus-visible, #ft-bulk-form :focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }

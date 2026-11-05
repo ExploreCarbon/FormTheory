@@ -11,6 +11,8 @@ class FormTheory_Admin {
 		add_action( 'admin_post_formtheory_save', array( $this, 'handle_save' ) );
 		add_action( 'admin_post_formtheory_delete_form', array( $this, 'handle_delete_form' ) );
 		add_action( 'admin_post_formtheory_delete_entry', array( $this, 'handle_delete_entry' ) );
+		add_action( 'admin_post_formtheory_bulk', array( $this, 'handle_bulk' ) );
+		add_action( 'admin_post_formtheory_note', array( $this, 'handle_note' ) );
 		add_action( 'admin_post_formtheory_export', array( $this, 'handle_export' ) );
 		add_action( 'admin_post_formtheory_file', array( $this, 'handle_file' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
@@ -30,6 +32,7 @@ class FormTheory_Admin {
 			return;
 		}
 		wp_enqueue_style( 'formtheory-admin', FORMTHEORY_URL . 'assets/admin.css', array(), FORMTHEORY_VERSION );
+		wp_enqueue_script( 'formtheory-admin', FORMTHEORY_URL . 'assets/admin.js', array(), FORMTHEORY_VERSION, true );
 		if ( false !== strpos( $hook, 'formtheory-edit' ) ) {
 			wp_enqueue_script( 'formtheory-builder', FORMTHEORY_URL . 'assets/builder.js', array(), FORMTHEORY_VERSION, true );
 		}
@@ -64,14 +67,15 @@ class FormTheory_Admin {
 		foreach ( $forms as $f ) {
 			$id = (int) $f['id'];
 			printf(
-				'<tr><td><a href="%1$s"><strong>%2$s</strong></a></td><td><code>[formtheory id="%3$d"]</code></td><td><a href="%4$s">%5$d</a></td><td>%6$s</td><td><a href="%1$s">Edit</a> | <a href="%4$s">Entries</a> | <a class="ft-danger" href="%7$s" onclick="return confirm(\'Delete form and all its entries?\');">Delete<span class="screen-reader-text"> %2$s</span></a></td></tr>',
+				'<tr><td><a href="%1$s"><strong>%2$s</strong></a></td><td><code>[formtheory id="%3$d"]</code></td><td><a href="%4$s">%5$d</a></td><td>%6$s</td><td><a href="%1$s">Edit</a> | <a href="%4$s">Entries</a> | <a class="ft-danger" href="%7$s" data-ft-confirm="%8$s">Delete<span class="screen-reader-text"> %2$s</span></a></td></tr>',
 				esc_url( $this->admin_url( 'formtheory-edit', array( 'id' => $id ) ) ),
 				esc_html( $f['title'] ? $f['title'] : '(untitled)' ),
 				$id,
 				esc_url( $this->admin_url( 'formtheory-entries', array( 'form' => $id ) ) ),
 				FormTheory_DB::count_entries( $id ),
 				esc_html( $f['updated_at'] ),
-				esc_url( $this->action_url( 'formtheory_delete_form', array( 'id' => $id ) ) )
+				esc_url( $this->action_url( 'formtheory_delete_form', array( 'id' => $id ) ) ),
+				esc_attr__( 'Delete form and all its entries?', 'formtheory' )
 			);
 		}
 		echo '</tbody></table></div>';
@@ -114,45 +118,86 @@ class FormTheory_Admin {
 			return;
 		}
 
-		echo '<form method="get"><input type="hidden" name="page" value="formtheory-entries"><label for="ft-form-pick">Form </label><select id="ft-form-pick" name="form">';
+		$status = isset( $_GET['status'] ) ? sanitize_key( $_GET['status'] ) : '';
+		$status = in_array( $status, array( 'unread', 'read' ), true ) ? $status : '';
+		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+
+		echo '<form method="get" class="ft-filter"><input type="hidden" name="page" value="formtheory-entries"><input type="hidden" name="status" value="' . esc_attr( $status ) . '"><label for="ft-form-pick">' . esc_html__( 'Form', 'formtheory' ) . '</label><select id="ft-form-pick" name="form">';
 		foreach ( $forms as $f ) {
 			if ( ! $form_id ) {
 				$form_id = (int) $f['id'];
 			}
 			printf( '<option value="%d"%s>%s</option>', (int) $f['id'], selected( $form_id, (int) $f['id'], false ), esc_html( $f['title'] ) );
 		}
-		echo '</select> <button class="button">View</button></form>';
+		echo '</select><label for="ft-search">' . esc_html__( 'Search', 'formtheory' ) . '</label><input type="search" id="ft-search" name="s" value="' . esc_attr( $search ) . '"> <button class="button">' . esc_html__( 'View', 'formtheory' ) . '</button></form>';
 
 		$form = $form_id ? FormTheory_DB::get_form( $form_id ) : null;
 		if ( ! $form ) {
-			echo '<p>No forms.</p></div>';
+			echo '<p>' . esc_html__( 'No forms.', 'formtheory' ) . '</p></div>';
 			return;
 		}
-		echo '<p><a class="button" href="' . esc_url( $this->action_url( 'formtheory_export', array( 'form' => $form_id ) ) ) . '">Export CSV</a></p>';
 
+		$base = array( 'form' => $form_id );
+		if ( '' !== $search ) {
+			$base['s'] = $search;
+		}
+		$tabs = array(
+			''       => __( 'All', 'formtheory' ),
+			'unread' => __( 'Unread', 'formtheory' ),
+			'read'   => __( 'Read', 'formtheory' ),
+		);
+		echo '<ul class="subsubsub ft-status">';
+		$i = 0;
+		foreach ( $tabs as $key => $label ) {
+			$targs = $base;
+			if ( '' !== $key ) {
+				$targs['status'] = $key;
+			}
+			printf(
+				'<li><a href="%s"%s>%s <span class="count">(%d)</span></a>%s</li>',
+				esc_url( $this->admin_url( 'formtheory-entries', $targs ) ),
+				$status === $key ? ' class="current" aria-current="page"' : '',
+				esc_html( $label ),
+				FormTheory_DB::count_entries( $form_id, array( 'search' => $search, 'status' => $key ) ),
+				++$i < count( $tabs ) ? ' |' : ''
+			);
+		}
+		echo '</ul><p class="clear"><a class="button" href="' . esc_url( $this->action_url( 'formtheory_export', array( 'form' => $form_id ) ) ) . '">' . esc_html__( 'Export CSV', 'formtheory' ) . '</a></p>';
+
+		$qargs = array( 'search' => $search, 'status' => $status );
 		$per   = 50;
 		$paged = max( 1, isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1 );
-		$total = FormTheory_DB::count_entries( $form_id );
-		$rows  = FormTheory_DB::get_entries( $form_id, $per, ( $paged - 1 ) * $per );
+		$total = FormTheory_DB::count_entries( $form_id, $qargs );
+		$rows  = FormTheory_DB::get_entries( $form_id, $per, ( $paged - 1 ) * $per, $qargs );
 		$cols  = array_slice( $this->data_fields( $form ), 0, 4 );
 
-		echo '<table class="widefat striped ft-table"><thead><tr><th scope="col">#</th><th scope="col">Date</th>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" id="ft-bulk-form">';
+		wp_nonce_field( 'formtheory_bulk' );
+		echo '<input type="hidden" name="action" value="formtheory_bulk"><input type="hidden" name="form" value="' . (int) $form_id . '">';
+		echo '<p class="ft-bulk"><label for="ft-bulk-action" class="screen-reader-text">' . esc_html__( 'Bulk action', 'formtheory' ) . '</label><select id="ft-bulk-action" name="ft_bulk"><option value="">' . esc_html__( 'Bulk actions', 'formtheory' ) . '</option><option value="read">' . esc_html__( 'Mark read', 'formtheory' ) . '</option><option value="unread">' . esc_html__( 'Mark unread', 'formtheory' ) . '</option><option value="delete">' . esc_html__( 'Delete', 'formtheory' ) . '</option></select> <button type="submit" class="button" data-ft-confirm-if="delete" data-ft-confirm="' . esc_attr__( 'Delete the selected entries?', 'formtheory' ) . '">' . esc_html__( 'Apply', 'formtheory' ) . '</button></p>';
+
+		echo '<table class="widefat striped ft-table"><thead><tr><td class="check-column"><input type="checkbox" id="ft-select-all" aria-label="' . esc_attr__( 'Select all entries', 'formtheory' ) . '"></td><th scope="col">#</th><th scope="col">' . esc_html__( 'Date', 'formtheory' ) . '</th>';
 		foreach ( $cols as $c ) {
 			echo '<th scope="col">' . esc_html( $c['label'] ) . '</th>';
 		}
-		echo '<th scope="col"><span class="screen-reader-text">Actions</span></th></tr></thead><tbody>';
+		echo '<th scope="col"><span class="screen-reader-text">' . esc_html__( 'Actions', 'formtheory' ) . '</span></th></tr></thead><tbody>';
 		if ( ! $rows ) {
-			echo '<tr><td colspan="' . ( count( $cols ) + 3 ) . '">No entries.</td></tr>';
+			echo '<tr><td colspan="' . ( count( $cols ) + 4 ) . '">' . esc_html__( 'No entries.', 'formtheory' ) . '</td></tr>';
 		}
 		foreach ( $rows as $r ) {
-			$view = $this->admin_url( 'formtheory-entries', array( 'form' => $form_id, 'entry' => (int) $r['id'] ) );
-			echo '<tr><td><a href="' . esc_url( $view ) . '">' . (int) $r['id'] . '</a></td><td>' . esc_html( $r['created_at'] ) . '</td>';
+			$view   = $this->admin_url( 'formtheory-entries', array( 'form' => $form_id, 'entry' => (int) $r['id'] ) );
+			$unread = isset( $r['status'] ) && 'unread' === $r['status'];
+			echo '<tr' . ( $unread ? ' class="ft-unread"' : '' ) . '>';
+			/* translators: %d: entry number. */
+			echo '<td class="check-column"><input type="checkbox" class="ft-row-check" name="ids[]" value="' . (int) $r['id'] . '" aria-label="' . esc_attr( sprintf( __( 'Select entry %d', 'formtheory' ), (int) $r['id'] ) ) . '"></td>';
+			echo '<td><a href="' . esc_url( $view ) . '">' . (int) $r['id'] . '</a>' . ( $unread ? '<span class="screen-reader-text"> ' . esc_html__( '(unread)', 'formtheory' ) . '</span>' : '' ) . '</td><td>' . esc_html( $r['created_at'] ) . '</td>';
 			foreach ( $cols as $c ) {
 				echo '<td>' . esc_html( wp_trim_words( $this->plain_value( $r['data'][ $c['id'] ] ?? '' ), 12 ) ) . '</td>';
 			}
-			echo '<td><a href="' . esc_url( $view ) . '">View<span class="screen-reader-text"> entry ' . (int) $r['id'] . '</span></a></td></tr>';
+			/* translators: %d: entry number. */
+			echo '<td><a href="' . esc_url( $view ) . '">' . esc_html__( 'View', 'formtheory' ) . '<span class="screen-reader-text"> ' . esc_html( sprintf( __( 'entry %d', 'formtheory' ), (int) $r['id'] ) ) . '</span></a></td></tr>';
 		}
-		echo '</tbody></table>';
+		echo '</tbody></table></form>';
 
 		$pages = (int) ceil( $total / $per );
 		if ( $pages > 1 ) {
@@ -175,6 +220,9 @@ class FormTheory_Admin {
 			echo '<p>Entry not found.</p>';
 			return;
 		}
+		if ( isset( $entry['status'] ) && 'unread' === $entry['status'] ) {
+			FormTheory_DB::set_entries_status( (int) $form['id'], array( (int) $entry['id'] ), 'read' );
+		}
 		$back = $this->admin_url( 'formtheory-entries', array( 'form' => (int) $form['id'] ) );
 		echo '<p><a href="' . esc_url( $back ) . '">&larr; Back to ' . esc_html( $form['title'] ) . '</a></p>';
 		echo '<h2>Entry #' . (int) $entry['id'] . '</h2><table class="widefat ft-entry"><tbody>';
@@ -192,7 +240,13 @@ class FormTheory_Admin {
 			echo '</td></tr>';
 		}
 		echo '</tbody></table>';
-		echo '<p><a class="button ft-danger" href="' . esc_url( $this->action_url( 'formtheory_delete_entry', array( 'id' => (int) $entry['id'] ) ) ) . '" onclick="return confirm(\'Delete this entry?\');">Delete entry</a></p>';
+		echo '<p><a class="button ft-danger" href="' . esc_url( $this->action_url( 'formtheory_delete_entry', array( 'id' => (int) $entry['id'] ) ) ) . '" data-ft-confirm="' . esc_attr__( 'Delete this entry?', 'formtheory' ) . '">' . esc_html__( 'Delete entry', 'formtheory' ) . '</a></p>';
+		echo '<h3>' . esc_html__( 'Notes', 'formtheory' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="ft-notes">';
+		wp_nonce_field( 'formtheory_note' );
+		echo '<input type="hidden" name="action" value="formtheory_note"><input type="hidden" name="entry" value="' . (int) $entry['id'] . '">';
+		echo '<p><label for="ft-notes" class="screen-reader-text">' . esc_html__( 'Internal notes', 'formtheory' ) . '</label><textarea id="ft-notes" name="notes" rows="5" class="large-text">' . esc_textarea( isset( $entry['notes'] ) ? (string) $entry['notes'] : '' ) . '</textarea></p>';
+		submit_button( __( 'Save note', 'formtheory' ), 'secondary', 'submit', false );
+		echo '</form>';
 	}
 
 	public function register_settings() {
@@ -241,6 +295,8 @@ class FormTheory_Admin {
 		$map = array(
 			'saved'   => 'Form saved.',
 			'deleted' => 'Deleted.',
+			'bulk'    => __( 'Bulk action applied.', 'formtheory' ),
+			'note'    => __( 'Note saved.', 'formtheory' ),
 		);
 		if ( isset( $map[ $msg ] ) ) {
 			echo '<div class="notice notice-success is-dismissible" role="status"><p>' . esc_html( $map[ $msg ] ) . '</p></div>';
@@ -273,6 +329,58 @@ class FormTheory_Admin {
 		$entry = FormTheory_DB::get_entry( $id );
 		FormTheory_DB::delete_entry( $id );
 		wp_safe_redirect( $this->admin_url( 'formtheory-entries', array( 'form' => $entry ? (int) $entry['form_id'] : 0, 'ft_msg' => 'deleted' ) ) );
+		exit;
+	}
+
+	/**
+	 * Apply a bulk action. Exit-free. Unknown action or no valid ids => 0.
+	 *
+	 * @param int    $form_id Form id (all writes are scoped to it).
+	 * @param string $action  delete|read|unread.
+	 * @param array  $ids     Entry ids; non-numeric ignored.
+	 * @return int Rows affected.
+	 */
+	public function bulk_apply( $form_id, $action, array $ids ) {
+		$form_id = (int) $form_id;
+		$clean   = array();
+		foreach ( $ids as $id ) {
+			if ( is_scalar( $id ) && ctype_digit( (string) $id ) && (int) $id > 0 ) {
+				$clean[] = (int) $id;
+			}
+		}
+		if ( ! $clean || ! $form_id ) {
+			return 0;
+		}
+		switch ( $action ) {
+			case 'delete':
+				return (int) FormTheory_DB::delete_entries( $form_id, $clean );
+			case 'read':
+			case 'unread':
+				return (int) FormTheory_DB::set_entries_status( $form_id, $clean, $action );
+		}
+		return 0;
+	}
+
+	public function handle_bulk() {
+		$this->guard( 'formtheory_bulk' );
+		$form_id = isset( $_POST['form'] ) ? absint( $_POST['form'] ) : 0;
+		$action  = isset( $_POST['ft_bulk'] ) ? sanitize_key( wp_unslash( $_POST['ft_bulk'] ) ) : '';
+		$ids     = isset( $_POST['ids'] ) && is_array( $_POST['ids'] ) ? wp_unslash( $_POST['ids'] ) : array(); // phpcs:ignore -- cleaned in bulk_apply().
+		$this->bulk_apply( $form_id, $action, $ids );
+		wp_safe_redirect( $this->admin_url( 'formtheory-entries', array( 'form' => $form_id, 'ft_msg' => 'bulk' ) ) );
+		exit;
+	}
+
+	public function handle_note() {
+		$this->guard( 'formtheory_note' );
+		$id    = isset( $_POST['entry'] ) ? absint( $_POST['entry'] ) : 0;
+		$entry = $id ? FormTheory_DB::get_entry( $id ) : null;
+		if ( ! $entry ) {
+			wp_die( esc_html__( 'Entry not found.', 'formtheory' ), 404 );
+		}
+		$notes = isset( $_POST['notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '';
+		FormTheory_DB::update_entry_notes( (int) $entry['id'], $notes );
+		wp_safe_redirect( $this->admin_url( 'formtheory-entries', array( 'form' => (int) $entry['form_id'], 'entry' => (int) $entry['id'], 'ft_msg' => 'note' ) ) );
 		exit;
 	}
 
