@@ -132,6 +132,70 @@
 			}
 		});
 
+		function showServerErrors(errors) {
+			var summary = form.querySelector('.ft-error-summary');
+			if (!summary) {
+				summary = document.createElement('div');
+				summary.className = 'ft-error-summary';
+				summary.setAttribute('role', 'alert');
+				summary.tabIndex = -1;
+				form.insertBefore(summary, form.querySelector('[data-ft-progress], [data-ft-page]'));
+			}
+			summary.textContent = '';
+			var p = document.createElement('p');
+			p.textContent = errors._form || 'Please fix the errors below.';
+			summary.appendChild(p);
+			var firstWrap = null;
+			form.querySelectorAll('[data-ft-field]').forEach(function (w) {
+				var msg = errors[w.getAttribute('data-ft-field')] || '';
+				setError(w, msg);
+				if (msg && !firstWrap) firstWrap = w;
+			});
+			if (firstWrap) {
+				var pi = pages.findIndex(function (pg) { return pg.contains(firstWrap); });
+				if (pages.length > 1 && pi > -1) show(pi, false);
+				var ctl = firstWrap.querySelector('input:not([type=hidden]), select, textarea');
+				if (ctl) { ctl.focus(); return; }
+			}
+			summary.focus();
+		}
+
+		function ajaxSubmit(btn) {
+			var data = new FormData(form);
+			data.append('action', 'formtheory_submit');
+			form.setAttribute('aria-busy', 'true');
+			fetch(form.getAttribute('data-ft-ajax'), { method: 'POST', body: data, credentials: 'same-origin' })
+				.then(function (r) {
+					return r.json().catch(function () { return { ok: false, unparsable: true, errors: { _form: 'Something went wrong. Please reload the page before submitting again.' } }; });
+				})
+				.then(function (res) {
+					form.removeAttribute('aria-busy');
+					if (res.ok && res.redirect) { window.location.assign(res.redirect); return; }
+					if (res.ok) {
+						var conf = document.createElement('div');
+						conf.id = form.id;
+						conf.className = 'ft-confirmation';
+						conf.setAttribute('role', 'status');
+						conf.tabIndex = -1;
+						conf.innerHTML = res.message || ''; // Server-sanitized via wp_kses_post.
+						form.parentNode.replaceChild(conf, form);
+						conf.focus();
+						return;
+					}
+					if (btn) btn.disabled = false;
+					var rcv3 = form.querySelector('[data-ft-recaptcha-v3]');
+					if (rcv3) rcv3.value = ''; // v3 tokens are single use.
+					if (window.turnstile) { try { window.turnstile.reset(); } catch (e) { /* no widget */ } }
+					showServerErrors(res.errors || {});
+				})
+				.catch(function () {
+					// Network failure (request never answered): fall back to a normal POST.
+					form.removeAttribute('aria-busy');
+					form.removeAttribute('data-ft-ajax');
+					HTMLFormElement.prototype.submit.call(form);
+				});
+		}
+
 		form.addEventListener('submit', function (e) {
 			var ok = true;
 			for (var i = 0; i < pages.length; i++) {
@@ -147,7 +211,7 @@
 				window.grecaptcha.ready(function () {
 					window.grecaptcha.execute(rc.getAttribute('data-ft-recaptcha-v3'), { action: rc.getAttribute('data-ft-recaptcha-action') }).then(function (token) {
 						rc.value = token;
-						form.submit();
+						if (form.getAttribute('data-ft-ajax') && window.fetch && window.FormData) ajaxSubmit(btn); else form.submit();
 					}, function () {
 						if (btn) btn.disabled = false;
 					});
@@ -155,6 +219,10 @@
 				return;
 			}
 			if (btn) btn.disabled = true;
+			if (form.getAttribute('data-ft-ajax') && window.fetch && window.FormData) {
+				e.preventDefault();
+				ajaxSubmit(btn);
+			}
 		});
 	}
 

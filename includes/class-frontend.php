@@ -9,6 +9,8 @@ class FormTheory_Frontend {
 	public function __construct() {
 		add_shortcode( 'formtheory', array( $this, 'shortcode' ) );
 		add_action( 'init', array( $this, 'maybe_submit' ) );
+		add_action( 'wp_ajax_formtheory_submit', array( $this, 'ajax_submit' ) );
+		add_action( 'wp_ajax_nopriv_formtheory_submit', array( $this, 'ajax_submit' ) );
 		add_action( 'init', array( $this, 'register_block' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
 	}
@@ -33,8 +35,12 @@ class FormTheory_Frontend {
 
 	/* ---------- Submit ---------- */
 
+	/** Uploaded files for the submission being processed ($_FILES shape). */
+	private $files = array();
+
+	/** Classic (non-JS) POST handler. */
 	public function maybe_submit() {
-		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || empty( $_POST['formtheory_id'] ) ) {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || empty( $_POST['formtheory_id'] ) || wp_doing_ajax() ) {
 			return;
 		}
 		$form_id = absint( $_POST['formtheory_id'] );
@@ -42,13 +48,60 @@ class FormTheory_Frontend {
 		if ( ! $form ) {
 			return;
 		}
-		$errors = array();
-		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_ft_nonce'] ?? '' ) ), 'formtheory_submit_' . $form_id ) ) {
-			$errors['_form'] = __( 'Your session expired. Please submit again.', 'formtheory' );
+		$r = $this->process( $form, wp_unslash( $_POST ), $_FILES ); // phpcs:ignore -- sanitized per field in process().
+		if ( ! $r['ok'] ) {
+			self::$state[ $form_id ] = array( 'errors' => $r['errors'], 'values' => $r['values'] );
+			return;
 		}
-		// Honeypot: silently pretend success.
-		if ( ! empty( $_POST['ft_hp'] ) ) {
-			$this->redirect_done( $form_id );
+		if ( $r['redirect'] ) {
+			// Host was fixed by the admin in the form config; allow it even if off-site.
+			wp_redirect( $r['redirect'] ); // phpcs:ignore WordPress.Security.SafeRedirect -- validated in confirmation_target().
+			exit;
+		}
+		$this->redirect_done( $form_id, (int) $r['entry_id'] );
+	}
+
+	/** AJAX handler: same pipeline, JSON response. */
+	public function ajax_submit() {
+		$form = FormTheory_DB::get_form( absint( $_POST['formtheory_id'] ?? 0 ) );
+		if ( ! $form ) {
+			wp_send_json( array( 'ok' => false, 'errors' => array( '_form' => __( 'Form not found.', 'formtheory' ) ) ), 404 );
+		}
+		$r = $this->process( $form, wp_unslash( $_POST ), $_FILES ); // phpcs:ignore -- sanitized per field in process().
+		unset( $r['values'] );
+		wp_send_json( $r );
+	}
+
+	/**
+	 * Validate, store and notify. Never redirects or exits.
+	 *
+	 * @param array $form  Form row.
+	 * @param array $post  Unslashed POST data.
+	 * @param array $files $_FILES-shaped array.
+	 * @return array { ok: bool, errors: array, values: array, entry_id: ?int, redirect: ?string, message: ?string }
+	 */
+	public function process( array $form, array $post, array $files ) {
+		$form_id     = (int) $form['id'];
+		$this->files = $files;
+		$result      = array( 'ok' => false, 'errors' => array(), 'values' => array(), 'entry_id' => null, 'redirect' => null, 'message' => null );
+
+		// Honeypot: silently pretend success, store nothing.
+		if ( ! empty( $post['ft_hp'] ) ) {
+			return array_merge( $result, array( 'ok' => true, 'message' => self::confirmation_html( $form, array(), 0 ) ) );
+		}
+		$errors = array();
+		if ( ! wp_verify_nonce( sanitize_text_field( (string) ( $post['_ft_nonce'] ?? '' ) ), 'formtheory_submit_' . $form_id ) ) {
+			$errors['_form'] = __( 'Your session expired. Please submit again.', 'formtheory' );
+		} else {
+			$spam = FormTheory_Spam::check( $post );
+			if ( is_wp_error( $spam ) ) {
+				$errors['_form'] = $spam->get_error_message();
+			} else {
+				$captcha = FormTheory_Recaptcha::verify();
+				if ( $captcha ) {
+					$errors['_form'] = $captcha;
+				}
+			}
 		}
 		if ( ! $errors ) {
 			$captcha = FormTheory_Recaptcha::verify();
@@ -57,16 +110,14 @@ class FormTheory_Frontend {
 			}
 		}
 
-		$raw    = isset( $_POST['ft'] ) && is_array( $_POST['ft'] ) ? wp_unslash( $_POST['ft'] ) : array(); // phpcs:ignore -- sanitized per field.
-		$fields = array_values( array_filter( $form['config']['fields'], function ( $f ) {
-			return 'page' !== $f['type'];
-		} ) );
-
+		$raw    = isset( $post['ft'] ) && is_array( $post['ft'] ) ? $post['ft'] : array();
+		$fields = FormTheory_Fields::data_fields( $form['config']['fields'] );
 		$values = array();
 		foreach ( $fields as $f ) {
 			$values[ $f['id'] ] = $this->sanitize_value( $f, $raw[ $f['id'] ] ?? '' );
 		}
-		$visible = FormTheory_Fields::visible_map( $fields, $values );
+		$result['values'] = $values;
+		$visible          = FormTheory_Fields::visible_map( $fields, $values );
 
 		$data = array();
 		foreach ( $fields as $f ) {
@@ -75,34 +126,26 @@ class FormTheory_Frontend {
 				continue;
 			}
 			if ( 'file' === $f['type'] ) {
-				continue; // Handled after validation so failed submits leave no orphans.
+				$err = $this->check_file( $f ); // Stored after validation so failed submits leave no orphans.
+			} else {
+				$err         = $this->validate( $f, $values[ $id ] );
+				$data[ $id ] = $values[ $id ];
 			}
-			$err = $this->validate( $f, $values[ $id ] );
 			if ( $err ) {
 				$errors[ $id ] = $err;
 			}
-			$data[ $id ] = $values[ $id ];
 		}
-		foreach ( $fields as $f ) {
-			if ( 'file' === $f['type'] && ! empty( $visible[ $f['id'] ] ) ) {
-				$err = $this->check_file( $f );
-				if ( $err ) {
-					$errors[ $f['id'] ] = $err;
-				}
-			}
-		}
-
 		if ( $errors ) {
-			self::$state[ $form_id ] = array( 'errors' => $errors, 'values' => $values );
-			return;
+			$result['errors'] = $errors;
+			return $result;
 		}
 
 		foreach ( $fields as $f ) {
 			if ( 'file' === $f['type'] && ! empty( $visible[ $f['id'] ] ) ) {
 				$stored = $this->store_file( $f );
 				if ( is_wp_error( $stored ) ) {
-					self::$state[ $form_id ] = array( 'errors' => array( $f['id'] => $stored->get_error_message() ), 'values' => $values );
-					return;
+					$result['errors'] = array( $f['id'] => $stored->get_error_message() );
+					return $result;
 				}
 				if ( $stored ) {
 					$data[ $f['id'] ] = $stored;
@@ -111,16 +154,72 @@ class FormTheory_Frontend {
 		}
 
 		$entry_id = FormTheory_DB::insert_entry( $form_id, $data );
-		$this->notify( $form, $fields, $data, $entry_id );
+		FormTheory_Notify::send( $form, $data, $entry_id );
 		do_action( 'formtheory_after_submission', $entry_id, $form, $data );
-		$this->redirect_done( $form_id );
+
+		$ctx                = array( 'form' => $form, 'data' => $data, 'entry_id' => $entry_id );
+		$result['ok']       = true;
+		$result['entry_id'] = $entry_id;
+		$result['redirect'] = self::confirmation_target( $form, $ctx );
+		$result['message']  = $result['redirect'] ? null : self::confirmation_html( $form, $data, $entry_id );
+		return $result;
 	}
 
-	private function redirect_done( $form_id ) {
+	/** Redirect back with a short-lived token so the confirmation can resolve merge tags. */
+	private function redirect_done( $form_id, $entry_id = 0 ) {
 		// wp_get_referer() is false when the form posts back to its own URL (the normal case), so validate the raw referer instead.
-		$url = wp_validate_redirect( (string) wp_get_raw_referer(), home_url( '/' ) );
-		wp_safe_redirect( add_query_arg( 'ft_done', $form_id, remove_query_arg( 'ft_done', $url ) ) . '#formtheory-' . $form_id );
+		$url   = remove_query_arg( array( 'ft_done', 'ft_t' ), wp_validate_redirect( (string) wp_get_raw_referer(), home_url( '/' ) ) );
+		$args  = array( 'ft_done' => $form_id );
+		if ( $entry_id ) {
+			$token = wp_generate_password( 20, false );
+			set_transient( 'formtheory_done_' . $token, (int) $entry_id, 10 * MINUTE_IN_SECONDS );
+			$args['ft_t'] = $token;
+		}
+		wp_safe_redirect( add_query_arg( $args, $url ) . '#formtheory-' . $form_id );
 		exit;
+	}
+
+	/** Entry referenced by the confirmation token, if it belongs to this form. */
+	private function done_entry( $form_id ) {
+		$token = isset( $_GET['ft_t'] ) ? preg_replace( '/[^A-Za-z0-9]/', '', (string) wp_unslash( $_GET['ft_t'] ) ) : '';
+		if ( '' === $token ) {
+			return null;
+		}
+		$entry_id = (int) get_transient( 'formtheory_done_' . $token );
+		delete_transient( 'formtheory_done_' . $token ); // Single use: a shared URL must not re-expose entry data.
+		$entry = FormTheory_DB::get_entry( $entry_id );
+		return $entry && (int) $entry['form_id'] === (int) $form_id ? $entry : null;
+	}
+
+	/**
+	 * Where to send the visitor after a successful submit, or null to show
+	 * the confirmation message. Redirect URLs resolve merge tags URL-encoded,
+	 * and are refused if a value changed the configured host.
+	 */
+	public static function confirmation_target( array $form, array $ctx ) {
+		$cfg = $form['config'];
+		$type = $cfg['confirmation_type'] ?? 'message';
+		if ( 'page' === $type ) {
+			$id = (int) ( $cfg['confirmation_page'] ?? 0 );
+			return $id && 'publish' === get_post_status( $id ) ? (string) get_permalink( $id ) : null;
+		}
+		if ( 'redirect' !== $type || empty( $cfg['confirmation_url'] ) ) {
+			return null;
+		}
+		$template = (string) $cfg['confirmation_url'];
+		$url      = FormTheory_Merge::replace( $template, $ctx, 'url' );
+		$expected = wp_parse_url( preg_replace( '/\{[^}]*\}/', '', $template ), PHP_URL_HOST );
+		$actual   = wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! $expected || strtolower( (string) $expected ) !== strtolower( (string) $actual ) || ! preg_match( '#^https?://#i', $url ) ) {
+			return null;
+		}
+		return $url;
+	}
+
+	/** Confirmation message HTML with merge tags resolved. */
+	public static function confirmation_html( array $form, array $data, $entry_id ) {
+		$msg = FormTheory_Merge::replace( $form['config']['confirmation'], array( 'form' => $form, 'data' => $data, 'entry_id' => $entry_id ), 'html' );
+		return wp_kses_post( wpautop( $msg ) );
 	}
 
 	private function sanitize_value( $f, $v ) {
@@ -132,6 +231,8 @@ class FormTheory_Frontend {
 			return '';
 		}
 		switch ( $f['type'] ) {
+			case 'consent':
+				return '1' === (string) $v ? __( 'Accepted', 'formtheory' ) : '';
 			case 'textarea':
 				return sanitize_textarea_field( $v );
 			case 'email':
@@ -163,7 +264,7 @@ class FormTheory_Frontend {
 	}
 
 	private function file_input( $f ) {
-		$files = $_FILES['ft'] ?? null; // phpcs:ignore -- validated below.
+		$files = $this->files['ft'] ?? null;
 		if ( ! $files || ! isset( $files['error'][ $f['id'] ] ) ) {
 			return null;
 		}
@@ -231,34 +332,6 @@ class FormTheory_Frontend {
 		);
 	}
 
-	private function notify( $form, $fields, $data, $entry_id ) {
-		$to = $form['config']['notify_to'];
-		if ( ! $to ) {
-			return;
-		}
-		$lines = array();
-		foreach ( $fields as $f ) {
-			if ( ! array_key_exists( $f['id'], $data ) ) {
-				continue;
-			}
-			$v       = $data[ $f['id'] ];
-			$v       = is_array( $v ) ? ( isset( $v['file'] ) ? $v['name'] . ' (attached in admin)' : implode( ', ', $v ) ) : $v;
-			$lines[] = $f['label'] . ': ' . $v;
-		}
-		$lines[] = '';
-		$lines[] = 'View: ' . add_query_arg( array( 'page' => 'formtheory-entries', 'entry' => $entry_id ), admin_url( 'admin.php' ) );
-
-		$headers = array();
-		foreach ( $fields as $f ) {
-			if ( 'email' === $f['type'] && ! empty( $data[ $f['id'] ] ) && is_email( $data[ $f['id'] ] ) ) {
-				$headers[] = 'Reply-To: ' . $data[ $f['id'] ];
-				break;
-			}
-		}
-		$subject = $form['config']['notify_subject'] ? $form['config']['notify_subject'] : 'New submission: ' . $form['title'];
-		wp_mail( $to, wp_strip_all_tags( $subject ), implode( "\n", $lines ), $headers );
-	}
-
 	/* ---------- Render ---------- */
 
 	public function shortcode( $atts ) {
@@ -273,7 +346,9 @@ class FormTheory_Frontend {
 
 		$anchor = 'formtheory-' . $form_id;
 		if ( isset( $_GET['ft_done'] ) && absint( $_GET['ft_done'] ) === $form_id ) {
-			return '<div id="' . esc_attr( $anchor ) . '" class="ft-confirmation" role="status" tabindex="-1">' . wp_kses_post( wpautop( $form['config']['confirmation'] ) ) . '</div>';
+			$entry = $this->done_entry( $form_id );
+			$html  = self::confirmation_html( $form, $entry ? $entry['data'] : array(), $entry ? (int) $entry['id'] : 0 );
+			return '<div id="' . esc_attr( $anchor ) . '" class="ft-confirmation" role="status" tabindex="-1">' . $html . '</div>';
 		}
 
 		$state  = self::$state[ $form_id ] ?? array( 'errors' => array(), 'values' => array() );
@@ -295,9 +370,11 @@ class FormTheory_Frontend {
 		$multi = count( $pages ) > 1;
 
 		ob_start();
-		echo '<form id="' . esc_attr( $anchor ) . '" class="ft-form" method="post" enctype="multipart/form-data" novalidate data-ft-form>';
+		$ajax = ! empty( $form['config']['ajax'] ) ? ' data-ft-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' : '';
+		echo '<form id="' . esc_attr( $anchor ) . '" class="ft-form" method="post" enctype="multipart/form-data" novalidate data-ft-form' . $ajax . '>'; // phpcs:ignore -- $ajax escaped above.
 		echo '<input type="hidden" name="formtheory_id" value="' . (int) $form_id . '">';
 		wp_nonce_field( 'formtheory_submit_' . $form_id, '_ft_nonce', false );
+		echo '<input type="hidden" name="ft_ts" value="' . esc_attr( FormTheory_Spam::stamp() ) . '">';
 		echo '<div class="ft-hp" aria-hidden="true"><label>Leave empty<input type="text" name="ft_hp" tabindex="-1" autocomplete="off"></label></div>';
 
 		if ( $errors ) {
@@ -327,6 +404,11 @@ class FormTheory_Frontend {
 			if ( $multi && $i < count( $pages ) - 1 ) {
 				echo '<button type="button" class="ft-btn ft-next" data-ft-next>' . esc_html__( 'Next', 'formtheory' ) . '</button>';
 			} else {
+				if ( FormTheory_Spam::turnstile_enabled() ) {
+					wp_enqueue_script( 'formtheory-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js', array(), null, array( 'strategy' => 'defer' ) );
+					echo '<div class="cf-turnstile ft-turnstile" data-sitekey="' . esc_attr( FormTheory_Spam::settings()['turnstile_site'] ) . '"></div>';
+					echo '<noscript><p class="ft-help">' . esc_html__( 'This form needs JavaScript enabled for its spam check.', 'formtheory' ) . '</p></noscript>';
+				}
 				echo '<button type="submit" class="ft-btn ft-submit">' . esc_html( $form['config']['submit_label'] ) . '</button>';
 			}
 			echo '</div></div>';
@@ -354,6 +436,15 @@ class FormTheory_Frontend {
 
 		echo '<div class="' . esc_attr( $classes ) . '" data-ft-field="' . esc_attr( $f['id'] ) . '" data-ft-required="' . ( $f['required'] ? '1' : '0' ) . '" data-ft-type="' . esc_attr( $f['type'] ) . '"' . $cond . '>'; // phpcs:ignore -- $cond escaped above.
 
+		if ( 'html' === $f['type'] ) {
+			echo '<div class="ft-field ft-type-html"' . $cond . '>' . wp_kses_post( $f['content'] ) . '</div>'; // phpcs:ignore -- $cond escaped above.
+			return;
+		}
+		if ( 'hidden' === $f['type'] ) {
+			$v = '' !== (string) $value ? $value : FormTheory_Fields::populate( $f['default'] );
+			echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $v ) . '">';
+			return;
+		}
 		$group = in_array( $f['type'], array( 'radio', 'checkbox' ), true );
 		if ( $group ) {
 			echo '<fieldset' . $aria . '><legend>' . esc_html( $f['label'] ) . $req . '</legend>'; // phpcs:ignore -- $aria/$req static/escaped.
@@ -370,6 +461,10 @@ class FormTheory_Frontend {
 					esc_html( $opt )
 				);
 			}
+			echo '</fieldset>';
+		} elseif ( 'consent' === $f['type'] ) {
+			echo '<fieldset' . $aria . '><legend>' . esc_html( $f['label'] ) . $req . '</legend>'; // phpcs:ignore -- static/escaped.
+			echo '<div class="ft-choice"><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1"' . checked( '' !== (string) $value, true, false ) . '><label for="' . esc_attr( $id ) . '">' . wp_kses_post( $f['text'] ? $f['text'] : $f['label'] ) . '</label></div>';
 			echo '</fieldset>';
 		} else {
 			echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $f['label'] ) . $req . '</label>'; // phpcs:ignore

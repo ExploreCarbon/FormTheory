@@ -68,6 +68,10 @@ class FormTheory_DB {
 			'confirmation'  => 'Thanks! Your submission was received.',
 			'notify_to'     => get_option( 'admin_email' ),
 			'notify_subject'=> 'New form submission',
+			'ajax'              => true,
+			'confirmation_type' => 'message',
+			'confirmation_page' => 0,
+			'confirmation_url'  => '',
 		);
 	}
 
@@ -78,7 +82,13 @@ class FormTheory_DB {
 			return null;
 		}
 		$cfg           = json_decode( $row['config'], true );
-		$row['config'] = wp_parse_args( is_array( $cfg ) ? $cfg : array(), self::default_config() );
+		$cfg           = is_array( $cfg ) ? $cfg : array();
+		$legacy        = ! array_key_exists( 'ajax', $cfg );
+		$row['config'] = wp_parse_args( $cfg, self::default_config() );
+		if ( $legacy ) {
+			unset( $row['config']['ajax'] ); // Let migrate_config mark it as a 1.0 form.
+		}
+		$row['config'] = FormTheory_Fields::migrate_config( $row['config'] );
 		return $row;
 	}
 

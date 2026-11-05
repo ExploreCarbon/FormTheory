@@ -125,7 +125,8 @@ class FormTheory_Recaptcha {
 		register_setting( 'formtheory_settings', self::OPTION, array( 'type' => 'array', 'sanitize_callback' => array( __CLASS__, 'sanitize' ) ) );
 	}
 
-	public static function page() {
+	/** Settings section (no form wrapper); rendered by FormTheory_Admin::page_settings(). */
+	public static function fields() {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
@@ -133,10 +134,6 @@ class FormTheory_Recaptcha {
 		$o     = self::OPTION;
 		$const = defined( 'FORMTHEORY_RECAPTCHA_SECRET_KEY' );
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'FormTheory Settings', 'formtheory' ); ?></h1>
-			<form method="post" action="options.php">
-				<?php settings_fields( 'formtheory_settings' ); ?>
 				<h2><?php esc_html_e( 'Google reCAPTCHA', 'formtheory' ); ?></h2>
 				<p><?php esc_html_e( 'Applies to every form. Get keys at google.com/recaptcha/admin; key type must match the version chosen.', 'formtheory' ); ?></p>
 				<table class="form-table" role="presentation">
@@ -167,9 +164,6 @@ class FormTheory_Recaptcha {
 						</td>
 					</tr>
 				</table>
-				<?php submit_button(); ?>
-			</form>
-		</div>
 		<?php
 	}
 }

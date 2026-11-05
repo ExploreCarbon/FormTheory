@@ -18,6 +18,10 @@ define( 'FORMTHEORY_URL', plugin_dir_url( __FILE__ ) );
 
 require_once FORMTHEORY_DIR . 'includes/class-db.php';
 require_once FORMTHEORY_DIR . 'includes/class-fields.php';
+require_once FORMTHEORY_DIR . 'includes/class-merge.php';
+require_once FORMTHEORY_DIR . 'includes/class-spam.php';
+require_once FORMTHEORY_DIR . 'includes/class-notify.php';
+require_once FORMTHEORY_DIR . 'includes/class-webhooks.php';
 require_once FORMTHEORY_DIR . 'includes/class-recaptcha.php';
 require_once FORMTHEORY_DIR . 'includes/class-admin.php';
 require_once FORMTHEORY_DIR . 'includes/class-frontend.php';
@@ -32,4 +36,5 @@ add_action( 'plugins_loaded', function () {
 		new FormTheory_Admin();
 	}
 	new FormTheory_Frontend();
+	FormTheory_Webhooks::init();
 } );

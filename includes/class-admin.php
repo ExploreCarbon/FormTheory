@@ -13,6 +13,7 @@ class FormTheory_Admin {
 		add_action( 'admin_post_formtheory_delete_entry', array( $this, 'handle_delete_entry' ) );
 		add_action( 'admin_post_formtheory_export', array( $this, 'handle_export' ) );
 		add_action( 'admin_post_formtheory_file', array( $this, 'handle_file' ) );
+		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_init', array( 'FormTheory_Recaptcha', 'register_setting' ) );
 	}
 
@@ -21,7 +22,7 @@ class FormTheory_Admin {
 		add_submenu_page( 'formtheory', 'Forms', 'Forms', self::CAP, 'formtheory', array( $this, 'page_forms' ) );
 		add_submenu_page( 'formtheory', 'New Form', 'New Form', self::CAP, 'formtheory-edit', array( $this, 'page_edit' ) );
 		add_submenu_page( 'formtheory', 'Entries', 'Entries', self::CAP, 'formtheory-entries', array( $this, 'page_entries' ) );
-		add_submenu_page( 'formtheory', 'Settings', 'Settings', self::CAP, 'formtheory-settings', array( 'FormTheory_Recaptcha', 'page' ) );
+		add_submenu_page( 'formtheory', 'Settings', 'Settings', self::CAP, 'formtheory-settings', array( $this, 'page_settings' ) );
 	}
 
 	public function assets( $hook ) {
@@ -83,7 +84,7 @@ class FormTheory_Admin {
 			wp_die( esc_html__( 'Form not found.', 'formtheory' ) );
 		}
 		$title  = $form ? $form['title'] : '';
-		$config = $form ? $form['config'] : FormTheory_DB::default_config();
+		$config = $form ? $form['config'] : FormTheory_Fields::migrate_config( FormTheory_DB::default_config() );
 		echo '<div class="wrap"><h1>' . ( $id ? 'Edit Form' : 'New Form' ) . '</h1>';
 		$this->notice();
 		if ( $id ) {
@@ -194,10 +195,38 @@ class FormTheory_Admin {
 		echo '<p><a class="button ft-danger" href="' . esc_url( $this->action_url( 'formtheory_delete_entry', array( 'id' => (int) $entry['id'] ) ) ) . '" onclick="return confirm(\'Delete this entry?\');">Delete entry</a></p>';
 	}
 
+	public function register_settings() {
+		register_setting( 'formtheory_settings', 'formtheory_settings', array(
+			'type'              => 'array',
+			'sanitize_callback' => function ( $in ) {
+				$in = is_array( $in ) ? $in : array();
+				return array(
+					'turnstile_site'   => sanitize_text_field( $in['turnstile_site'] ?? '' ),
+					'turnstile_secret' => sanitize_text_field( $in['turnstile_secret'] ?? '' ),
+				);
+			},
+		) );
+	}
+
+	public function page_settings() {
+		if ( ! current_user_can( self::CAP ) ) {
+			return;
+		}
+		$s = FormTheory_Spam::settings();
+		echo '<div class="wrap"><h1>FormTheory Settings</h1><form method="post" action="options.php">';
+		settings_fields( 'formtheory_settings' );
+		FormTheory_Recaptcha::fields();
+		echo '<h2>Cloudflare Turnstile</h2><p>Leave both blank to disable. A signed time-trap and honeypot are always on.</p>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th scope="row"><label for="ft-ts-site">Site key</label></th><td><input type="text" class="regular-text" id="ft-ts-site" name="formtheory_settings[turnstile_site]" value="' . esc_attr( $s['turnstile_site'] ) . '"></td></tr>';
+		echo '<tr><th scope="row"><label for="ft-ts-secret">Secret key</label></th><td><input type="password" class="regular-text" id="ft-ts-secret" name="formtheory_settings[turnstile_secret]" value="' . esc_attr( $s['turnstile_secret'] ) . '" autocomplete="off"></td></tr>';
+		echo '</table>';
+		submit_button();
+		echo '</form></div>';
+	}
+
 	private function data_fields( $form ) {
-		return array_values( array_filter( $form['config']['fields'], function ( $f ) {
-			return 'page' !== $f['type'];
-		} ) );
+		return FormTheory_Fields::data_fields( $form['config']['fields'] );
 	}
 
 	public function plain_value( $val ) {
