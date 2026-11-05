@@ -107,14 +107,37 @@ class FormTheory_Frontend {
 		$entry_id = FormTheory_DB::insert_entry( $form_id, $data );
 		$this->notify( $form, $fields, $data, $entry_id );
 		do_action( 'formtheory_after_submission', $entry_id, $form, $data );
-		$this->redirect_done( $form_id );
+		$this->redirect_done( $form_id, $entry_id );
 	}
 
-	private function redirect_done( $form_id ) {
-		$ref = wp_get_referer();
-		$url = $ref ? $ref : home_url( '/' );
-		wp_safe_redirect( add_query_arg( 'ft_done', $form_id, remove_query_arg( 'ft_done', $url ) ) . '#formtheory-' . $form_id );
+	/** Redirect back with a short-lived token so the confirmation can resolve merge tags. */
+	private function redirect_done( $form_id, $entry_id = 0 ) {
+		$ref   = wp_get_referer();
+		$url   = remove_query_arg( array( 'ft_done', 'ft_t' ), $ref ? $ref : home_url( '/' ) );
+		$args  = array( 'ft_done' => $form_id );
+		if ( $entry_id ) {
+			$token = wp_generate_password( 20, false );
+			set_transient( 'formtheory_done_' . $token, (int) $entry_id, 10 * MINUTE_IN_SECONDS );
+			$args['ft_t'] = $token;
+		}
+		wp_safe_redirect( add_query_arg( $args, $url ) . '#formtheory-' . $form_id );
 		exit;
+	}
+
+	/** Entry referenced by the confirmation token, if it belongs to this form. */
+	private function done_entry( $form_id ) {
+		$token = isset( $_GET['ft_t'] ) ? preg_replace( '/[^A-Za-z0-9]/', '', (string) wp_unslash( $_GET['ft_t'] ) ) : '';
+		if ( '' === $token ) {
+			return null;
+		}
+		$entry = FormTheory_DB::get_entry( (int) get_transient( 'formtheory_done_' . $token ) );
+		return $entry && (int) $entry['form_id'] === (int) $form_id ? $entry : null;
+	}
+
+	/** Confirmation message HTML with merge tags resolved. */
+	public static function confirmation_html( array $form, array $data, $entry_id ) {
+		$msg = FormTheory_Merge::replace( $form['config']['confirmation'], array( 'form' => $form, 'data' => $data, 'entry_id' => $entry_id ), 'html' );
+		return wp_kses_post( wpautop( $msg ) );
 	}
 
 	private function sanitize_value( $f, $v ) {
@@ -267,7 +290,9 @@ class FormTheory_Frontend {
 
 		$anchor = 'formtheory-' . $form_id;
 		if ( isset( $_GET['ft_done'] ) && absint( $_GET['ft_done'] ) === $form_id ) {
-			return '<div id="' . esc_attr( $anchor ) . '" class="ft-confirmation" role="status" tabindex="-1">' . wp_kses_post( wpautop( $form['config']['confirmation'] ) ) . '</div>';
+			$entry = $this->done_entry( $form_id );
+			$html  = self::confirmation_html( $form, $entry ? $entry['data'] : array(), $entry ? (int) $entry['id'] : 0 );
+			return '<div id="' . esc_attr( $anchor ) . '" class="ft-confirmation" role="status" tabindex="-1">' . $html . '</div>';
 		}
 
 		$state  = self::$state[ $form_id ] ?? array( 'errors' => array(), 'values' => array() );
