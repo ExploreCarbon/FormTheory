@@ -32,6 +32,11 @@ class FieldsTest extends TestCase {
 		$this->assertSame( 'v', $f['default'] );
 	}
 
+	public function test_legacy_config_keeps_classic_submit() {
+		$this->assertFalse( \FormTheory_Fields::migrate_config( array( 'fields' => array() ) )['ajax'] );
+		$this->assertTrue( \FormTheory_Fields::migrate_config( array( 'fields' => array(), 'ajax' => true ) )['ajax'] );
+	}
+
 	public function test_non_data_types() {
 		$this->assertSame( array( 'page', 'html' ), \FormTheory_Fields::NON_DATA );
 	}

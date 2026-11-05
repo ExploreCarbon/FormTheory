@@ -1,6 +1,7 @@
 <?php
 define( 'ABSPATH', __DIR__ . '/' );
 define( 'MB_IN_BYTES', 1048576 );
+define( 'ARRAY_A', 'ARRAY_A' );
 require dirname( __DIR__ ) . '/vendor/autoload.php';
 
 if ( ! class_exists( 'WP_Error' ) ) {

@@ -174,7 +174,9 @@ class FormTheory_Frontend {
 		if ( '' === $token ) {
 			return null;
 		}
-		$entry = FormTheory_DB::get_entry( (int) get_transient( 'formtheory_done_' . $token ) );
+		$entry_id = (int) get_transient( 'formtheory_done_' . $token );
+		delete_transient( 'formtheory_done_' . $token ); // Single use: a shared URL must not re-expose entry data.
+		$entry = FormTheory_DB::get_entry( $entry_id );
 		return $entry && (int) $entry['form_id'] === (int) $form_id ? $entry : null;
 	}
 
@@ -391,6 +393,7 @@ class FormTheory_Frontend {
 				if ( FormTheory_Spam::turnstile_enabled() ) {
 					wp_enqueue_script( 'formtheory-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js', array(), null, array( 'strategy' => 'defer' ) );
 					echo '<div class="cf-turnstile ft-turnstile" data-sitekey="' . esc_attr( FormTheory_Spam::settings()['turnstile_site'] ) . '"></div>';
+					echo '<noscript><p class="ft-help">' . esc_html__( 'This form needs JavaScript enabled for its spam check.', 'formtheory' ) . '</p></noscript>';
 				}
 				echo '<button type="submit" class="ft-btn ft-submit">' . esc_html( $form['config']['submit_label'] ) . '</button>';
 			}

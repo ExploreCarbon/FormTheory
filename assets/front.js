@@ -165,7 +165,9 @@
 			data.append('action', 'formtheory_submit');
 			form.setAttribute('aria-busy', 'true');
 			fetch(form.getAttribute('data-ft-ajax'), { method: 'POST', body: data, credentials: 'same-origin' })
-				.then(function (r) { return r.json(); })
+				.then(function (r) {
+					return r.json().catch(function () { return { ok: false, unparsable: true, errors: { _form: 'Something went wrong. Please reload the page before submitting again.' } }; });
+				})
 				.then(function (res) {
 					form.removeAttribute('aria-busy');
 					if (res.ok && res.redirect) { window.location.assign(res.redirect); return; }
@@ -185,7 +187,7 @@
 					showServerErrors(res.errors || {});
 				})
 				.catch(function () {
-					// Network/parse failure: fall back to a normal POST.
+					// Network failure (request never answered): fall back to a normal POST.
 					form.removeAttribute('aria-busy');
 					form.removeAttribute('data-ft-ajax');
 					HTMLFormElement.prototype.submit.call(form);

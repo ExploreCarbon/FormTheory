@@ -70,17 +70,17 @@ Each form can have any number of notifications. Each has: recipients (emails or 
 
 ## AJAX submit
 
-On by default per form (**Submit without page reload**). Without JavaScript, or on network failure, the form falls back to a normal POST. Errors are shown inline, announced, and focus moves to the first invalid field (switching steps on multi-page forms).
+On by default for new forms (**Submit without page reload**); forms created in 1.0 keep full-page submit until switched on. Without JavaScript, or on network failure, the form falls back to a normal POST. Errors are shown inline, announced, and focus moves to the first invalid field (switching steps on multi-page forms).
 
 ## Spam protection
 
 - Honeypot field (always on).
 - Signed time-trap: submissions faster than 3 seconds after render are rejected.
-- Cloudflare Turnstile: set site + secret keys under **FormTheory → Settings**. Verification failures (including network errors) reject the submission.
+- Cloudflare Turnstile: set site + secret keys under **FormTheory → Settings**. Verification failures (including network errors) reject the submission. Turnstile requires JavaScript; no-JS visitors see a notice.
 
 ## Webhooks
 
-Each form can post entries to HTTPS endpoints after submission (non-blocking, 5 s timeout, private/loopback hosts refused). Formats: JSON (`form_id`, `form_title`, `entry_id`, `submitted_at`, `fields`) or form-encoded. With a secret set, requests carry `X-FormTheory-Signature: sha256=<HMAC-SHA256 of body>`. Optional conditions as for notifications.
+Each form can post entries to HTTPS endpoints after submission. Requests are queued via WP-Cron so they never delay the visitor (5 s timeout, private/loopback hosts refused; sites with `DISABLE_WP_CRON` need a real cron job). Formats: JSON (`form_id`, `form_title`, `entry_id`, `submitted_at`, `fields`) or form-encoded. With a secret set, requests carry `X-FormTheory-Signature: sha256=<HMAC-SHA256 of body>`. Optional conditions as for notifications.
 
 ## Hooks
 

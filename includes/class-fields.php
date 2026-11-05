@@ -172,6 +172,9 @@ class FormTheory_Fields {
 
 	/** Upgrade 1.0 configs (single notify_to/notify_subject) to the notifications list. */
 	public static function migrate_config( array $cfg ) {
+		if ( ! array_key_exists( 'ajax', $cfg ) ) {
+			$cfg['ajax'] = false; // 1.0 forms keep the full-page POST they were built with.
+		}
 		if ( isset( $cfg['notifications'] ) && is_array( $cfg['notifications'] ) ) {
 			return $cfg;
 		}

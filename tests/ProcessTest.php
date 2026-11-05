@@ -86,6 +86,25 @@ class ProcessTest extends TestCase {
 		$this->assertCount( 1, $GLOBALS['wpdb']->inserts );
 	}
 
+	public function test_done_token_is_single_use() {
+		Functions\when( 'get_transient' )->justReturn( 1 );
+		Functions\expect( 'delete_transient' )->once()->with( 'formtheory_done_abc' );
+		$GLOBALS['wpdb'] = new class() extends FakeWpdb {
+			public function prepare( $q ) {
+				return $q;
+			}
+			public function get_row() {
+				return array( 'id' => 1, 'form_id' => 2, 'data' => '{"name":"Ann"}' );
+			}
+		};
+		$_GET['ft_t'] = 'abc';
+		$m            = new \ReflectionMethod( \FormTheory_Frontend::class, 'done_entry' );
+		$m->setAccessible( true );
+		$entry = $m->invoke( $this->front, 2 );
+		unset( $_GET['ft_t'] );
+		$this->assertSame( 'Ann', $entry['data']['name'] );
+	}
+
 	public function test_honeypot_returns_ok_without_insert() {
 		$p          = $this->post( array( 'name' => 'Ann' ) );
 		$p['ft_hp'] = 'bot';

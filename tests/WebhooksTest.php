@@ -6,6 +6,7 @@ use Brain\Monkey\Functions;
 class WebhooksTest extends TestCase {
 
 	private $calls = array();
+	private $events = array();
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -14,6 +15,27 @@ class WebhooksTest extends TestCase {
 			$calls[] = compact( 'url', 'args' );
 			return array();
 		} );
+		$events = &$this->events;
+		Functions\when( 'wp_schedule_single_event' )->alias( function ( $ts, $hook, $args ) use ( &$events ) {
+			$events[] = compact( 'ts', 'hook', 'args' );
+			return true;
+		} );
+	}
+
+	/** Dispatch, then run scheduled events like WP-Cron would. */
+	private function fire( $entry_id, $form, $data ) {
+		\FormTheory_Webhooks::dispatch( $entry_id, $form, $data );
+		foreach ( $this->events as $e ) {
+			\FormTheory_Webhooks::send( ...$e['args'] );
+		}
+	}
+
+	public function test_dispatch_defers_to_cron() {
+		\FormTheory_Webhooks::dispatch( 12, $this->form( array( $this->hook() ) ), array( 'name' => 'Ann' ) );
+		$this->assertCount( 0, $this->calls );
+		$this->assertCount( 1, $this->events );
+		$this->assertSame( 'formtheory_send_webhook', $this->events[0]['hook'] );
+		$this->assertSame( 'https://hook.test/in', $this->events[0]['args'][0] );
 	}
 
 	private function form( array $hooks ) {
@@ -59,23 +81,23 @@ class WebhooksTest extends TestCase {
 	}
 
 	public function test_nonblocking_args() {
-		\FormTheory_Webhooks::dispatch( 12, $this->form( array( $this->hook() ) ), array( 'name' => 'Ann' ) );
+		$this->fire( 12, $this->form( array( $this->hook() ) ), array( 'name' => 'Ann' ) );
 		$this->assertCount( 1, $this->calls );
 		$args = $this->calls[0]['args'];
-		$this->assertFalse( $args['blocking'] );
+		$this->assertTrue( $args['blocking'] );
 		$this->assertSame( 5, $args['timeout'] );
 		$this->assertSame( 'application/json', $args['headers']['Content-Type'] );
 		$this->assertSame( 'Ann', json_decode( $args['body'], true )['fields']['name'] );
 	}
 
 	public function test_signature_header() {
-		\FormTheory_Webhooks::dispatch( 12, $this->form( array( $this->hook( array( 'secret' => 'k' ) ) ) ), array( 'name' => 'Ann' ) );
+		$this->fire( 12, $this->form( array( $this->hook( array( 'secret' => 'k' ) ) ) ), array( 'name' => 'Ann' ) );
 		$args = $this->calls[0]['args'];
 		$this->assertSame( 'sha256=' . hash_hmac( 'sha256', $args['body'], 'k' ), $args['headers']['X-FormTheory-Signature'] );
 	}
 
 	public function test_form_format_flattens_files() {
-		\FormTheory_Webhooks::dispatch( 12, $this->form( array( $this->hook( array( 'format' => 'form' ) ) ) ), array( 'name' => array( 'file' => 'x.pdf', 'name' => 'cv.pdf' ) ) );
+		$this->fire( 12, $this->form( array( $this->hook( array( 'format' => 'form' ) ) ) ), array( 'name' => array( 'file' => 'x.pdf', 'name' => 'cv.pdf' ) ) );
 		$args = $this->calls[0]['args'];
 		$this->assertSame( 'cv.pdf', $args['body']['name'] );
 		$this->assertSame( 12, $args['body']['entry_id'] );
@@ -83,7 +105,7 @@ class WebhooksTest extends TestCase {
 
 	public function test_cond_false_skips() {
 		$cond = array( 'enabled' => true, 'action' => 'show', 'logic' => 'all', 'rules' => array( array( 'field' => 'name', 'op' => 'is', 'value' => 'Bob' ) ) );
-		\FormTheory_Webhooks::dispatch( 12, $this->form( array( $this->hook( array( 'cond' => $cond ) ) ) ), array( 'name' => 'Ann' ) );
+		$this->fire( 12, $this->form( array( $this->hook( array( 'cond' => $cond ) ) ) ), array( 'name' => 'Ann' ) );
 		$this->assertCount( 0, $this->calls );
 	}
 }

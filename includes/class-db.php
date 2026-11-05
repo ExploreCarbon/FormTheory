@@ -82,7 +82,13 @@ class FormTheory_DB {
 			return null;
 		}
 		$cfg           = json_decode( $row['config'], true );
-		$row['config'] = FormTheory_Fields::migrate_config( wp_parse_args( is_array( $cfg ) ? $cfg : array(), self::default_config() ) );
+		$cfg           = is_array( $cfg ) ? $cfg : array();
+		$legacy        = ! array_key_exists( 'ajax', $cfg );
+		$row['config'] = wp_parse_args( $cfg, self::default_config() );
+		if ( $legacy ) {
+			unset( $row['config']['ajax'] ); // Let migrate_config mark it as a 1.0 form.
+		}
+		$row['config'] = FormTheory_Fields::migrate_config( $row['config'] );
 		return $row;
 	}
 
