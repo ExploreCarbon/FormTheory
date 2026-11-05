@@ -190,6 +190,44 @@ class FormTheory_Drafts {
 		return function_exists( 'mb_strtolower' ) ? mb_strtolower( (string) $s, 'UTF-8' ) : strtolower( (string) $s );
 	}
 
+	/** Cheap bounded size of a posted payload: stops counting once over $limit bytes. */
+	public static function payload_too_big( $raw, $limit = self::MAX_BYTES ) {
+		$n     = 0;
+		$stack = array( $raw );
+		while ( $stack ) {
+			$v = array_pop( $stack );
+			if ( is_array( $v ) ) {
+				foreach ( $v as $k => $item ) {
+					$n      += strlen( (string) $k ) + 4;
+					$stack[] = $item;
+					if ( $n > $limit ) {
+						return true;
+					}
+				}
+			} elseif ( is_scalar( $v ) ) {
+				$n += strlen( (string) $v );
+			}
+			if ( $n > $limit ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static function rate_key( $kind ) {
+		return ( 'email' === $kind ? 'formtheory_draft_rl_' : 'formtheory_draft_rlc_' ) . md5( FormTheory_DB::client_ip() );
+	}
+
+	private static function rate_get( $kind ) {
+		$cur = get_transient( self::rate_key( $kind ) );
+		return is_array( $cur ) && isset( $cur['n'], $cur['until'] ) && (int) $cur['until'] > time() ? $cur : array( 'n' => 0, 'until' => time() + 3600 );
+	}
+
+	/** Peek: true if one more hit is allowed (does not count). */
+	public static function rate_ok( $kind, $max ) {
+		return (int) self::rate_get( $kind )['n'] < (int) $max;
+	}
+
 	/**
 	 * Fixed-window per-IP counter (window starts at the first hit, never slides).
 	 * Returns false (and does not count) once $max hits were used this hour.
@@ -197,10 +235,9 @@ class FormTheory_Drafts {
 	 * @param string $kind 'email' => formtheory_draft_rl_<md5(ip)>, else formtheory_draft_rlc_<md5(ip)>.
 	 */
 	public static function rate_hit( $kind, $max ) {
-		$key  = ( 'email' === $kind ? 'formtheory_draft_rl_' : 'formtheory_draft_rlc_' ) . md5( FormTheory_DB::client_ip() );
-		$cur  = get_transient( $key );
+		$key  = self::rate_key( $kind );
 		$now  = time();
-		$cur  = is_array( $cur ) && isset( $cur['n'], $cur['until'] ) && (int) $cur['until'] > $now ? $cur : array( 'n' => 0, 'until' => $now + 3600 );
+		$cur  = self::rate_get( $kind );
 		if ( (int) $cur['n'] >= (int) $max ) {
 			return false;
 		}

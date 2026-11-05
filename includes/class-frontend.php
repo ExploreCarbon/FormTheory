@@ -180,13 +180,22 @@ class FormTheory_Frontend {
 		if ( '' !== $email && ! is_email( $email ) ) {
 			return $fail( __( 'Enter a valid email address.', 'formtheory' ) );
 		}
-		if ( ( '' !== $email && ! FormTheory_Drafts::rate_hit( 'email', FormTheory_Drafts::RL_EMAIL ) )
-			|| ! FormTheory_Drafts::rate_hit( 'create', FormTheory_Drafts::RL_CREATE ) ) {
+		$raw = isset( $post['ft'] ) && is_array( $post['ft'] ) ? $post['ft'] : array();
+		if ( FormTheory_Drafts::payload_too_big( $raw ) ) {
+			// Refused before any per-field sanitizing work; create() re-checks the stored JSON.
+			return $fail( __( 'There is too much to save. Please shorten some answers and try again.', 'formtheory' ) );
+		}
+		// Peek both limits first so a refused request never burns the other quota.
+		if ( ! FormTheory_Drafts::rate_ok( 'create', FormTheory_Drafts::RL_CREATE )
+			|| ( '' !== $email && ! FormTheory_Drafts::rate_ok( 'email', FormTheory_Drafts::RL_EMAIL ) ) ) {
 			return $fail( __( 'Too many requests.', 'formtheory' ), 429 );
+		}
+		FormTheory_Drafts::rate_hit( 'create', FormTheory_Drafts::RL_CREATE );
+		if ( '' !== $email ) {
+			FormTheory_Drafts::rate_hit( 'email', FormTheory_Drafts::RL_EMAIL );
 		}
 
 		$fields = FormTheory_Fields::data_fields( $form['config']['fields'] );
-		$raw    = isset( $post['ft'] ) && is_array( $post['ft'] ) ? $post['ft'] : array();
 		$values = array();
 		foreach ( $fields as $f ) {
 			$v = $this->sanitize_value( $f, $raw[ $f['id'] ] ?? '' );
@@ -207,7 +216,7 @@ class FormTheory_Frontend {
 		}
 
 		$expires = time() + FormTheory_Drafts::ttl();
-		$base    = remove_query_arg( array( 'ft_resume', 'ft_done', 'ft_t' ), wp_validate_redirect( (string) wp_get_raw_referer(), home_url( '/' ) ) );
+		$base    = self::page_base( wp_validate_redirect( (string) wp_get_raw_referer(), home_url( '/' ) ) );
 		$url     = esc_url_raw( add_query_arg( 'ft_resume', $token, $base ) . '#formtheory-' . $form_id );
 		$emailed = false;
 		if ( '' !== $email ) {
@@ -224,6 +233,15 @@ class FormTheory_Frontend {
 			'expires' => gmdate( 'c', $expires ),
 			'emailed' => $emailed,
 		);
+	}
+
+	/** scheme://host[:port]/path of a validated same-host URL: the sender cannot choose query args or fragment in the link. */
+	private static function page_base( $url ) {
+		$p = wp_parse_url( (string) $url );
+		if ( ! is_array( $p ) || empty( $p['host'] ) ) {
+			$p = wp_parse_url( home_url( '/' ) );
+		}
+		return ( $p['scheme'] ?? 'https' ) . '://' . $p['host'] . ( isset( $p['port'] ) ? ':' . (int) $p['port'] : '' ) . ( $p['path'] ?? '/' );
 	}
 
 	/**

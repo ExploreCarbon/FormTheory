@@ -140,6 +140,7 @@ class DraftsTest extends TestCase {
 			return 0 === strpos( (string) $url, 'https://site.test/' ) ? $url : $fallback;
 		} );
 		Functions\when( 'home_url' )->justReturn( 'https://site.test/' );
+		Functions\when( 'wp_parse_url' )->alias( 'parse_url' );
 		Functions\when( 'remove_query_arg' )->alias( function ( $keys, $url ) {
 			$parts = explode( '?', $url, 2 );
 			if ( 1 === count( $parts ) ) {
@@ -336,8 +337,45 @@ class DraftsTest extends TestCase {
 	public function test_save_returns_url_with_token_and_strips_old_params() {
 		$r = $this->front->save_draft( $this->form(), $this->post( array( 'name' => 'Ann' ), array( '_wp_http_referer' => 'x' ) ) );
 		$this->assertTrue( $r['ok'] );
-		$this->assertMatchesRegularExpression( '#^https://site\.test/contact/\?a=1&ft_resume=[A-Za-z0-9]{32}\#formtheory-2$#', $r['url'] );
+		$this->assertMatchesRegularExpression( '#^https://site\.test/contact/\?ft_resume=[A-Za-z0-9]{32}\#formtheory-2$#', $r['url'] );
 		$this->assertNotEmpty( $r['expires'] );
+		$this->assertSame( array(), $this->mails );
+	}
+
+	public function test_link_base_drops_referer_query_and_fragment() {
+		Functions\when( 'wp_get_raw_referer' )->justReturn( 'https://site.test/contact/?evil=1&x=<script>#frag' );
+		$r = $this->front->save_draft( $this->form(), $this->post( array( 'name' => 'Ann' ), array( 'email' => 'v@example.com' ) ) );
+		$this->assertMatchesRegularExpression( '#^https://site\.test/contact/\?ft_resume=[A-Za-z0-9]{32}\#formtheory-2$#', $r['url'] );
+		$this->assertStringNotContainsString( 'evil', $this->mails[0][2] );
+		$this->assertStringNotContainsString( '<script>', $this->mails[0][2] );
+	}
+
+	public function test_oversize_post_refused_before_sanitizing() {
+		$calls = 0;
+		Functions\when( 'sanitize_text_field' )->alias( function ( $s ) use ( &$calls ) {
+			$calls++;
+			return (string) $s;
+		} );
+		$rows = array();
+		for ( $i = 0; $i < 3000; $i++ ) {
+			$rows[] = array( 'kn' => str_repeat( 'k', 50 ), 'ka' => str_repeat( '9', 40 ) );
+		}
+		$form  = $this->form();
+		$post  = $this->post( array( 'kids' => $rows ) );
+		$calls = 0;
+		$r     = $this->front->save_draft( $form, $post );
+		$this->assertFalse( $r['ok'] );
+		$this->assertSame( 'There is too much to save. Please shorten some answers and try again.', $r['error'] );
+		$this->assertSame( 1, $calls ); // Only the nonce; no field value was sanitized.
+		$this->assertSame( array(), $this->db->rows );
+		$this->assertSame( array(), $this->transients ); // No quota consumed either.
+	}
+
+	public function test_create_refusal_does_not_burn_email_quota() {
+		$this->transients[ 'formtheory_draft_rlc_' . md5( '203.0.113.9' ) ] = array( 'n' => 20, 'until' => time() + 600 );
+		$r = $this->front->save_draft( $this->form(), $this->post( array( 'name' => 'A' ), array( 'email' => 'v@example.com' ) ) );
+		$this->assertSame( 'Too many requests.', $r['error'] );
+		$this->assertArrayNotHasKey( 'formtheory_draft_rl_' . md5( '203.0.113.9' ), $this->transients );
 		$this->assertSame( array(), $this->mails );
 	}
 
