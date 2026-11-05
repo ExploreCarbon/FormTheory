@@ -349,10 +349,43 @@ class RepeaterTest extends TestCase {
 		$this->assertCount( 1, $r['values']['rep'] );
 	}
 
-	public function test_row_number_counts_non_empty_rows_as_rendered_back() {
-		// Empty rows between are dropped, so numbering follows the re-rendered rows.
+	public function test_error_row_number_is_posted_position_and_rerender_keeps_it() {
+		$r = $this->submit( $this->form(), array( array( 'name' => 'Ann' ), array( 'name' => '', 'mail' => '' ), array( 'name' => 'Cy', 'mail' => 'bad' ) ) );
+		$this->assertFalse( $r['ok'] );
+		$this->assertSame( 'Row 3, Email: Enter a valid email address.', $r['errors']['rep'] );
+		// The failed-submit re-render keeps the empty row, so the third group is titled "Row 3".
+		$this->assertCount( 3, $r['values']['rep'] );
+		$html = $this->render( array(), $r['values']['rep'], $r['errors']['rep'] );
+		$this->assertStringContainsString( 'id="ft-7-f1-r2-label" data-ft-rep-title>Row 3</span>', $html );
+		$this->assertMatchesRegularExpression( '/id="ft-7-f1-2-mail" name="ft\[f1\]\[2\]\[mail\]" value="bad"/', $html );
+		// Leading empty row.
 		$r = $this->submit( $this->form(), array( array( 'name' => '' ), array( 'name' => 'Ann', 'mail' => 'bad' ) ) );
-		$this->assertSame( 'Row 1, Email: Enter a valid email address.', $r['errors']['rep'] );
+		$this->assertSame( 'Row 2, Email: Enter a valid email address.', $r['errors']['rep'] );
+	}
+
+	public function test_successful_submit_still_stores_compacted_rows() {
+		$r = $this->submit( $this->form(), array( array( 'name' => 'A' ), array( 'name' => '' ), array( 'name' => 'C' ) ) );
+		$this->assertTrue( $r['ok'] );
+		$this->assertSame( array( 'A', 'C' ), array_column( $r['values']['rep'], 'name' ) );
+	}
+
+	public function test_filled_row_past_scan_cap_is_too_many_rows() {
+		$many = array();
+		for ( $i = 0; $i < 150; $i++ ) {
+			$many[] = array( 'name' => 'x' . $i );
+		}
+		$this->assertSame( 'Too many rows.', $this->submit( $this->form(), $many )['errors']['rep'] );
+		// First 100 empty, a filled row afterwards: still an error, not silently ignored.
+		$late = array_fill( 0, 100, array( 'name' => '' ) );
+		$late[] = array( 'name' => 'late' );
+		$r = $this->submit( $this->form(), $late );
+		$this->assertFalse( $r['ok'] );
+		$this->assertSame( 'Too many rows.', $r['errors']['rep'] );
+		// Bounded work: sanitize_repeater itself never returns more than the cap.
+		$this->assertCount( 100, \FormTheory_Frontend::sanitize_repeater( $this->one(), $many ) );
+		// Empty rows past the cap are harmless.
+		$empties = array_fill( 0, 150, array( 'name' => '' ) );
+		$this->assertTrue( $this->submit( $this->form(), $empties )['ok'] );
 	}
 
 	/* ---------- text / webhook ---------- */

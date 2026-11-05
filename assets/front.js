@@ -94,9 +94,9 @@
 	}
 	// Re-index a row element (and its descendants) from index `from` to `to`; DOM use limited to get/setAttribute + querySelectorAll.
 	function repReindexRow(row, prefix, name, from, to) {
-		var nodes = [row].concat(Array.prototype.slice.call(row.querySelectorAll('[name],[id],[for],[aria-labelledby]')));
+		var nodes = [row].concat(Array.prototype.slice.call(row.querySelectorAll('[name],[id],[for],[aria-labelledby],[aria-describedby]')));
 		nodes.forEach(function (n) {
-			['name', 'id', 'for', 'aria-labelledby'].forEach(function (a) {
+			['name', 'id', 'for', 'aria-labelledby', 'aria-describedby'].forEach(function (a) {
 				var v = n.getAttribute(a);
 				if (v != null) n.setAttribute(a, repRename(v, prefix, name, from, to));
 			});
@@ -207,7 +207,8 @@
 		var fs = wrap.querySelector('[data-ft-repeater]');
 		if (!fs) return '';
 		var isReq = wrap.getAttribute('data-ft-required') === '1';
-		var filled = Array.prototype.filter.call(fs.querySelectorAll('[data-ft-rep-row]'), function (r) {
+		var allRows = Array.prototype.slice.call(fs.querySelectorAll('[data-ft-rep-row]'));
+		var filled = allRows.filter(function (r) {
 			return Array.prototype.some.call(r.querySelectorAll('input, select, textarea'), function (c) { return c.value.trim() !== ''; });
 		});
 		if (!filled.length) return isReq ? t('required', 'This field is required.') : '';
@@ -222,7 +223,7 @@
 				else m = valueMsg(kinds[c.type] || '', v);
 				if (m) {
 					var lab = filled[i].querySelector('label[for="' + c.id + '"]');
-					return fmt(t('row_error', 'Row %1$d, %2$s: %3$s'), i + 1, lab && lab.firstChild ? lab.firstChild.textContent.trim() : '', m);
+					return fmt(t('row_error', 'Row %1$d, %2$s: %3$s'), allRows.indexOf(filled[i]) + 1, lab && lab.firstChild ? lab.firstChild.textContent.trim() : '', m);
 				}
 			}
 		}

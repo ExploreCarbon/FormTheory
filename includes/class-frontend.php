@@ -72,6 +72,9 @@ class FormTheory_Frontend {
 	/** Drawn signature data URLs (field id => string) for the submission being processed; kept out of $values. */
 	private $sig_data = array();
 
+	/** Per repeater field id: posted-position rows (empties kept, for the re-render), 1-based positions of kept rows, and an over-the-scan-cap flag. */
+	private $rep = array();
+
 	/** PNG signature: magic bytes, max decoded size, max dimensions, max base64 length checked before decoding. */
 	const SIG_PREFIX    = 'data:image/png;base64,';
 	const SIG_MAX_BYTES = 204800;
@@ -125,6 +128,7 @@ class FormTheory_Frontend {
 		$form_id     = (int) $form['id'];
 		$this->files    = $files;
 		$this->sig_data = array();
+		$this->rep      = array();
 		$result     = array( 'ok' => false, 'errors' => array(), 'values' => array(), 'entry_id' => null, 'redirect' => null, 'message' => null );
 
 		// Honeypot: silently pretend success, store nothing.
@@ -196,6 +200,12 @@ class FormTheory_Frontend {
 			}
 		}
 		if ( $errors ) {
+			// Re-render repeaters at their posted positions (empty rows kept) so the "Row N" in an error matches the visible title.
+			foreach ( $fields as $f ) {
+				if ( 'repeater' === $f['type'] && ! empty( $this->rep[ $f['id'] ]['all'] ) ) {
+					$result['values'][ $f['id'] ] = $this->rep[ $f['id'] ]['all'];
+				}
+			}
 			$result['errors'] = $errors;
 			return $result;
 		}
@@ -321,7 +331,9 @@ class FormTheory_Frontend {
 			return '' !== $typed ? array( 'typed' => $typed ) : '';
 		}
 		if ( 'repeater' === $f['type'] ) {
-			return self::sanitize_repeater( $f, $v );
+			$scan                = self::scan_repeater( $f, $v );
+			$this->rep[ $f['id'] ] = $scan;
+			return $scan['rows'] ? $scan['rows'] : '';
 		}
 		if ( is_array( $v ) ) {
 			return '';
@@ -353,19 +365,37 @@ class FormTheory_Frontend {
 	 * cells count as empty. Nothing filled in => ''.
 	 */
 	public static function sanitize_repeater( array $f, $raw ) {
+		$scan = self::scan_repeater( $f, $raw );
+		return $scan['rows'] ? $scan['rows'] : '';
+	}
+
+	/**
+	 * Shared scan behind sanitize_repeater(). Returns rows (non-empty only,
+	 * re-indexed), all (every examined row at its posted position, for the
+	 * re-render after a failed submit), pos (1-based posted positions of rows)
+	 * and over (a non-empty row exists past the scan cap; found without sanitizing).
+	 */
+	private static function scan_repeater( array $f, $raw ) {
+		$out  = array( 'rows' => array(), 'all' => array(), 'pos' => array(), 'over' => false );
 		$cols = is_array( $f['columns'] ?? null ) ? $f['columns'] : array();
 		if ( ! is_array( $raw ) || ! $cols ) {
-			return '';
+			return $out;
 		}
-		$rows    = array();
 		$scanned = 0;
 		foreach ( $raw as $r ) {
 			if ( ++$scanned > self::REPEATER_SCAN_ROWS ) {
-				break;
-			}
-			if ( ! is_array( $r ) ) {
+				// Cheap check only: is any remaining row non-empty? Then validate() reports "Too many rows.".
+				if ( is_array( $r ) ) {
+					foreach ( $cols as $c ) {
+						if ( isset( $r[ $c['id'] ] ) && is_string( $r[ $c['id'] ] ) && '' !== trim( $r[ $c['id'] ] ) ) {
+							$out['over'] = true;
+							return $out;
+						}
+					}
+				}
 				continue;
 			}
+			$r   = is_array( $r ) ? $r : array();
 			$row = array();
 			$any = false;
 			foreach ( $cols as $c ) {
@@ -376,11 +406,13 @@ class FormTheory_Frontend {
 				}
 				$row[ $c['id'] ] = $cell;
 			}
+			$out['all'][] = $row;
 			if ( $any ) {
-				$rows[] = $row;
+				$out['rows'][] = $row;
+				$out['pos'][]  = $scanned;
 			}
 		}
-		return $rows ? $rows : '';
+		return $out;
 	}
 
 	/** Row count, per-cell type and per-column required checks; the first problem is reported with its row number. */
@@ -395,6 +427,7 @@ class FormTheory_Frontend {
 			/* translators: %d: minimum number of rows (2 or more). */
 			return 1 === $need ? __( 'Add at least 1 row.', 'formtheory' ) : sprintf( __( 'Add at least %d rows.', 'formtheory' ), $need );
 		}
+		$pos = $this->rep[ $f['id'] ?? '' ]['pos'] ?? array();
 		foreach ( array_values( $rows ) as $n => $row ) {
 			foreach ( (array) ( $f['columns'] ?? array() ) as $c ) {
 				$cell = is_array( $row ) && isset( $row[ $c['id'] ] ) ? $row[ $c['id'] ] : '';
@@ -402,7 +435,7 @@ class FormTheory_Frontend {
 				if ( $err ) {
 					$label = '' !== (string) $c['label'] ? $c['label'] : $c['id'];
 					/* translators: 1: row number, 2: column label, 3: error message. */
-					return sprintf( __( 'Row %1$d, %2$s: %3$s', 'formtheory' ), $n + 1, $label, $err );
+					return sprintf( __( 'Row %1$d, %2$s: %3$s', 'formtheory' ), $pos[ $n ] ?? $n + 1, $label, $err );
 				}
 			}
 		}
@@ -410,6 +443,9 @@ class FormTheory_Frontend {
 	}
 
 	private function validate( $f, $v ) {
+		if ( 'repeater' === $f['type'] && ! empty( $this->rep[ $f['id'] ?? '' ]['over'] ) ) {
+			return __( 'Too many rows.', 'formtheory' );
+		}
 		$empty = is_array( $v ) ? ! $v : '' === trim( $v );
 		if ( $empty ) {
 			return $f['required'] ? __( 'This field is required.', 'formtheory' ) : '';

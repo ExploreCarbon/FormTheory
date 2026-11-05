@@ -129,6 +129,8 @@ class FormTheory_Admin {
 			'column_removed'   => __( 'Column removed', 'formtheory' ),
 			'min_rows_label'   => __( 'Minimum rows (0-20)', 'formtheory' ),
 			'max_rows_label'   => __( 'Maximum rows (1-20)', 'formtheory' ),
+			/* translators: %d: maximum number of rows. */
+			'max_rows_raised'  => __( 'Maximum rows raised to %d to match the minimum.', 'formtheory' ),
 			'add_row_label'    => __( 'Add button text', 'formtheory' ),
 			'prefix'           => __( 'Prefix (for example $)', 'formtheory' ),
 			'suffix'           => __( 'Suffix (for example kg)', 'formtheory' ),

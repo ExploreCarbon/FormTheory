@@ -327,11 +327,13 @@
 			minIn.addEventListener('input', function (e) {
 				var n = parseInt(e.target.value, 10);
 				f.min_rows = isNaN(n) ? 1 : Math.max(0, Math.min(20, n));
-				if ((f.max_rows == null ? 5 : f.max_rows) < f.min_rows) { f.max_rows = f.min_rows; maxIn.value = String(f.max_rows); }
+				if ((f.max_rows == null ? 5 : f.max_rows) < f.min_rows) { f.max_rows = f.min_rows; maxIn.value = String(f.max_rows); announce(fmt(t('max_rows_raised', 'Maximum rows raised to %d to match the minimum.'), f.max_rows)); }
 			});
 			maxIn.addEventListener('input', function (e) {
 				var n = parseInt(e.target.value, 10);
-				f.max_rows = Math.max(f.min_rows == null ? 1 : f.min_rows, isNaN(n) ? 5 : Math.max(1, Math.min(20, n)));
+				var lo = f.min_rows == null ? 1 : f.min_rows;
+				f.max_rows = Math.max(lo, isNaN(n) ? 5 : Math.max(1, Math.min(20, n)));
+				if (!isNaN(n) && f.max_rows !== n && f.max_rows === lo && n < lo) { maxIn.value = String(f.max_rows); announce(fmt(t('max_rows_raised', 'Maximum rows raised to %d to match the minimum.'), f.max_rows)); }
 			});
 			body.appendChild(labelled(t('min_rows_label', 'Minimum rows (0-20)'), minIn));
 			body.appendChild(labelled(t('max_rows_label', 'Maximum rows (1-20)'), maxIn));
