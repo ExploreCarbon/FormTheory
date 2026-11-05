@@ -2,7 +2,7 @@
 
 Lightweight WordPress form builder: conditional logic, file uploads, multi-page forms, entries, CSV export, email notifications. No build step.
 
-- **Version:** 1.1.0
+- **Version:** 1.2.0
 - **Requires:** WordPress 6.0+, PHP 7.4+
 - **License:** GPL-2.0-or-later
 
@@ -82,6 +82,37 @@ On by default for new forms (**Submit without page reload**); forms created in 1
 
 Each form can post entries to HTTPS endpoints after submission. Requests are queued via WP-Cron so they never delay the visitor (5 s timeout, private/loopback hosts refused; sites with `DISABLE_WP_CRON` need a real cron job). Formats: JSON (`form_id`, `form_title`, `entry_id`, `submitted_at`, `fields`) or form-encoded. With a secret set, requests carry `X-FormTheory-Signature: sha256=<HMAC-SHA256 of body>`. Optional conditions as for notifications.
 
+## Webhook log and retry
+
+Every webhook delivery is recorded under **FormTheory → Webhook Log** (filter by pending / ok / failed; shows HTTP code and attempts). A delivery is attempted up to 3 times: retries run after 60 s and then 240 s. Failed deliveries can be retried manually from the log. Retries run on WP-Cron, so the `DISABLE_WP_CRON` note above applies.
+
+## Entries management
+
+Under **FormTheory → Entries**:
+
+- Search entries, and filter by status (unread / read). New entries are unread; opening an entry marks it read. Entries that predate 1.2 are treated as read.
+- Bulk actions on selected entries, scoped to the selected form (including delete).
+- Private notes on each entry.
+- **Export CSV** as before.
+
+## Duplicate, import and export
+
+- **Duplicate** a form from the Forms list.
+- **Export JSON** a form, and **Import** it from the Forms screen (1 MB limit). Webhook secrets are blanked in the export, so re-enter them after importing.
+
+## Privacy and retention
+
+- **Retention** (days) in **FormTheory → Settings**: `0` keeps entries forever (default); maximum `3650`. A daily WP-Cron job purges older entries and their webhook log rows (`DISABLE_WP_CRON` sites need a real cron job).
+- Registers a WordPress personal-data **exporter** and **eraser** for entries, and suggested text for the site Privacy Policy guide (Settings → Privacy).
+
+## Internationalisation
+
+Admin and front-end strings are translatable (text domain `formtheory`, loaded from `languages/`). The template is `languages/formtheory.pot`.
+
+## Accessibility
+
+Audited against WCAG 2.2 AA; findings and fixes are recorded in [docs/wcag-audit-1.2.md](docs/wcag-audit-1.2.md).
+
 ## Uninstall
 
 Off by default. Enable "Delete all FormTheory data when the plugin is deleted" in Settings to permanently remove forms, entries, uploaded files, the webhook log, options and scheduled events on deletion. Single-site only; multisite per-blog cleanup is not handled.
@@ -120,6 +151,11 @@ PHPUnit needs the `mbstring` extension (`php -d extension=mbstring vendor/bin/ph
 
 ```
 formtheory.php               Bootstrap, constants, activation hook
+uninstall.php                Opt-in data removal on plugin deletion
+languages/formtheory.pot     Translation template
+docs/wcag-audit-1.2.md       WCAG 2.2 AA audit
+readme.txt                   wordpress.org readme
+.github/workflows/ci.yml     CI: PHPUnit on PHP 7.4/8.1/8.3 + php -l
 includes/class-db.php        Tables, CRUD, private upload dir
 includes/class-fields.php    Field schema, config sanitizing, conditional logic, validation
 includes/class-recaptcha.php Google reCAPTCHA settings, render, verify
@@ -128,8 +164,11 @@ includes/class-frontend.php  Shortcode, block, rendering, submission pipeline, A
 includes/class-merge.php     Merge tags
 includes/class-notify.php    Notifications
 includes/class-spam.php      Time-trap + Turnstile
-includes/class-webhooks.php  Webhooks
+includes/class-webhooks.php  Webhooks, delivery log, retry
+includes/class-portable.php  Form JSON import/export
+includes/class-privacy.php   Retention purge, privacy exporter/eraser/policy text
 assets/builder.js            Admin form builder
+assets/admin.js              Admin screens: confirm prompts, select-all
 assets/admin.css             Admin styles
 assets/front.js              Front-end conditional logic and multi-page navigation
 assets/front.css             Front-end styles
