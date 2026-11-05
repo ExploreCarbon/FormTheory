@@ -423,6 +423,10 @@ class FormTheory_Admin {
 			echo '<div class="notice notice-error is-dismissible" role="alert"><p>' . esc_html( $text ) . '</p></div>';
 			return;
 		}
+		if ( 'webhook_retry_failed' === $msg ) {
+			echo '<div class="notice notice-warning is-dismissible" role="status"><p>' . esc_html__( 'Webhook could not be rescheduled.', 'formtheory' ) . '</p></div>';
+			return;
+		}
 		if ( 'bulk_none' === $msg ) {
 			echo '<div class="notice notice-warning is-dismissible" role="status"><p>' . esc_html__( 'No entries were changed.', 'formtheory' ) . '</p></div>';
 			return;
@@ -448,8 +452,8 @@ class FormTheory_Admin {
 	public function handle_webhook_retry() {
 		$this->guard( 'formtheory_webhook_retry' );
 		$id = isset( $_POST['log'] ) ? absint( $_POST['log'] ) : 0;
-		FormTheory_Webhooks::retry( $id );
-		wp_safe_redirect( $this->admin_url( 'formtheory-webhooks', array( 'ft_msg' => 'webhook_retry' ) ) );
+		$ok = FormTheory_Webhooks::retry( $id );
+		wp_safe_redirect( $this->admin_url( 'formtheory-webhooks', array( 'ft_msg' => $ok ? 'webhook_retry' : 'webhook_retry_failed' ) ) );
 		exit;
 	}
 

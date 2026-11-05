@@ -10,7 +10,9 @@ class WebhookRetryTest extends TestCase {
 	private $row;
 	private $updates = array();
 	private $events  = array();
-	private $post;
+	private $queries = array();
+	private $claim   = 1;
+	private $schedule_ok = true;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -45,10 +47,14 @@ class WebhookRetryTest extends TestCase {
 			$self->updates[] = $fields;
 			return 1;
 		} );
+		$this->wpdb->shouldReceive( 'query' )->andReturnUsing( function ( $sql ) use ( $self ) {
+			$self->queries[] = $sql;
+			return $self->claim;
+		} );
 		Functions\when( 'current_time' )->justReturn( '2026-01-01 00:00:00' );
 		Functions\when( 'wp_schedule_single_event' )->alias( function ( $ts, $hook, $args ) use ( $self ) {
 			$self->events[] = compact( 'ts', 'hook', 'args' );
-			return true;
+			return $self->schedule_ok;
 		} );
 		Functions\when( 'wp_remote_retrieve_response_code' )->alias( function ( $r ) {
 			return is_array( $r ) ? ( $r['response']['code'] ?? 0 ) : 0;
@@ -141,20 +147,62 @@ class WebhookRetryTest extends TestCase {
 	}
 
 	public function test_retry_resets_failed_row_and_reschedules() {
-		$this->row['status']   = 'failed';
-		$this->row['attempts'] = '3';
 		$this->assertTrue( \FormTheory_Webhooks::retry( 7 ) );
-		$this->assertSame( 0, $this->last()['attempts'] );
-		$this->assertSame( 'pending', $this->last()['status'] );
+		$this->assertStringContainsString( "status = 'pending', attempts = 0", $this->queries[0] );
+		$this->assertStringContainsString( "AND status = 'failed'", $this->queries[0] );
 		$this->assertCount( 1, $this->events );
 		$this->assertSame( array( 7 ), $this->events[0]['args'] );
 	}
 
 	public function test_retry_ignores_non_failed_row() {
-		$this->row['status'] = 'ok';
+		$this->claim = 0;
 		$this->assertFalse( \FormTheory_Webhooks::retry( 7 ) );
 		$this->assertCount( 0, $this->events );
+	}
+
+	public function test_retry_false_when_schedule_fails() {
+		$this->schedule_ok = false;
+		$this->assertFalse( \FormTheory_Webhooks::retry( 7 ) );
+		$this->assertSame( 'failed', $this->last()['status'] );
+	}
+
+	public function test_claim_miss_sends_nothing() {
+		$this->claim = 0;
+		Functions\expect( 'wp_safe_remote_post' )->never();
+		\FormTheory_Webhooks::deliver( 7 );
 		$this->assertCount( 0, $this->updates );
+		$this->assertCount( 0, $this->events );
+	}
+
+	public function test_claim_is_atomic_on_status_and_attempts() {
+		$this->respond( 204 );
+		$this->row['attempts'] = '1';
+		\FormTheory_Webhooks::deliver( 7 );
+		$this->assertStringContainsString( "WHERE id = 7 AND status = 'pending' AND attempts = 1", $this->queries[0] );
+	}
+
+	public function test_endpoint_down_gives_exactly_three_attempts() {
+		$this->respond( 500 );
+		for ( $i = 0; $i < 3; $i++ ) {
+			\FormTheory_Webhooks::deliver( 7 );
+			$u                     = $this->last();
+			$this->row['attempts'] = (string) $u['attempts'];
+			$this->row['status']   = $u['status'];
+		}
+		$this->assertCount( 2, $this->events );
+		$this->assertLessThanOrEqual( time() + 60, $this->events[0]['ts'] );
+		$this->assertGreaterThanOrEqual( time() + 200, $this->events[1]['ts'] );
+		$this->assertLessThanOrEqual( time() + 240, $this->events[1]['ts'] );
+		$this->assertSame( 'failed', $this->row['status'] );
+		$this->assertSame( '3', $this->row['attempts'] );
+		$sent = 0;
+		Functions\when( 'wp_safe_remote_post' )->alias( function () use ( &$sent ) {
+			$sent++;
+			return array( 'response' => array( 'code' => 500 ) );
+		} );
+		\FormTheory_Webhooks::deliver( 7 );
+		$this->assertSame( 0, $sent );
+		$this->assertCount( 2, $this->events );
 	}
 
 	public function test_display_url_strips_query_and_userinfo() {

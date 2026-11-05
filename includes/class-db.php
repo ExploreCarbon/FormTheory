@@ -353,6 +353,8 @@ class FormTheory_DB {
 				}
 			}
 		}
+		// Webhook log rows hold a full payload copy; erase them with the entry.
+		$wpdb->delete( self::webhook_log_table(), array( 'entry_id' => (int) $id ), array( '%d' ) );
 		return (bool) $wpdb->delete( self::entries_table(), array( 'id' => $id ), array( '%d' ) );
 	}
 
@@ -418,6 +420,32 @@ class FormTheory_DB {
 		$data['updated_at'] = current_time( 'mysql' );
 		$fmt[]              = '%s';
 		$wpdb->update( self::webhook_log_table(), $data, array( 'id' => (int) $id ), $fmt, array( '%d' ) );
+	}
+
+	/**
+	 * Atomically claim a pending row for one delivery attempt (bumps attempts so the UPDATE always changes the row).
+	 * @return bool true only for the single caller that won the claim.
+	 */
+	public static function claim_webhook( $id, $attempts ) {
+		global $wpdb;
+		$sql = $wpdb->prepare(
+			'UPDATE ' . self::webhook_log_table() . " SET attempts = attempts + 1, updated_at = %s WHERE id = %d AND status = 'pending' AND attempts = %d",
+			current_time( 'mysql' ),
+			(int) $id,
+			(int) $attempts
+		);
+		return 1 === (int) $wpdb->query( $sql );
+	}
+
+	/** Atomically move a failed row back to pending. @return bool */
+	public static function reset_failed_webhook( $id ) {
+		global $wpdb;
+		$sql = $wpdb->prepare(
+			'UPDATE ' . self::webhook_log_table() . " SET status = 'pending', attempts = 0, http_code = 0, error = '', updated_at = %s WHERE id = %d AND status = 'failed'",
+			current_time( 'mysql' ),
+			(int) $id
+		);
+		return 1 === (int) $wpdb->query( $sql );
 	}
 
 	public static function get_webhook_log( $id ) {

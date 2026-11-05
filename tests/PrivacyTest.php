@@ -60,7 +60,7 @@ class PrivacyTest extends TestCase {
 				return false !== strpos( $sql, "created_at < 2026-01-21 12:00:00" );
 			} ) )->andReturn( array( '3', '4' ) );
 		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
-		$this->wpdb->shouldReceive( 'delete' )->twice()->andReturn( 1 );
+		$this->wpdb->shouldReceive( 'delete' )->times( 4 )->andReturn( 1 );
 		$sqls = array();
 		$this->wpdb->shouldReceive( 'query' )->once()->andReturnUsing( function ( $sql ) use ( &$sqls ) {
 			$sqls[] = $sql;
@@ -70,6 +70,23 @@ class PrivacyTest extends TestCase {
 		$this->assertCount( 1, $sqls );
 		$this->assertStringContainsString( 'DELETE FROM wp_formtheory_webhook_log', $sqls[0] );
 		$this->assertStringContainsString( 'created_at < 2026-01-21 12:00:00', $sqls[0] );
+	}
+
+	public function test_delete_entry_also_deletes_webhook_log_rows_by_entry_id() {
+		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
+		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_webhook_log', array( 'entry_id' => 8 ), array( '%d' ) )->once()->andReturn( 2 );
+		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_entries', array( 'id' => 8 ), array( '%d' ) )->once()->andReturn( 1 );
+		$this->assertTrue( \FormTheory_DB::delete_entry( 8 ) );
+	}
+
+	public function test_delete_form_cascades_to_webhook_log() {
+		$this->wpdb->shouldReceive( 'get_results' )->andReturn( array( array( 'id' => '21', 'form_id' => '3', 'data' => '{}' ) ) );
+		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
+		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_webhook_log', array( 'entry_id' => 21 ), array( '%d' ) )->once()->andReturn( 1 );
+		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_entries', array( 'id' => 21 ), array( '%d' ) )->once()->andReturn( 1 );
+		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_forms', array( 'id' => 3 ), array( '%d' ) )->once()->andReturn( 1 );
+		\FormTheory_DB::delete_form( 3 );
+		$this->addToAssertionCount( 1 ); // Mockery expectations verify the cascade.
 	}
 
 	public function test_email_match_is_exact_not_substring() {
@@ -103,6 +120,7 @@ class PrivacyTest extends TestCase {
 	public function test_eraser_removes_matching_entries_only() {
 		$this->rows( array( $this->row( 4, 'a@b.co' ), $this->row( 9, 'a@b.co' ), $this->row( 5, 'other@b.co' ) ) );
 		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
+		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_webhook_log', Mockery::any(), Mockery::any() )->twice()->andReturn( 1 );
 		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_entries', array( 'id' => 4 ), Mockery::any() )->once()->andReturn( 1 );
 		$this->wpdb->shouldReceive( 'delete' )->with( 'wp_formtheory_entries', array( 'id' => 9 ), Mockery::any() )->once()->andReturn( 1 );
 		$r = \FormTheory_Privacy::erase( 'a@b.co', 1 );

@@ -77,6 +77,9 @@ class FormTheory_Webhooks {
 		if ( ! $row || 'pending' !== $row['status'] ) {
 			return;
 		}
+		if ( ! FormTheory_DB::claim_webhook( (int) $log_id, (int) $row['attempts'] ) ) {
+			return; // Another worker owns this attempt.
+		}
 		$request = json_decode( (string) $row['request'], true );
 		$request = is_array( $request ) ? $request : array();
 		$res     = wp_safe_remote_post( $row['url'], array(
@@ -110,12 +113,13 @@ class FormTheory_Webhooks {
 
 	/** Admin retry: failed rows only. Resets and reschedules. @return bool */
 	public static function retry( $log_id ) {
-		$row = FormTheory_DB::get_webhook_log( (int) $log_id );
-		if ( ! $row || 'failed' !== $row['status'] ) {
+		if ( ! FormTheory_DB::reset_failed_webhook( (int) $log_id ) ) {
 			return false;
 		}
-		FormTheory_DB::update_webhook_log( (int) $log_id, array( 'status' => 'pending', 'attempts' => 0, 'http_code' => 0, 'error' => '' ) );
-		wp_schedule_single_event( time(), 'formtheory_deliver_webhook', array( (int) $log_id ) );
+		if ( ! wp_schedule_single_event( time(), 'formtheory_deliver_webhook', array( (int) $log_id ) ) ) {
+			FormTheory_DB::update_webhook_log( (int) $log_id, array( 'status' => 'failed', 'attempts' => 3 ) );
+			return false;
+		}
 		return true;
 	}
 

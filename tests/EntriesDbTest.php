@@ -57,7 +57,7 @@ class EntriesDbTest extends TestCase {
 			} ) )
 			->andReturn( array( '3', '2' ) );
 		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
-		$this->wpdb->shouldReceive( 'delete' )->twice()->andReturn( 1 );
+		$this->wpdb->shouldReceive( 'delete' )->times( 4 )->andReturn( 1 );
 		$this->assertSame( 2, \FormTheory_DB::delete_entries( 5, array( '3', 'x', '0', '-2' ) ) );
 	}
 

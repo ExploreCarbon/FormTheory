@@ -30,7 +30,7 @@ class AdminBulkTest extends TestCase {
 			} ) )
 			->andReturn( array( '1', '2' ) );
 		$this->wpdb->shouldReceive( 'get_row' )->andReturn( null );
-		$this->wpdb->shouldReceive( 'delete' )->twice()->andReturn( 1 );
+		$this->wpdb->shouldReceive( 'delete' )->times( 4 )->andReturn( 1 );
 		$this->assertSame( 2, ( new \FormTheory_Admin() )->bulk_apply( 5, 'delete', array( 1, 2 ) ) );
 	}
 

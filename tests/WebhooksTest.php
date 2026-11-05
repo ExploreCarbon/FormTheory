@@ -34,6 +34,7 @@ class WebhooksTest extends TestCase {
 			return end( $log );
 		} );
 		$wpdb->shouldReceive( 'update' )->andReturn( 1 );
+		$wpdb->shouldReceive( 'query' )->andReturn( 1 );
 		$GLOBALS['wpdb'] = $wpdb;
 		Functions\when( 'current_time' )->justReturn( '2026-01-01 00:00:00' );
 		Functions\when( 'wp_remote_retrieve_response_code' )->justReturn( 200 );
