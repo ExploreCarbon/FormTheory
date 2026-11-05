@@ -97,6 +97,8 @@ class BlockTest extends TestCase {
 		$this->assertSame( 'formtheory/form', $captured[0] );
 		$this->assertSame( 'formtheory-block', $captured[1]['editor_script'] );
 		$this->assertSame( 'widgets', $captured[1]['category'] );
+		$this->assertSame( 2, $captured[1]['api_version'] );
+		$this->assertSame( 'formtheory', $captured[1]['editor_style'] );
 		$this->assertSame( 'feedback', $captured[1]['icon'] );
 		$this->assertSame( 'FormTheory Form', $captured[1]['title'] );
 		$this->assertSame( 'number', $captured[1]['attributes']['id']['type'] );
@@ -104,9 +106,10 @@ class BlockTest extends TestCase {
 		$this->assertIsCallable( $captured[1]['render_callback'] );
 		$this->assertSame( 'formtheory-block', $reg[0] );
 		$this->assertStringEndsWith( 'assets/block.js', $reg[1] );
-		foreach ( array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-server-side-render', 'wp-i18n' ) as $dep ) {
+		foreach ( array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-server-side-render' ) as $dep ) {
 			$this->assertContains( $dep, $reg[2] );
 		}
+		$this->assertNotContains( 'wp-i18n', $reg[2] );
 		$this->assertTrue( $reg[4] );
 	}
 
@@ -183,13 +186,42 @@ class BlockTest extends TestCase {
 		$this->assertStringNotContainsString( ' disabled', $html );
 	}
 
-	public function test_editor_context_follows_is_admin() {
-		Functions\when( 'is_admin' )->justReturn( true );
-		$this->assertTrue( \FormTheory_Frontend::is_editor_context() );
+	private function req( $route, $context ) {
+		$r = \Mockery::mock();
+		$r->shouldReceive( 'get_route' )->andReturn( $route );
+		$r->shouldReceive( 'get_param' )->with( 'context' )->andReturn( $context );
+		return $r;
 	}
 
-	public function test_front_end_is_not_editor_context() {
-		Functions\when( 'is_admin' )->justReturn( false );
+	public function test_preview_only_for_block_renderer_route_with_edit_context() {
 		$this->assertFalse( \FormTheory_Frontend::is_editor_context() );
+		$this->front->flag_preview( null, null, $this->req( '/wp/v2/block-renderer/formtheory/form', 'edit' ) );
+		$this->assertTrue( \FormTheory_Frontend::is_editor_context() );
+		$this->front->clear_preview();
+		$this->assertFalse( \FormTheory_Frontend::is_editor_context() );
+	}
+
+	public function test_posts_rest_request_is_not_preview() {
+		$this->front->flag_preview( null, null, $this->req( '/wp/v2/posts', 'view' ) );
+		$this->assertFalse( \FormTheory_Frontend::is_editor_context() );
+		$this->front->flag_preview( null, null, $this->req( '/wp/v2/posts', 'edit' ) );
+		$this->assertFalse( \FormTheory_Frontend::is_editor_context() );
+	}
+
+	public function test_block_renderer_without_edit_context_or_other_block_is_not_preview() {
+		$this->front->flag_preview( null, null, $this->req( '/wp/v2/block-renderer/formtheory/form', 'view' ) );
+		$this->assertFalse( \FormTheory_Frontend::is_editor_context() );
+		$this->front->flag_preview( null, null, $this->req( '/wp/v2/block-renderer/core/archives', 'edit' ) );
+		$this->assertFalse( \FormTheory_Frontend::is_editor_context() );
+	}
+
+	public function test_admin_ajax_and_front_end_are_not_preview() {
+		Functions\when( 'is_admin' )->justReturn( true ); // admin-ajax.php reports true.
+		$this->assertFalse( \FormTheory_Frontend::is_editor_context() );
+	}
+
+	protected function tearDown(): void {
+		$this->front->clear_preview();
+		parent::tearDown();
 	}
 }

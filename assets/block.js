@@ -44,6 +44,13 @@
 			var options = forms.length ? forms.map( function ( f ) {
 				return { value: String( f.value ), label: String( f.label ) };
 			} ) : [ { value: '0', label: t( 'select_form', '— Select a form —' ) } ];
+			if ( id > 0 && ! known ) {
+				options.unshift( {
+					value: String( id ),
+					label: t( 'not_found', 'Form #%d (not found)' ).replace( '%d', String( id ) ),
+					disabled: true
+				} );
+			}
 			var select = el( SelectControl, {
 				label: t( 'select', 'Form' ),
 				value: String( id ),

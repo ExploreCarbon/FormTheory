@@ -17,6 +17,8 @@ class FormTheory_Frontend {
 		add_action( 'init', array( $this, 'register_block' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'attach_editor_data' ) );
+		add_filter( 'rest_request_before_callbacks', array( $this, 'flag_preview' ), 10, 3 );
+		add_filter( 'rest_post_dispatch', array( $this, 'clear_preview' ) );
 	}
 
 	public function register_assets() {
@@ -72,7 +74,7 @@ class FormTheory_Frontend {
 		wp_register_script(
 			'formtheory-block',
 			FORMTHEORY_URL . 'assets/block.js',
-			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-server-side-render', 'wp-i18n' ),
+			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-server-side-render' ),
 			FORMTHEORY_VERSION,
 			true
 		);
@@ -80,7 +82,9 @@ class FormTheory_Frontend {
 			'title'           => __( 'FormTheory Form', 'formtheory' ),
 			'category'        => 'widgets',
 			'icon'            => 'feedback',
+			'api_version'     => 2,
 			'editor_script'   => 'formtheory-block',
+			'editor_style'    => 'formtheory',
 			'attributes'      => array( 'id' => array( 'type' => 'number', 'default' => 0 ) ),
 			'render_callback' => function ( $attrs ) {
 				$id = absint( $attrs['id'] ?? 0 );
@@ -95,9 +99,31 @@ class FormTheory_Frontend {
 		) );
 	}
 
-	/** Block editor preview: the server-side-render REST call (or any admin screen). */
+	/** True only while the block editor's server-side-render request is being dispatched. */
+	private static $preview = false;
+
+	/**
+	 * Block editor preview = the block-renderer REST route for this block with
+	 * context=edit (what ServerSideRender sends). Any other REST consumer, such as
+	 * /wp/v2/posts content.rendered, gets the normal live form. No is_admin()
+	 * branch: the editor's preview always arrives through this REST route, and
+	 * admin-ajax or other admin screens must not get a dead form.
+	 */
+	public function flag_preview( $response, $handler = null, $request = null ) {
+		if ( is_object( $request ) && '/wp/v2/block-renderer/formtheory/form' === $request->get_route() && 'edit' === $request->get_param( 'context' ) ) {
+			self::$preview = true;
+		}
+		return $response;
+	}
+
+	/** Clears the preview flag once the REST request is done. */
+	public function clear_preview( $result = null ) {
+		self::$preview = false;
+		return $result;
+	}
+
 	public static function is_editor_context() {
-		return ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || is_admin();
+		return self::$preview;
 	}
 
 	/**
@@ -125,6 +151,8 @@ class FormTheory_Frontend {
 			'instructions' => __( 'Choose which form to show here.', 'formtheory' ),
 			'missing'      => __( 'The selected form no longer exists. Choose another form.', 'formtheory' ),
 			'no_forms'     => __( 'No forms yet. Create one under FormTheory first.', 'formtheory' ),
+			/* translators: %d: form ID. */
+			'not_found'    => __( 'Form #%d (not found)', 'formtheory' ),
 		);
 	}
 
