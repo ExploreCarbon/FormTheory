@@ -100,6 +100,24 @@ class FormTheory_Fields {
 				}
 			}
 		}
+		$cfg['webhooks'] = array();
+		foreach ( (array) ( $raw['webhooks'] ?? array() ) as $h ) {
+			$url = is_array( $h ) ? esc_url_raw( trim( (string) ( $h['url'] ?? '' ) ) ) : '';
+			if ( ! preg_match( '#^https://#i', $url ) ) {
+				continue;
+			}
+			$cond          = self::sanitize_cond( $h['cond'] ?? array() );
+			$cond['rules'] = array_values( array_filter( $cond['rules'], function ( $r ) use ( $ids ) {
+				return isset( $ids[ $r['field'] ] );
+			} ) );
+			$cond['enabled']   = $cond['enabled'] && $cond['rules'];
+			$cfg['webhooks'][] = array(
+				'url'    => $url,
+				'format' => 'form' === ( $h['format'] ?? '' ) ? 'form' : 'json',
+				'secret' => sanitize_text_field( $h['secret'] ?? '' ),
+				'cond'   => $cond,
+			);
+		}
 		return self::migrate_config( $cfg );
 	}
 

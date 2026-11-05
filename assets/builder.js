@@ -183,6 +183,17 @@
 		});
 	}
 
+	function webhooksEditor() {
+		return repeater('Webhooks', 'Webhook', 'webhooks', function () {
+			return { url: '', format: 'json', secret: '', cond: newCond() };
+		}, function (h, body) {
+			body.appendChild(labelled('Endpoint URL (https only)', textIn(h.url, function (v) { h.url = v; }, 'url')));
+			body.appendChild(labelled('Format', select({ json: 'JSON', form: 'Form-encoded' }, h.format || 'json', function (v) { h.format = v; })));
+			body.appendChild(labelled('Signing secret (optional, sent as X-FormTheory-Signature)', textIn(h.secret, function (v) { h.secret = v; })));
+			body.appendChild(ruleEditor(h, 'Only send when conditions match'));
+		});
+	}
+
 	function card(f, i) {
 		var n = cfg.fields.length;
 		var title = (LABELS[f.type] || f.type) + (f.label ? ': ' + f.label : '');
@@ -284,6 +295,7 @@
 		root.appendChild(list);
 		root.appendChild(settings);
 		root.appendChild(notificationsEditor());
+		root.appendChild(webhooksEditor());
 		root.appendChild(el('div', { id: 'ftb-live', class: 'screen-reader-text', 'aria-live': 'polite' }));
 
 		if (focusId) {
