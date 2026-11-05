@@ -26,7 +26,7 @@
 		});
 		return out;
 	}
-	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block' }, I18N.types || {});
+	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation' }, I18N.types || {});
 	var OPS = Object.assign({ is: 'is', isnot: 'is not', contains: 'contains', gt: 'greater than', lt: 'less than', empty: 'is empty', notempty: 'is not empty' }, I18N.ops || {});
 	var uid = 0;
 
@@ -244,7 +244,24 @@
 			rich.value = f[key] || '';
 			body.appendChild(labelled(f.type === 'consent' ? t('consent_text', 'Consent text (HTML links allowed)') : t('html_content', 'HTML content'), rich));
 		}
-		if (['page', 'html', 'hidden'].indexOf(f.type) === -1) {
+		if (f.type === 'calc') {
+			var refs = [];
+			for (var ri = 0; ri < i; ri++) { var o = cfg.fields[ri]; if (o.type !== 'page' && o.type !== 'html') refs.push('{field:' + o.id + '}'); }
+			var hintId = 'ftb-' + (++uid);
+			var fx = textIn(f.formula, function (v) { f.formula = v; });
+			fx.setAttribute('aria-describedby', hintId);
+			fx.setAttribute('spellcheck', 'false');
+			body.appendChild(labelled(t('formula', 'Formula'), fx));
+			body.appendChild(el('p', { class: 'description', id: hintId, text: refs.length ? fmt(t('formula_hint', 'Use numbers, + - * /, parentheses and field references: %s'), refs.join(', ')) : t('formula_no_refs', 'Use numbers, + - * / and parentheses. Add fields above this one to reference them.') }));
+			var dec = {}; for (var dn = 0; dn <= 6; dn++) dec[dn] = String(dn);
+			body.appendChild(labelled(t('decimals', 'Decimal places'), select(dec, String(f.decimals == null ? 2 : f.decimals), function (v) { f.decimals = parseInt(v, 10); })));
+			var pre = textIn(f.prefix, function (v) { f.prefix = v; }); pre.maxLength = 20;
+			body.appendChild(labelled(t('prefix', 'Prefix (for example $)'), pre));
+			var suf = textIn(f.suffix, function (v) { f.suffix = v; }); suf.maxLength = 20;
+			body.appendChild(labelled(t('suffix', 'Suffix (for example kg)'), suf));
+			body.appendChild(labelled(t('help_text', 'Help text'), textIn(f.help, function (v) { f.help = v; })));
+		}
+		if (['page', 'html', 'hidden', 'calc'].indexOf(f.type) === -1) {
 			body.appendChild(check(t('required', 'Required'), f.required, function (v) { f.required = v; }));
 			if (['text', 'email', 'phone', 'number', 'textarea', 'select'].indexOf(f.type) !== -1) {
 				body.appendChild(labelled(t('placeholder', 'Placeholder'), textIn(f.placeholder, function (v) { f.placeholder = v; })));
@@ -299,6 +316,7 @@
 			palette.appendChild(el('button', { type: 'button', class: 'button', text: LABELS[tp] || tp, onclick: function () {
 				var f = { id: nextId(), type: tp, label: tp === 'page' ? '' : LABELS[tp], required: false, options: ['select', 'radio', 'checkbox'].indexOf(tp) !== -1 ? [t('option_1', 'Option 1'), t('option_2', 'Option 2')] : [], cond: { enabled: false, action: 'show', logic: 'all', rules: [] } };
 				if (tp === 'file') { f.allowed = 'jpg,jpeg,png,pdf'; f.max_mb = 5; }
+				if (tp === 'calc') { f.formula = ''; f.decimals = 2; f.prefix = ''; f.suffix = ''; }
 				cfg.fields.push(f);
 				render(f.id, null, true);
 				announce(fmt(t('field_added', '%s field added'), LABELS[tp] || tp));

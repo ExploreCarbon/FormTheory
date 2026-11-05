@@ -10,9 +10,101 @@
 		return str.replace(/%(?:(\d+)\$)?[sd]/g, function (m, pos) { return args[pos ? pos - 1 : n++]; });
 	}
 
+	// calc:start -- Mirror of FormTheory_Calc (tokenizer + shunting-yard; no eval/Function).
+	var CALC_PREC = { '+': 1, '-': 1, '*': 2, '/': 2, neg: 3 };
+	function compileFormula(s) {
+		s = String(s || '');
+		if (!s.length || s.length > 500) return null;
+		var out = [], ops = [], depth = 0, expect = true, i = 0, m;
+		var numRe = /^(?:\d+(?:\.\d+)?|\.\d+)/, refRe = /^\{field:([a-z0-9_]+)\}/;
+		while (i < s.length) {
+			var c = s.charAt(i);
+			if (c === ' ' || c === '\t' || c === '\n' || c === '\r') { i++; continue; }
+			if (expect) {
+				var rest = s.slice(i);
+				if ((m = numRe.exec(rest))) { out.push(['num', parseFloat(m[0])]); i += m[0].length; expect = false; }
+				else if ((m = refRe.exec(rest))) { out.push(['ref', m[1]]); i += m[0].length; expect = false; }
+				else if (c === '(') { if (++depth > 50) return null; ops.push('('); i++; }
+				else if (c === '-') { ops.push('neg'); i++; }
+				else if (c === '+') { i++; }
+				else return null;
+				continue;
+			}
+			if (c === ')') {
+				if (depth < 1) return null;
+				while (ops[ops.length - 1] !== '(') out.push(['op', ops.pop()]);
+				ops.pop(); depth--; i++;
+				continue;
+			}
+			if (!Object.prototype.hasOwnProperty.call(CALC_PREC, c) || c === 'neg') return null;
+			while (ops.length && ops[ops.length - 1] !== '(' && CALC_PREC[ops[ops.length - 1]] >= CALC_PREC[c]) out.push(['op', ops.pop()]);
+			ops.push(c); expect = true; i++;
+		}
+		if (expect || depth) return null;
+		while (ops.length) out.push(['op', ops.pop()]);
+		return out;
+	}
+	function toNumber(v) {
+		v = String(v == null ? '' : v).trim();
+		return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(v) ? parseFloat(v) : 0;
+	}
+	// getValue(id) returns the raw value of field id; non-numeric => 0. Null on syntax error / division by zero.
+	function evaluateFormula(formula, getValue) {
+		var rpn = compileFormula(formula);
+		if (!rpn) return null;
+		var st = [];
+		for (var k = 0; k < rpn.length; k++) {
+			var tk = rpn[k];
+			if (tk[0] === 'num') st.push(tk[1]);
+			else if (tk[0] === 'ref') st.push(toNumber(getValue(tk[1])));
+			else if (tk[1] === 'neg') st.push(-st.pop());
+			else {
+				var b = st.pop(), a = st.pop();
+				if (tk[1] === '+') st.push(a + b);
+				else if (tk[1] === '-') st.push(a - b);
+				else if (tk[1] === '*') st.push(a * b);
+				else { if (b === 0) return null; st.push(a / b); }
+			}
+		}
+		var r = st.pop();
+		return isFinite(r) ? r : null;
+	}
+	// Mirror of FormTheory_Calc::format(): half away from zero, fixed places, no "-0".
+	function formatCalc(v, d) {
+		d = Math.max(0, Math.min(6, parseInt(d, 10) || 0));
+		var p = Math.pow(10, d);
+		var r = (v < 0 ? -1 : 1) * Math.round(Math.abs(v) * p * (1 + Number.EPSILON)) / p;
+		if (r === 0) r = 0;
+		return r.toFixed(d);
+	}
+	// calc:end
+
+	// Recompute every calc output in field order; later/unknown calc refs read as 0 (matches the server).
+	function updateCalcs(form) {
+		var outs = Array.prototype.slice.call(form.querySelectorAll('output[data-ft-calc]'));
+		var done = {};
+		var calcIds = {};
+		outs.forEach(function (o) { calcIds[o.closest('[data-ft-field]').getAttribute('data-ft-field')] = true; });
+		outs.forEach(function (o) {
+			var wrap = o.closest('[data-ft-field]');
+			var id = wrap.getAttribute('data-ft-field');
+			var r = evaluateFormula(o.getAttribute('data-ft-calc'), function (ref) {
+				if (calcIds[ref]) return done[ref] || '';
+				var v = fieldValue(form, ref);
+				return v.length ? v[0] : '';
+			});
+			var val = r === null ? '' : formatCalc(r, o.getAttribute('data-ft-decimals'));
+			done[id] = val;
+			o.setAttribute('data-ft-value', val);
+			o.textContent = val === '' ? '' : (o.getAttribute('data-ft-prefix') || '') + val + (o.getAttribute('data-ft-suffix') || '');
+		});
+	}
+
 	function fieldValue(form, id) {
 		var wrap = form.querySelector('[data-ft-field="' + id + '"]');
 		if (!wrap || wrap.hidden) return [];
+		var calc = wrap.querySelector('output[data-ft-calc]');
+		if (calc) { var cv = calc.getAttribute('data-ft-value') || ''; return cv === '' ? [] : [cv]; }
 		var inputs = wrap.querySelectorAll('input, select, textarea');
 		var out = [];
 		inputs.forEach(function (el) {
@@ -125,10 +217,11 @@
 		var summary = form.querySelector('.ft-error-summary');
 		if (summary) summary.focus();
 
-		applyConditions(form);
-		form.addEventListener('input', function () { applyConditions(form); });
+		function refresh() { updateCalcs(form); applyConditions(form); updateCalcs(form); }
+		refresh();
+		form.addEventListener('input', refresh);
 		form.addEventListener('change', function (e) {
-			applyConditions(form);
+			refresh();
 			var w = e.target.closest('[data-ft-field]');
 			if (w && w.classList.contains('ft-has-error')) validateWrap(w);
 		});

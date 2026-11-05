@@ -65,6 +65,7 @@ class FormTheory_Admin {
 				'hidden'   => __( 'Hidden', 'formtheory' ),
 				'consent'  => __( 'Consent', 'formtheory' ),
 				'html'     => __( 'HTML block', 'formtheory' ),
+				'calc'     => __( 'Calculation', 'formtheory' ),
 			),
 			'ops'              => array(
 				'is'       => __( 'is', 'formtheory' ),
@@ -97,6 +98,13 @@ class FormTheory_Admin {
 			'add_rule'         => __( 'Add rule', 'formtheory' ),
 			/* translators: %s: list of merge tags. Do not translate the tags. */
 			'merge_tags'       => __( 'Merge tags: %s', 'formtheory' ),
+			'formula'          => __( 'Formula', 'formtheory' ),
+			/* translators: %s: list of field references such as {field:qty}. Do not translate the references. */
+			'formula_hint'     => __( 'Use numbers, + - * /, parentheses and field references: %s', 'formtheory' ),
+			'formula_no_refs'  => __( 'Use numbers, + - * / and parentheses. Add fields above this one to reference them.', 'formtheory' ),
+			'decimals'         => __( 'Decimal places', 'formtheory' ),
+			'prefix'           => __( 'Prefix (for example $)', 'formtheory' ),
+			'suffix'           => __( 'Suffix (for example kg)', 'formtheory' ),
 			'notifications'    => __( 'Notifications', 'formtheory' ),
 			/* translators: %d: notification number. */
 			'notification_n'   => __( 'Notification %d', 'formtheory' ),

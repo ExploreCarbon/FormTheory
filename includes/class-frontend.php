@@ -134,8 +134,21 @@ class FormTheory_Frontend {
 		foreach ( $fields as $f ) {
 			$values[ $f['id'] ] = $this->sanitize_value( $f, $raw[ $f['id'] ] ?? '' );
 		}
+		// Calc fields: posted values are ignored and recomputed. Pass 1 uses all
+		// sanitized values so calc results can drive conditions; pass 2 (stored)
+		// treats fields hidden by those conditions as empty, like front.js does.
+		$values  = FormTheory_Calc::compute( $fields, $values );
+		$visible = FormTheory_Fields::visible_map( $fields, $values );
+		$shown   = array();
+		foreach ( $values as $vid => $v ) {
+			$shown[ $vid ] = empty( $visible[ $vid ] ) ? '' : $v;
+		}
+		foreach ( FormTheory_Calc::compute( $fields, $shown ) as $vid => $v ) {
+			if ( ! empty( $visible[ $vid ] ) ) {
+				$values[ $vid ] = $v;
+			}
+		}
 		$result['values'] = $values;
-		$visible          = FormTheory_Fields::visible_map( $fields, $values );
 
 		$data = array();
 		foreach ( $fields as $f ) {
@@ -373,6 +386,7 @@ class FormTheory_Frontend {
 		$errors = $state['errors'];
 		$values = $state['values'];
 		$fields = $form['config']['fields'];
+		$values = FormTheory_Calc::compute( FormTheory_Fields::data_fields( $fields ), $values ); // Initial calc output.
 		$pages  = array( array() );
 		foreach ( $fields as $f ) {
 			if ( 'page' === $f['type'] ) {
@@ -499,6 +513,14 @@ class FormTheory_Frontend {
 			echo '<fieldset><legend>' . esc_html( $f['label'] ) . $req . $req_sr . '</legend>'; // phpcs:ignore -- static/escaped.
 			echo '<div class="ft-choice"><input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1"' . checked( '' !== (string) $value, true, false ) . $aria . '><label for="' . esc_attr( $id ) . '">' . wp_kses_post( $f['text'] ? $f['text'] : $f['label'] ) . '</label></div>';
 			echo '</fieldset>';
+		} elseif ( 'calc' === $f['type'] ) {
+			// Read-only result. aria-live="off": no announcement on every keystroke; users reach the labelled value by reading/tabbing order.
+			$for = implode( ' ', array_map( function ( $ref ) use ( $form_id ) {
+				return 'ft-' . $form_id . '-' . $ref;
+			}, FormTheory_Calc::refs( $f['formula'] ) ) );
+			$shown = '' !== (string) $value ? $f['prefix'] . $value . $f['suffix'] : '';
+			echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $f['label'] ) . '</label>';
+			echo '<output id="' . esc_attr( $id ) . '" class="ft-calc"' . ( $for ? ' for="' . esc_attr( $for ) . '"' : '' ) . ' aria-live="off" data-ft-calc="' . esc_attr( $f['formula'] ) . '" data-ft-decimals="' . (int) $f['decimals'] . '" data-ft-prefix="' . esc_attr( $f['prefix'] ) . '" data-ft-suffix="' . esc_attr( $f['suffix'] ) . '" data-ft-value="' . esc_attr( $value ) . '"' . $aria_base . '>' . esc_html( $shown ) . '</output>'; // phpcs:ignore -- $aria_base static/escaped.
 		} else {
 			echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $f['label'] ) . $req . '</label>'; // phpcs:ignore
 			$ph = $f['placeholder'] ? ' placeholder="' . esc_attr( $f['placeholder'] ) . '"' : '';

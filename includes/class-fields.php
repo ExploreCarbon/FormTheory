@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class FormTheory_Fields {
 
-	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html' );
+	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html', 'calc' );
 	/** Layout-only types: never validated or stored. */
 	const NON_DATA = array( 'page', 'html' );
 	const OPS   = array( 'is', 'isnot', 'contains', 'gt', 'lt', 'empty', 'notempty' );
@@ -50,7 +50,7 @@ class FormTheory_Fields {
 				'id'          => $id,
 				'type'        => $type,
 				'label'       => sanitize_text_field( $f['label'] ?? '' ),
-				'required'    => ! empty( $f['required'] ) && ! in_array( $type, array( 'page', 'html', 'hidden' ), true ),
+				'required'    => ! empty( $f['required'] ) && ! in_array( $type, array( 'page', 'html', 'hidden', 'calc' ), true ),
 				'placeholder' => sanitize_text_field( $f['placeholder'] ?? '' ),
 				'help'        => sanitize_text_field( $f['help'] ?? '' ),
 				'options'     => array(),
@@ -79,8 +79,21 @@ class FormTheory_Fields {
 			if ( 'html' === $type ) {
 				$field['content'] = wp_kses_post( $f['content'] ?? '' );
 			}
+			if ( 'calc' === $type ) {
+				$formula           = trim( (string) ( $f['formula'] ?? '' ) );
+				$field['formula']  = FormTheory_Calc::is_valid( $formula ) ? $formula : '';
+				$field['decimals'] = max( 0, min( 6, (int) ( $f['decimals'] ?? 2 ) ) );
+				$field['prefix']   = mb_substr( sanitize_text_field( $f['prefix'] ?? '' ), 0, 20 );
+				$field['suffix']   = mb_substr( sanitize_text_field( $f['suffix'] ?? '' ), 0, 20 );
+			}
 			$field['cond'] = self::sanitize_cond( $f['cond'] ?? array() );
 			$fields[]      = $field;
+		}
+		// A calc field with no (valid) formula is never a condition source.
+		foreach ( $fields as $cf ) {
+			if ( 'calc' === $cf['type'] && '' === $cf['formula'] ) {
+				unset( $ids[ $cf['id'] ] );
+			}
 		}
 		// Drop condition rules pointing to unknown fields.
 		foreach ( $fields as &$field ) {

@@ -19,6 +19,7 @@ define( 'FORMTHEORY_URL', plugin_dir_url( __FILE__ ) );
 
 require_once FORMTHEORY_DIR . 'includes/class-db.php';
 require_once FORMTHEORY_DIR . 'includes/class-fields.php';
+require_once FORMTHEORY_DIR . 'includes/class-calc.php';
 require_once FORMTHEORY_DIR . 'includes/class-merge.php';
 require_once FORMTHEORY_DIR . 'includes/class-spam.php';
 require_once FORMTHEORY_DIR . 'includes/class-notify.php';
