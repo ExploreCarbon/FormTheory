@@ -34,6 +34,7 @@ add_action( 'init', function () {
 } );
 
 register_activation_hook( __FILE__, array( 'FormTheory_DB', 'install' ) );
+register_deactivation_hook( __FILE__, array( 'FormTheory_Privacy', 'unschedule' ) );
 
 add_action( 'plugins_loaded', function () {
 	if ( get_option( 'formtheory_db_version' ) !== FORMTHEORY_VERSION ) {

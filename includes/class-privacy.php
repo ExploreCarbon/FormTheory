@@ -16,6 +16,11 @@ class FormTheory_Privacy {
 		add_action( 'admin_init', array( __CLASS__, 'policy_content' ) );
 	}
 
+	/** Deactivation: stop the purge cron. Webhook retries are left alone. */
+	public static function unschedule() {
+		wp_unschedule_hook( self::CRON_HOOK );
+	}
+
 	public static function schedule() {
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time() + 3600, 'daily', self::CRON_HOOK );

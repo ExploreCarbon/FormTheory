@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-05T17:53:54+00:00\n"
+"POT-Creation-Date: 2026-11-05T18:13:40+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: formtheory\n"
@@ -69,7 +69,6 @@ msgstr ""
 
 #: includes/class-admin.php:58
 #: includes/class-admin.php:335
-#: includes/class-admin.php:757
 msgid "Date"
 msgstr ""
 
@@ -549,8 +548,8 @@ msgstr ""
 #: includes/class-admin.php:240
 #: includes/class-admin.php:612
 #: includes/class-admin.php:623
-#: includes/class-admin.php:710
-#: includes/class-admin.php:749
+#: includes/class-admin.php:715
+#: includes/class-admin.php:754
 #: includes/class-frontend.php:86
 msgid "Form not found."
 msgstr ""
@@ -666,7 +665,7 @@ msgid "Entries pages"
 msgstr ""
 
 #: includes/class-admin.php:376
-#: includes/class-admin.php:727
+#: includes/class-admin.php:732
 msgid "Entry not found."
 msgstr ""
 
@@ -683,12 +682,11 @@ msgid "Entry #%d"
 msgstr ""
 
 #: includes/class-admin.php:387
-#: includes/class-privacy.php:75
+#: includes/class-privacy.php:80
 msgid "Submitted"
 msgstr ""
 
 #: includes/class-admin.php:388
-#: includes/class-admin.php:757
 msgid "IP"
 msgstr ""
 
@@ -846,17 +844,17 @@ msgid "Webhook retry scheduled."
 msgstr ""
 
 #: includes/class-admin.php:557
-#: includes/class-portable.php:31
+#: includes/class-portable.php:32
 msgid "Import file is larger than 1 MB."
 msgstr ""
 
 #: includes/class-admin.php:558
-#: includes/class-portable.php:35
+#: includes/class-portable.php:36
 msgid "Import file is not valid JSON."
 msgstr ""
 
 #: includes/class-admin.php:559
-#: includes/class-portable.php:38
+#: includes/class-portable.php:39
 msgid "This is not a FormTheory export file."
 msgstr ""
 
@@ -880,30 +878,30 @@ msgstr ""
 msgid "No entries were changed."
 msgstr ""
 
-#: includes/class-admin.php:757
-msgid "Entry ID"
+#: includes/class-admin.php:627
+msgid "Export failed."
 msgstr ""
 
-#: includes/class-admin.php:779
-#: includes/class-admin.php:783
+#: includes/class-admin.php:785
+#: includes/class-admin.php:789
 msgid "File not found."
 msgstr ""
 
-#: includes/class-db.php:147
+#: includes/class-db.php:148
 #: includes/class-fields.php:27
 msgid "Submit"
 msgstr ""
 
-#: includes/class-db.php:148
+#: includes/class-db.php:149
 msgid "Thanks! Your submission was received."
 msgstr ""
 
-#: includes/class-db.php:150
+#: includes/class-db.php:151
 msgid "New form submission"
 msgstr ""
 
 #. translators: %s: original form title
-#: includes/class-db.php:203
+#: includes/class-db.php:204
 #, php-format
 msgid "%s (copy)"
 msgstr ""
@@ -1031,38 +1029,38 @@ msgstr ""
 msgid "View: %s"
 msgstr ""
 
-#: includes/class-privacy.php:37
-#: includes/class-privacy.php:45
+#: includes/class-privacy.php:42
+#: includes/class-privacy.php:50
 msgid "FormTheory entries"
 msgstr ""
 
 #. translators: %d: number of days
-#: includes/class-privacy.php:58
+#: includes/class-privacy.php:63
 #, php-format
 msgid "Entries are automatically deleted after %d days."
 msgstr ""
 
-#: includes/class-privacy.php:60
+#: includes/class-privacy.php:65
 msgid "Entries are kept until an administrator deletes them."
 msgstr ""
 
-#: includes/class-privacy.php:62
+#: includes/class-privacy.php:67
 msgid "When a visitor submits a FormTheory form, the site stores the submitted field data (including any uploaded files), the visitor's IP address, the WordPress user ID if they are logged in, and the submission date."
 msgstr ""
 
-#: includes/class-privacy.php:74
+#: includes/class-privacy.php:79
 msgid "Form ID"
 msgstr ""
 
-#: includes/class-privacy.php:76
+#: includes/class-privacy.php:81
 msgid "IP address"
 msgstr ""
 
-#: includes/class-privacy.php:77
+#: includes/class-privacy.php:82
 msgid "User ID"
 msgstr ""
 
-#: includes/class-privacy.php:84
+#: includes/class-privacy.php:89
 msgid "Form entries"
 msgstr ""
 

@@ -79,6 +79,12 @@ class EntriesDbTest extends TestCase {
 		$this->assertContains( '%\\\\u00e9%', $params );
 	}
 
+	public function test_search_invalid_utf8_matches_nothing() {
+		list( $where, $params ) = \FormTheory_DB::entries_query( 5, array( 'search' => "\xff\xfe" ) );
+		$this->assertStringContainsString( '1=0', $where );
+		$this->assertSame( array( 5 ), $params );
+	}
+
 	public function test_clean_ids_drops_non_scalars() {
 		$this->wpdb->shouldNotReceive( 'query' );
 		$this->assertSame( 0, \FormTheory_DB::delete_entries( 5, array( array( 7 ), null ) ) );

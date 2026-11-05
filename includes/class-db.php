@@ -31,7 +31,7 @@ class FormTheory_DB {
 			delete_option( $opt );
 		}
 		foreach ( array( 'formtheory_send_webhook', 'formtheory_deliver_webhook', 'formtheory_purge' ) as $hook ) {
-			wp_clear_scheduled_hook( $hook );
+			wp_unschedule_hook( $hook );
 		}
 		self::remove_dir( self::upload_dir() );
 	}
@@ -112,7 +112,8 @@ class FormTheory_DB {
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			KEY form_id (form_id),
-			KEY status (status)
+			KEY status (status),
+			KEY entry_id (entry_id)
 		) $charset;" );
 
 		// Upgrading from < 1.2.0: entries that predate the status column count as read.
@@ -250,9 +251,15 @@ class FormTheory_DB {
 
 		$search = isset( $args['search'] ) ? trim( (string) $args['search'] ) : '';
 		if ( '' !== $search ) {
-			$where   .= ' AND data LIKE %s';
 			// data is stored as JSON: match the JSON-escaped form of the term.
-			$params[] = '%' . $wpdb->esc_like( substr( wp_json_encode( $search ), 1, -1 ) ) . '%';
+			$encoded = wp_json_encode( $search );
+			if ( false === $encoded ) {
+				// Invalid UTF-8 cannot match any stored JSON: match nothing.
+				$where .= ' AND 1=0';
+			} else {
+				$where   .= ' AND data LIKE %s';
+				$params[] = '%' . $wpdb->esc_like( substr( $encoded, 1, -1 ) ) . '%';
+			}
 		}
 
 		return array( $where, $params );

@@ -15,6 +15,18 @@ class PortableTest extends TestCase {
 		} );
 	}
 
+	public function test_export_returns_empty_string_on_encode_failure() {
+		$form           = $this->form();
+		$form['title']  = "bad \xff utf8";
+		$this->assertSame( '', \FormTheory_Portable::export( $form ) );
+	}
+
+	public function test_import_caps_title_at_255_chars() {
+		$json = json_encode( array( 'formtheory' => 1, 'title' => str_repeat( 'a', 300 ), 'config' => array() ) );
+		$out  = \FormTheory_Portable::import( $json );
+		$this->assertSame( 255, strlen( $out['title'] ) );
+	}
+
 	private function form() {
 		$config = \FormTheory_Fields::sanitize_config( array(
 			'fields'   => array(

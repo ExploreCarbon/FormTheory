@@ -12,7 +12,7 @@ class FormTheory_Portable {
 				$config['webhooks'][ $i ]['secret'] = '';
 			}
 		}
-		return wp_json_encode(
+		$json = wp_json_encode(
 			array(
 				'formtheory'     => 1,
 				'plugin_version' => defined( 'FORMTHEORY_VERSION' ) ? FORMTHEORY_VERSION : '',
@@ -20,6 +20,7 @@ class FormTheory_Portable {
 				'config'         => $config,
 			)
 		);
+		return is_string( $json ) ? $json : '';
 	}
 
 	/**
@@ -37,8 +38,10 @@ class FormTheory_Portable {
 		if ( ! isset( $data['formtheory'] ) || 1 !== $data['formtheory'] ) {
 			return new WP_Error( 'ft_import_marker', __( 'This is not a FormTheory export file.', 'formtheory' ) );
 		}
+		$title = sanitize_text_field( is_string( $data['title'] ?? null ) ? $data['title'] : '' );
+		$title = function_exists( 'mb_substr' ) ? mb_substr( $title, 0, 255 ) : substr( $title, 0, 255 );
 		return array(
-			'title'  => sanitize_text_field( is_string( $data['title'] ?? null ) ? $data['title'] : '' ),
+			'title'  => $title,
 			'config' => FormTheory_Fields::sanitize_config( $data['config'] ?? array() ),
 		);
 	}

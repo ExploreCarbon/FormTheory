@@ -622,10 +622,15 @@ class FormTheory_Admin {
 		if ( ! $form ) {
 			wp_die( esc_html__( 'Form not found.', 'formtheory' ) );
 		}
+		$json = FormTheory_Portable::export( $form );
+		if ( false === $json || '' === $json ) {
+			wp_die( esc_html__( 'Export failed.', 'formtheory' ), '', array( 'response' => 500 ) );
+		}
 		nocache_headers();
+		header( 'X-Content-Type-Options: nosniff' );
 		header( 'Content-Type: application/json; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="formtheory-form-' . $id . '-' . gmdate( 'Ymd' ) . '.json"' );
-		echo FormTheory_Portable::export( $form ); // phpcs:ignore WordPress.Security.EscapeOutput -- JSON download.
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON download.
 		exit;
 	}
 
@@ -754,7 +759,8 @@ class FormTheory_Admin {
 		header( 'Content-Disposition: attachment; filename="formtheory-' . $form_id . '-' . gmdate( 'Ymd-His' ) . '.csv"' );
 		$out = fopen( 'php://output', 'w' );
 		fwrite( $out, "\xEF\xBB\xBF" );
-		$head = array( __( 'Entry ID', 'formtheory' ), __( 'Date', 'formtheory' ), __( 'IP', 'formtheory' ) );
+		// Intentionally untranslated: keeps imports keyed on column names stable across locales.
+		$head = array( 'Entry ID', 'Date', 'IP' );
 		foreach ( $fields as $f ) {
 			$head[] = $this->csv_cell( $f['label'] );
 		}

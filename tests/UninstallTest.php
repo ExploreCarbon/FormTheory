@@ -51,7 +51,7 @@ class UninstallTest extends TestCase {
 			return true;
 		} );
 		$cleared = array();
-		Functions\when( 'wp_clear_scheduled_hook' )->alias( function ( $h ) use ( &$cleared ) {
+		Functions\when( 'wp_unschedule_hook' )->alias( function ( $h ) use ( &$cleared ) {
 			$cleared[] = $h;
 		} );
 		mkdir( $this->tmp . '/formtheory-private' );
@@ -70,6 +70,15 @@ class UninstallTest extends TestCase {
 		$this->assertSame( array( 'formtheory_settings', 'formtheory_recaptcha', 'formtheory_db_version' ), $deleted );
 		$this->assertSame( array( 'formtheory_send_webhook', 'formtheory_deliver_webhook', 'formtheory_purge' ), $cleared );
 		$this->assertDirectoryDoesNotExist( $this->tmp . '/formtheory-private' );
+	}
+
+	public function test_deactivation_unschedules_only_purge() {
+		$cleared = array();
+		Functions\when( 'wp_unschedule_hook' )->alias( function ( $h ) use ( &$cleared ) {
+			$cleared[] = $h;
+		} );
+		\FormTheory_Privacy::unschedule();
+		$this->assertSame( array( 'formtheory_purge' ), $cleared );
 	}
 
 	public function test_remove_dir_refuses_wrong_basename() {
