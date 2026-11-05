@@ -298,6 +298,10 @@ class FormTheory_Admin {
 			'bulk'    => __( 'Bulk action applied.', 'formtheory' ),
 			'note'    => __( 'Note saved.', 'formtheory' ),
 		);
+		if ( 'bulk_none' === $msg ) {
+			echo '<div class="notice notice-warning is-dismissible" role="status"><p>' . esc_html__( 'No entries were changed.', 'formtheory' ) . '</p></div>';
+			return;
+		}
 		if ( isset( $map[ $msg ] ) ) {
 			echo '<div class="notice notice-success is-dismissible" role="status"><p>' . esc_html( $map[ $msg ] ) . '</p></div>';
 		}
@@ -366,9 +370,17 @@ class FormTheory_Admin {
 		$form_id = isset( $_POST['form'] ) ? absint( $_POST['form'] ) : 0;
 		$action  = isset( $_POST['ft_bulk'] ) ? sanitize_key( wp_unslash( $_POST['ft_bulk'] ) ) : '';
 		$ids     = isset( $_POST['ids'] ) && is_array( $_POST['ids'] ) ? wp_unslash( $_POST['ids'] ) : array(); // phpcs:ignore -- cleaned in bulk_apply().
-		$this->bulk_apply( $form_id, $action, $ids );
-		wp_safe_redirect( $this->admin_url( 'formtheory-entries', array( 'form' => $form_id, 'ft_msg' => 'bulk' ) ) );
+		if ( ! $form_id || ! FormTheory_DB::get_form( $form_id ) ) {
+			wp_die( esc_html__( 'Form not found.', 'formtheory' ), 404 );
+		}
+		$changed = $this->bulk_apply( $form_id, $action, $ids );
+		wp_safe_redirect( $this->admin_url( 'formtheory-entries', array( 'form' => $form_id, 'ft_msg' => self::bulk_message_key( $changed ) ) ) );
 		exit;
+	}
+
+	/** Notice key for a bulk result. */
+	public static function bulk_message_key( $changed ) {
+		return (int) $changed > 0 ? 'bulk' : 'bulk_none';
 	}
 
 	public function handle_note() {

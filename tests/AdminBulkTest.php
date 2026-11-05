@@ -55,4 +55,12 @@ class AdminBulkTest extends TestCase {
 		$this->wpdb->shouldNotReceive( 'get_col' );
 		$this->assertSame( 0, ( new \FormTheory_Admin() )->bulk_apply( 5, 'delete', array( 'x', '' ) ) );
 	}
+
+	public function test_bulk_message_key_zero_is_none() {
+		$this->assertSame( 'bulk_none', \FormTheory_Admin::bulk_message_key( 0 ) );
+	}
+
+	public function test_bulk_message_key_positive_is_bulk() {
+		$this->assertSame( 'bulk', \FormTheory_Admin::bulk_message_key( 3 ) );
+	}
 }
