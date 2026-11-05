@@ -50,6 +50,18 @@ class FormTheory_Admin {
 	 */
 	public static function builder_i18n() {
 		return array(
+			'fields'             => __( 'Fields', 'formtheory' ),
+			'form_settings'      => __( 'Form settings', 'formtheory' ),
+			'builder_navigation' => __( 'Form editor sections', 'formtheory' ),
+			'fields_hint'        => __( 'Add fields, then open a field to edit its label and options.', 'formtheory' ),
+			'settings_hint'      => __( 'Choose what happens when someone submits this form.', 'formtheory' ),
+			'notifications_hint' => __( 'Send submission emails to your team or the person filling out the form.', 'formtheory' ),
+			'webhooks_hint'      => __( 'Send submissions to another service. Leave empty if you do not need an integration.', 'formtheory' ),
+			'unsaved_changes'    => __( 'Unsaved changes', 'formtheory' ),
+			'saved_state'        => __( 'No unsaved changes', 'formtheory' ),
+			'expand_all'         => __( 'Expand all', 'formtheory' ),
+			'collapse_all'       => __( 'Collapse all', 'formtheory' ),
+			'required_badge'     => __( 'Required', 'formtheory' ),
 			'types'            => array(
 				'text'     => __( 'Text', 'formtheory' ),
 				'email'    => __( 'Email', 'formtheory' ),
@@ -279,7 +291,7 @@ class FormTheory_Admin {
 		}
 		$title  = $form ? $form['title'] : '';
 		$config = $form ? $form['config'] : FormTheory_Fields::migrate_config( FormTheory_DB::default_config() );
-		echo '<div class="wrap"><h1>' . ( $id ? esc_html__( 'Edit Form', 'formtheory' ) : esc_html__( 'New Form', 'formtheory' ) ) . '</h1>';
+		echo '<div class="wrap ft-builder-page"><h1>' . ( $id ? esc_html__( 'Edit Form', 'formtheory' ) : esc_html__( 'New Form', 'formtheory' ) ) . '</h1>';
 		$this->notice();
 		if ( $id ) {
 			printf(
@@ -558,16 +570,22 @@ class FormTheory_Admin {
 			return;
 		}
 		$s = FormTheory_Spam::settings();
-		echo '<div class="wrap"><h1>' . esc_html__( 'FormTheory Settings', 'formtheory' ) . '</h1><form method="post" action="options.php">';
+		echo '<div class="wrap ft-settings-page"><h1>' . esc_html__( 'FormTheory Settings', 'formtheory' ) . '</h1>';
+		echo '<p class="description">' . esc_html__( 'These settings apply to every FormTheory form. Manage individual form behavior in the form editor.', 'formtheory' ) . '</p>';
+		settings_errors();
+		echo '<form method="post" action="options.php">';
 		settings_fields( 'formtheory_settings' );
+		echo '<section class="ft-settings-section" aria-labelledby="ft-spam-heading"><h2 id="ft-spam-heading">' . esc_html__( 'Spam protection', 'formtheory' ) . '</h2>';
+		echo '<p>' . esc_html__( 'A honeypot and signed time-trap are always active. Add an optional verification service below for extra protection.', 'formtheory' ) . '</p></section>';
+		echo '<section class="ft-settings-section" aria-label="' . esc_attr__( 'Google reCAPTCHA', 'formtheory' ) . '">';
 		FormTheory_Recaptcha::fields();
-		echo '<h2>' . esc_html__( 'Cloudflare Turnstile', 'formtheory' ) . '</h2><p>' . esc_html__( 'Leave both blank to disable. A signed time-trap and honeypot are always on.', 'formtheory' ) . '</p>';
+		echo '</section><section class="ft-settings-section" aria-labelledby="ft-turnstile-heading"><h2 id="ft-turnstile-heading">' . esc_html__( 'Cloudflare Turnstile', 'formtheory' ) . '</h2><p id="ft-turnstile-help">' . esc_html__( 'Enter both keys to enable Turnstile on every form. Leave both blank to disable it. Use keys registered for this site.', 'formtheory' ) . '</p>';
 		echo '<table class="form-table" role="presentation">';
-		echo '<tr><th scope="row"><label for="ft-ts-site">' . esc_html__( 'Site key', 'formtheory' ) . '</label></th><td><input type="text" class="regular-text" id="ft-ts-site" name="formtheory_settings[turnstile_site]" value="' . esc_attr( $s['turnstile_site'] ) . '"></td></tr>';
-		echo '<tr><th scope="row"><label for="ft-ts-secret">' . esc_html__( 'Secret key', 'formtheory' ) . '</label></th><td><input type="password" class="regular-text" id="ft-ts-secret" name="formtheory_settings[turnstile_secret]" value="' . esc_attr( $s['turnstile_secret'] ) . '" autocomplete="off"></td></tr>';
-		echo '</table>';
-		echo '<h2>' . esc_html__( 'Privacy', 'formtheory' ) . '</h2><table class="form-table" role="presentation"><tr><th scope="row"><label for="ft-ret">' . esc_html__( 'Delete entries after (days)', 'formtheory' ) . '</label></th><td><input type="number" min="0" max="3650" class="small-text" id="ft-ret" name="formtheory_settings[retention_days]" value="' . esc_attr( (string) FormTheory_Privacy::retention_days() ) . '"><p class="description">' . esc_html__( '0 keeps entries forever. Older entries and their uploaded files are deleted daily.', 'formtheory' ) . '</p></td></tr></table>';
-		echo '<h2>' . esc_html__( 'Uninstall', 'formtheory' ) . '</h2><table class="form-table" role="presentation"><tr><th scope="row">' . esc_html__( 'Data removal', 'formtheory' ) . '</th><td><label for="ft-del"><input type="checkbox" id="ft-del" name="formtheory_settings[delete_on_uninstall]" value="1"' . checked( ! empty( $s['delete_on_uninstall'] ), true, false ) . '> ' . esc_html__( 'Delete all FormTheory data when the plugin is deleted', 'formtheory' ) . '</label><p class="description">' . esc_html__( 'Warning: all forms, entries and uploaded files are permanently deleted when the plugin is deleted. This cannot be undone.', 'formtheory' ) . '</p></td></tr></table>';
+		echo '<tr><th scope="row"><label for="ft-ts-site">' . esc_html__( 'Site key', 'formtheory' ) . '</label></th><td><input type="text" class="regular-text" id="ft-ts-site" name="formtheory_settings[turnstile_site]" value="' . esc_attr( $s['turnstile_site'] ) . '" autocomplete="off" aria-describedby="ft-turnstile-help"></td></tr>';
+		echo '<tr><th scope="row"><label for="ft-ts-secret">' . esc_html__( 'Secret key', 'formtheory' ) . '</label></th><td><input type="password" class="regular-text" id="ft-ts-secret" name="formtheory_settings[turnstile_secret]" value="' . esc_attr( $s['turnstile_secret'] ) . '" autocomplete="new-password" aria-describedby="ft-turnstile-help"></td></tr>';
+		echo '</table></section>';
+		echo '<section class="ft-settings-section" aria-labelledby="ft-privacy-heading"><h2 id="ft-privacy-heading">' . esc_html__( 'Entry retention', 'formtheory' ) . '</h2><p>' . esc_html__( 'Choose how long to keep submissions and their uploaded files.', 'formtheory' ) . '</p><table class="form-table" role="presentation"><tr><th scope="row"><label for="ft-ret">' . esc_html__( 'Delete entries after (days)', 'formtheory' ) . '</label></th><td><input type="number" min="0" max="3650" step="1" class="small-text" id="ft-ret" name="formtheory_settings[retention_days]" aria-describedby="ft-ret-help" value="' . esc_attr( (string) FormTheory_Privacy::retention_days() ) . '"><p class="description" id="ft-ret-help">' . esc_html__( '0 keeps entries forever. Older entries and their uploaded files are deleted daily. Export any entries you need before shortening this period.', 'formtheory' ) . '</p></td></tr></table></section>';
+		echo '<section class="ft-settings-section ft-settings-danger" aria-labelledby="ft-uninstall-heading"><h2 id="ft-uninstall-heading">' . esc_html__( 'Plugin removal', 'formtheory' ) . '</h2><table class="form-table" role="presentation"><tr><th scope="row">' . esc_html__( 'Data removal', 'formtheory' ) . '</th><td><label for="ft-del"><input type="checkbox" id="ft-del" name="formtheory_settings[delete_on_uninstall]" value="1" aria-describedby="ft-del-help"' . checked( ! empty( $s['delete_on_uninstall'] ), true, false ) . '> ' . esc_html__( 'Delete all FormTheory data when the plugin is deleted', 'formtheory' ) . '</label><p class="description" id="ft-del-help">' . esc_html__( 'Warning: all forms, entries and uploaded files are permanently deleted when the plugin is deleted. This cannot be undone.', 'formtheory' ) . '</p></td></tr></table></section>';
 		submit_button();
 		echo '</form></div>';
 	}

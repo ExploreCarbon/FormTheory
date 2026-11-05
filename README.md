@@ -2,7 +2,7 @@
 
 Lightweight WordPress form builder: conditional logic, file uploads, multi-page forms, entries, CSV export, email notifications. No build step.
 
-- **Version:** 1.3.0
+- **Version:** 1.3.1
 - **Requires:** WordPress 6.0+, PHP 7.4+
 - **License:** GPL-2.0-or-later
 
@@ -15,7 +15,7 @@ Activation creates the plugin tables (forms, entries, webhook log and, since 1.3
 
 ## Usage
 
-1. **FormTheory → New Form** — build the form in the builder.
+1. **FormTheory → New Form** — add and configure fields in **Fields**, then use **Form settings**, **Notifications**, and **Webhooks** to configure submission behavior. Expand or collapse field editors, and save with **Save Form**. Unsaved changes are indicated beside the save button and trigger a warning before leaving the page.
 2. Embed it:
    - Shortcode: `[formtheory id="123"]`
    - Block: `formtheory/form` with attribute `id` (server-rendered). In the block editor, pick a form from a dropdown and see a live, non-interactive preview (every control is disabled and nothing can submit). A deleted form shows a warning and the picker.

@@ -4,7 +4,7 @@ Tags: forms, form builder, contact form, conditional logic, webhooks
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,14 @@ Set the retention period (days) under FormTheory > Settings. 0 keeps entries for
 
 == Changelog ==
 
+= 1.3.1 =
+* Admin builder: separate sections for Fields, Form settings, Notifications and Webhooks.
+* Collapsible field picker, expand/collapse controls, required-field indicators and improved mobile layout.
+* Unsaved-change status and protection when leaving the form editor.
+* Validation reveals the first invalid setting, including fields inside hidden sections and collapsed panels.
+* Global settings grouped with clearer spam protection, entry retention and plugin removal guidance.
+* Browser regression checks for builder interactions and desktop/mobile layouts.
+
 = 1.3.0 =
 * New field: calculated (formula with numbers, field references, + - * /, parentheses and unary minus; recomputed on the server).
 * New field: star rating (3-10).
@@ -116,6 +124,9 @@ Set the retention period (days) under FormTheory > Settings. 0 keeps entries for
 * Initial release: form builder, conditional logic, file uploads, multi-page forms, entries, CSV export and email notifications.
 
 == Upgrade Notice ==
+
+= 1.3.1 =
+Improves the admin form builder and global settings. Existing forms and submissions remain compatible.
 
 = 1.3.0 =
 Recommended for all sites: fixes a fatal error (TypeError) in 1.2.0 and earlier on PHP 8 when a form with a checkbox field is submitted with an option selected. Also adds new field types, save and continue later, and a block editor picker. The database upgrades automatically (a drafts table is added); existing forms and entries are unchanged.

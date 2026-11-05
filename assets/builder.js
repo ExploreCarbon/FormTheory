@@ -36,6 +36,18 @@
 	var NON_COND_SOURCE = ['address', 'signature', 'repeater'];
 	var OPS = Object.assign({ is: 'is', isnot: 'is not', contains: 'contains', gt: 'greater than', lt: 'less than', empty: 'is empty', notempty: 'is not empty' }, I18N.ops || {});
 	var uid = 0;
+	var activeSection = 'fields';
+	var initialState;
+	var submitting = false;
+	var titleInput = document.getElementById('ft-title');
+	var saveState = el('span', { class: 'ftb-save-state', role: 'status' });
+	function currentState() { return JSON.stringify(cfg) + '\n' + (titleInput ? titleInput.value : ''); }
+	function updateSaveState() {
+		var dirty = initialState != null && currentState() !== initialState;
+		var message = dirty ? t('unsaved_changes', 'Unsaved changes') : t('saved_state', 'No unsaved changes');
+		if (saveState.textContent !== message) saveState.textContent = message;
+		saveState.classList.toggle('is-dirty', dirty);
+	}
 
 	function nextId() {
 		var max = 0;
@@ -364,7 +376,10 @@
 			body.appendChild(labelled(t('country_default', 'Default country (optional)'), textIn(f.country_default, function (v) { f.country_default = v; })));
 		}
 		if (['page', 'html', 'hidden', 'calc'].indexOf(f.type) === -1) {
-			body.appendChild(check(t('required', 'Required'), f.required, function (v) { f.required = v; }));
+			body.appendChild(check(t('required', 'Required'), f.required, function (v) {
+				f.required = v;
+				requiredBadge.hidden = !v;
+			}));
 			if (['text', 'email', 'phone', 'number', 'textarea', 'select'].indexOf(f.type) !== -1) {
 				body.appendChild(labelled(t('placeholder', 'Placeholder'), textIn(f.placeholder, function (v) { f.placeholder = v; })));
 			}
@@ -396,24 +411,28 @@
 				cfg.fields.forEach(function (o) { if (o.cond) o.cond.rules = (o.cond.rules || []).filter(function (r) { return r.field !== f.id; }); });
 				render();
 				var cards = root.querySelectorAll('.ftb-list > details.ftb-card > summary');
-				var nx = cards[Math.min(i, cards.length - 1)] || root.querySelector('.ftb-palette button');
+				var nx = cards[Math.min(i, cards.length - 1)] || root.querySelector('.ftb-field-picker > summary');
 				if (nx) nx.focus();
 				announce(t('field_deleted', 'Field deleted'));
 			} })
 		]);
 
+		var requiredBadge = el('span', { class: 'ftb-required', text: t('required_badge', 'Required'), hidden: !f.required });
 		var details = el('details', { class: 'ftb-card' + (f.type === 'page' ? ' ftb-page' : ''), 'data-id': f.id }, [
-			el('summary', {}, [summary, el('code', { class: 'ftb-id', text: f.id })]), body, tools
+			el('summary', {}, [summary, requiredBadge, el('code', { class: 'ftb-id', text: f.id })]), body, tools
 		]);
 		return details;
 	}
 
 	function render(focusId, focusDir) {
+		if (focusId) activeSection = 'fields';
+		var oldPicker = root.querySelector('.ftb-field-picker');
+		var pickerOpen = oldPicker ? oldPicker.open : (!cfg.fields.length || !window.matchMedia('(max-width: 782px)').matches);
 		var open = {};
 		root.querySelectorAll('details[open]').forEach(function (d) { open[d.getAttribute('data-id')] = true; });
 		root.textContent = '';
 
-		var palette = el('div', { class: 'ftb-palette', role: 'group', 'aria-label': t('add_field', 'Add field') }, [el('strong', { text: t('add_field', 'Add field') + ': ' })]);
+		var palette = el('div', { class: 'ftb-palette', role: 'group', 'aria-label': t('add_field', 'Add field') });
 		TYPES.forEach(function (tp) {
 			palette.appendChild(el('button', { type: 'button', class: 'button', text: LABELS[tp] || tp, onclick: function () {
 				var f = { id: nextId(), type: tp, label: tp === 'page' ? '' : LABELS[tp], required: false, options: ['select', 'radio', 'checkbox'].indexOf(tp) !== -1 ? [t('option_1', 'Option 1'), t('option_2', 'Option 2')] : [], cond: { enabled: false, action: 'show', logic: 'all', rules: [] } };
@@ -453,11 +472,40 @@
 			settings.appendChild(labelled(t('redirect_url', 'Redirect URL (merge tags allowed in path/query)'), textIn(cfg.confirmation_url, function (v) { cfg.confirmation_url = v; }, 'url')));
 		}
 
-		root.appendChild(palette);
-		root.appendChild(list);
-		root.appendChild(settings);
-		root.appendChild(notificationsEditor());
-		root.appendChild(webhooksEditor());
+		var picker = el('details', { class: 'ftb-field-picker' }, [el('summary', { text: t('add_field', 'Add field') }), palette]);
+		picker.open = pickerOpen;
+		var sections = [
+			{ id: 'fields', title: t('fields', 'Fields'), hint: t('fields_hint', 'Add fields, then open a field to edit its label and options.'), children: [picker, list] },
+			{ id: 'settings', title: t('form_settings', 'Form settings'), hint: t('settings_hint', 'Choose what happens when someone submits this form.'), children: [settings] },
+			{ id: 'notifications', title: t('notifications', 'Notifications'), hint: t('notifications_hint', 'Send submission emails to your team or the person filling out the form.'), children: [notificationsEditor()] },
+			{ id: 'webhooks', title: t('webhooks', 'Webhooks'), hint: t('webhooks_hint', 'Send submissions to another service. Leave empty if you do not need an integration.'), children: [webhooksEditor()] }
+		];
+		var nav = el('nav', { class: 'ftb-nav', 'aria-label': t('builder_navigation', 'Form editor sections') });
+		function showSection(id) {
+			activeSection = id;
+			sections.forEach(function (s) {
+				s.panel.hidden = s.id !== id;
+				s.button.setAttribute('aria-pressed', s.id === id ? 'true' : 'false');
+			});
+		}
+		sections.forEach(function (s) {
+			s.button = el('button', { type: 'button', class: 'ftb-nav-button', text: s.title, 'aria-controls': 'ftb-panel-' + s.id, onclick: function () { showSection(s.id); } });
+			nav.appendChild(s.button);
+			s.panel = el('section', { class: 'ftb-panel', id: 'ftb-panel-' + s.id, 'aria-labelledby': 'ftb-heading-' + s.id }, [
+				el('h2', { id: 'ftb-heading-' + s.id, text: s.title }), el('p', { class: 'description ftb-section-hint', text: s.hint })
+			].concat(s.children));
+		});
+		root.appendChild(nav);
+		sections.forEach(function (s) { root.appendChild(s.panel); });
+		var disclosureTools = el('div', { class: 'ftb-disclosure-tools' });
+		[true, false].forEach(function (expand) {
+			disclosureTools.appendChild(el('button', { type: 'button', class: 'button', text: expand ? t('expand_all', 'Expand all') : t('collapse_all', 'Collapse all'), disabled: cfg.fields.length ? null : 'disabled', onclick: function () {
+				list.querySelectorAll('details.ftb-card').forEach(function (d) { d.open = expand; });
+			} }));
+		});
+		list.parentNode.insertBefore(disclosureTools, list);
+		showSection(activeSection);
+		updateSaveState();
 
 		if (focusId) {
 			var target = root.querySelector('details[data-id="' + focusId + '"]');
@@ -468,6 +516,32 @@
 		}
 	}
 
-	form.addEventListener('submit', function () { store.value = JSON.stringify(cfg); });
+	form.addEventListener('input', updateSaveState);
+	form.addEventListener('change', updateSaveState);
+	form.addEventListener('click', updateSaveState);
+	// Reveal invalid settings before the browser attempts to focus their controls.
+	var firstInvalid = null;
+	form.addEventListener('invalid', function (event) {
+		if (firstInvalid) return;
+		firstInvalid = event.target;
+		setTimeout(function () { firstInvalid = null; }, 0);
+		var panel = event.target.closest('.ftb-panel');
+		if (panel && panel.hidden) root.querySelector('[aria-controls="' + panel.id + '"]').click();
+		var ancestor = event.target.parentElement;
+		while (ancestor && ancestor !== form) {
+			if (ancestor.tagName === 'DETAILS') ancestor.open = true;
+			ancestor = ancestor.parentElement;
+		}
+	}, true);
+	form.addEventListener('submit', function () { store.value = JSON.stringify(cfg); submitting = true; });
+	window.addEventListener('beforeunload', function (event) {
+		if (!submitting && initialState != null && currentState() !== initialState) {
+			event.preventDefault(); event.returnValue = '';
+		}
+	});
 	render();
+	initialState = currentState();
+	var saveRow = form.querySelector('p.submit');
+	if (saveRow) { saveRow.classList.add('ftb-save-bar'); saveRow.appendChild(saveState); }
+	updateSaveState();
 })();

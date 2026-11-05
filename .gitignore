@@ -1,3 +1,4 @@
 vendor/
+.qa/
 .superpowers/
 .phpunit.result.cache
