@@ -50,6 +50,12 @@ class FormTheory_Frontend {
 		if ( ! empty( $_POST['ft_hp'] ) ) {
 			$this->redirect_done( $form_id );
 		}
+		if ( ! $errors ) {
+			$spam = FormTheory_Spam::check( wp_unslash( $_POST ) ); // phpcs:ignore -- only reads ft_ts / turnstile token.
+			if ( is_wp_error( $spam ) ) {
+				$errors['_form'] = $spam->get_error_message();
+			}
+		}
 
 		$raw    = isset( $_POST['ft'] ) && is_array( $_POST['ft'] ) ? wp_unslash( $_POST['ft'] ) : array(); // phpcs:ignore -- sanitized per field.
 		$fields = FormTheory_Fields::data_fields( $form['config']['fields'] );
@@ -317,6 +323,7 @@ class FormTheory_Frontend {
 		echo '<form id="' . esc_attr( $anchor ) . '" class="ft-form" method="post" enctype="multipart/form-data" novalidate data-ft-form>';
 		echo '<input type="hidden" name="formtheory_id" value="' . (int) $form_id . '">';
 		wp_nonce_field( 'formtheory_submit_' . $form_id, '_ft_nonce', false );
+		echo '<input type="hidden" name="ft_ts" value="' . esc_attr( FormTheory_Spam::stamp() ) . '">';
 		echo '<div class="ft-hp" aria-hidden="true"><label>Leave empty<input type="text" name="ft_hp" tabindex="-1" autocomplete="off"></label></div>';
 
 		if ( $errors ) {
@@ -343,6 +350,10 @@ class FormTheory_Frontend {
 			if ( $multi && $i < count( $pages ) - 1 ) {
 				echo '<button type="button" class="ft-btn ft-next" data-ft-next>' . esc_html__( 'Next', 'formtheory' ) . '</button>';
 			} else {
+				if ( FormTheory_Spam::turnstile_enabled() ) {
+					wp_enqueue_script( 'formtheory-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js', array(), null, array( 'strategy' => 'defer' ) );
+					echo '<div class="cf-turnstile ft-turnstile" data-sitekey="' . esc_attr( FormTheory_Spam::settings()['turnstile_site'] ) . '"></div>';
+				}
 				echo '<button type="submit" class="ft-btn ft-submit">' . esc_html( $form['config']['submit_label'] ) . '</button>';
 			}
 			echo '</div></div>';
