@@ -37,6 +37,7 @@ class BlockTest extends TestCase {
 			'wp_nonce_field' => function ( $action, $name ) {
 				echo '<input type="hidden" name="' . $name . '" value="NONCE123">';
 			},
+			'wp_style_is'   => false,
 			'add_shortcode' => null,
 			'add_action'    => null,
 		) );
@@ -89,6 +90,11 @@ class BlockTest extends TestCase {
 		Functions\when( 'register_block_type' )->alias( function ( $name, $args ) use ( &$captured ) {
 			$captured = array( $name, $args );
 		} );
+		$style = null;
+		Functions\expect( 'wp_register_style' )->once()->andReturnUsing( function () use ( &$style ) {
+			$style = func_get_args();
+			return true;
+		} );
 		Functions\expect( 'wp_register_script' )->once()->andReturnUsing( function ( $h, $src, $deps, $ver, $foot ) use ( &$reg ) {
 			$reg = func_get_args();
 			return true;
@@ -110,6 +116,8 @@ class BlockTest extends TestCase {
 			$this->assertContains( $dep, $reg[2] );
 		}
 		$this->assertNotContains( 'wp-i18n', $reg[2] );
+		$this->assertSame( $captured[1]['editor_style'], $style[0] );
+		$this->assertStringEndsWith( 'assets/front.css', $style[1] );
 		$this->assertTrue( $reg[4] );
 	}
 
@@ -119,6 +127,7 @@ class BlockTest extends TestCase {
 		$wpdb->shouldNotReceive( 'get_results' );
 		Functions\when( 'register_block_type' )->justReturn( true );
 		Functions\when( 'wp_register_script' )->justReturn( true );
+		Functions\when( 'wp_register_style' )->justReturn( true );
 		Functions\expect( 'wp_add_inline_script' )->never();
 		$this->front->register_block();
 		$this->addToAssertionCount( 1 );

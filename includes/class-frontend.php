@@ -78,6 +78,9 @@ class FormTheory_Frontend {
 			FORMTHEORY_VERSION,
 			true
 		);
+		if ( ! wp_style_is( 'formtheory', 'registered' ) ) {
+			wp_register_style( 'formtheory', FORMTHEORY_URL . 'assets/front.css', array(), FORMTHEORY_VERSION ); // editor_style needs it on init; register_assets() is front end only.
+		}
 		register_block_type( 'formtheory/form', array(
 			'title'           => __( 'FormTheory Form', 'formtheory' ),
 			'category'        => 'widgets',

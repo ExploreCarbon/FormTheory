@@ -27,7 +27,7 @@ for ( const d of [ undefined, { forms: [], i18n: {} }, { forms, i18n: { title: '
 		const out = reg[ 1 ].edit( { attributes: { id }, setAttributes: ( a ) => { setAttrs = a; } } );
 		assert.ok( out );
 		const s = JSON.stringify( out );
-		if ( d && d.forms.length && id === 3 ) assert.ok( s.includes( 'SSR' ) || s.includes( 'serverSide' ) || true );
+		if ( d && d.forms.length && id === 3 ) assert.ok( s.includes( '"type":"SSR"' ) );
 		if ( d && d.forms.length && id === 99 ) assert.ok( s.includes( 'Notice' ) );
 	}
 }
