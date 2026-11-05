@@ -1,0 +1,20 @@
+.ft-table { margin-top: 1rem; }
+.ft-danger, .ftb-danger { color: #b32d2e !important; }
+.ftb-palette { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: 1rem 0; }
+.ftb-list { display: flex; flex-direction: column; gap: .5rem; max-width: 52rem; }
+.ftb-card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; }
+.ftb-card.ftb-page { border-left: 4px solid #2271b1; }
+.ftb-card > summary { padding: .75rem 1rem; cursor: pointer; display: flex; justify-content: space-between; gap: 1rem; font-weight: 600; }
+.ftb-card > summary:focus-visible, .ftb-card button:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+.ftb-id { font-weight: 400; }
+.ftb-body { padding: 0 1rem; }
+.ftb-row label { display: block; font-weight: 600; margin-bottom: .2rem; }
+.ftb-check { display: flex; align-items: center; gap: .4rem; }
+.ftb-check label { display: inline; margin: 0; }
+.ftb-inline { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+.ftb-cond { border-top: 1px solid #dcdcde; padding-top: .5rem; margin-bottom: .5rem; }
+.ftb-tools { display: flex; flex-wrap: wrap; gap: .4rem; padding: .75rem 1rem; border-top: 1px solid #dcdcde; }
+.ftb-settings { max-width: 52rem; margin-top: 1.5rem; padding: 1rem; background: #fff; border: 1px solid #c3c4c7; }
+.ftb-settings legend { font-weight: 600; font-size: 1.1em; padding: 0 .3rem; }
+.ftb-empty { font-style: italic; }
+.ft-entry th { width: 220px; }

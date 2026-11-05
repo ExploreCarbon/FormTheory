@@ -1,0 +1,26 @@
+.ft-form { --ft-accent: #1d4ed8; --ft-error: #b91c1c; --ft-border: #6b7280; max-width: 40rem; }
+.ft-field { margin: 0 0 1.25rem; }
+.ft-field[hidden], .ft-page[hidden] { display: none; }
+.ft-field > label, .ft-field legend { display: block; font-weight: 600; margin-bottom: .35rem; }
+.ft-field fieldset { border: 0; margin: 0; padding: 0; }
+.ft-field input[type=text], .ft-field input[type=email], .ft-field input[type=tel], .ft-field input[type=number],
+.ft-field input[type=date], .ft-field select, .ft-field textarea {
+	box-sizing: border-box; width: 100%; min-height: 2.5rem; padding: .5rem .65rem;
+	border: 1px solid var(--ft-border); border-radius: 4px; font: inherit; background: #fff; color: #111;
+}
+.ft-choice { display: flex; align-items: center; gap: .5rem; min-height: 24px; margin: .25rem 0; }
+.ft-choice input { width: 1.15rem; height: 1.15rem; margin: 0; }
+.ft-form :focus-visible { outline: 3px solid var(--ft-accent); outline-offset: 2px; }
+.ft-req, .ft-error { color: var(--ft-error); }
+.ft-error { margin: .35rem 0 0; font-weight: 600; }
+.ft-has-error input, .ft-has-error select, .ft-has-error textarea { border-color: var(--ft-error); border-width: 2px; }
+.ft-help { margin: .3rem 0 0; font-size: .9em; color: #4b5563; }
+.ft-error-summary { border: 2px solid var(--ft-error); padding: .75rem 1rem; margin-bottom: 1rem; color: var(--ft-error); }
+.ft-nav { display: flex; gap: .75rem; margin-top: 1rem; }
+.ft-btn { min-height: 44px; min-width: 44px; padding: .6rem 1.25rem; border-radius: 4px; border: 2px solid var(--ft-accent); font: inherit; cursor: pointer; }
+.ft-submit, .ft-next { background: var(--ft-accent); color: #fff; }
+.ft-prev { background: #fff; color: var(--ft-accent); }
+.ft-btn:disabled { opacity: .6; cursor: wait; }
+.ft-progress { font-weight: 600; }
+.ft-confirmation { padding: 1rem; border-left: 4px solid #15803d; background: #f0fdf4; color: #14532d; }
+.ft-hp { position: absolute !important; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
