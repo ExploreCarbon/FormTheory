@@ -506,17 +506,25 @@ class FormTheory_Frontend {
 			}
 		}
 
-		$entry_id = FormTheory_DB::insert_entry( $form_id, $data );
+		// "Don't store entries": nothing is inserted (entry id 0), so notifications and webhooks
+		// still run on the submitted data and their webhook log rows are not tied to a deleted entry.
+		$store    = ! isset( $form['config']['store_entries'] ) || ! empty( $form['config']['store_entries'] );
+		$entry_id = $store ? FormTheory_DB::insert_entry( $form_id, $data ) : 0;
 		$resumed  = (string) ( $post['ft_resume'] ?? '' );
 		if ( FormTheory_Drafts::valid_token( $resumed ) ) {
 			FormTheory_Drafts::delete( $resumed, $form_id ); // Submitted: the saved draft is no longer needed.
 		}
 		FormTheory_Notify::send( $form, $data, $entry_id );
 		do_action( 'formtheory_after_submission', $entry_id, $form, $data );
+		if ( ! $store ) {
+			foreach ( $written as $path ) {
+				@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- attachments were already sent; no entry will ever reference these files.
+			}
+		}
 
-		$ctx                = array( 'form' => $form, 'data' => $data, 'entry_id' => $entry_id );
+		$ctx                = array( 'form' => $form, 'data' => $data, 'entry_id' => $entry_id, 'values' => $values, 'visible' => $visible );
 		$result['ok']       = true;
-		$result['entry_id'] = $entry_id;
+		$result['entry_id'] = $entry_id ? $entry_id : null;
 		$result['redirect'] = self::confirmation_target( $form, $ctx );
 		$result['message']  = $result['redirect'] ? null : self::confirmation_html( $form, $data, $entry_id );
 		return $result;
@@ -559,6 +567,9 @@ class FormTheory_Frontend {
 		if ( 'page' === $type ) {
 			$id = (int) ( $cfg['confirmation_page'] ?? 0 );
 			return $id && 'publish' === get_post_status( $id ) ? (string) get_permalink( $id ) : null;
+		}
+		if ( 'score' === $type ) {
+			return FormTheory_Score::target( $form, $ctx['values'] ?? $ctx['data'], $ctx['visible'] ?? array() );
 		}
 		if ( 'redirect' !== $type || empty( $cfg['confirmation_url'] ) ) {
 			return null;
