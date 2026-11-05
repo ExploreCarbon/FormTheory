@@ -64,7 +64,7 @@
 	}
 
 	function textIn(val, oninput, type) {
-		return el('input', { type: type || 'text', class: 'regular-text', value: val == null ? '' : String(val), oninput: function (e) { oninput(e.target.value); } });
+		return el('input', { type: type || 'text', class: 'regular-text', autocomplete: type === 'password' ? 'new-password' : null, value: val == null ? '' : String(val), oninput: function (e) { oninput(e.target.value); } });
 	}
 
 	function select(opts, val, onchange) {
@@ -219,7 +219,7 @@
 		}, function (h, body) {
 			body.appendChild(labelled(t('endpoint_url', 'Endpoint URL (https only)'), textIn(h.url, function (v) { h.url = v; }, 'url')));
 			body.appendChild(labelled(t('format', 'Format'), select({ json: 'JSON', form: t('form_encoded', 'Form-encoded') }, h.format || 'json', function (v) { h.format = v; })));
-			body.appendChild(labelled(t('signing_secret', 'Signing secret (optional, sent as X-FormTheory-Signature)'), textIn(h.secret, function (v) { h.secret = v; })));
+			body.appendChild(labelled(t('signing_secret', 'Signing secret (optional, sent as X-FormTheory-Signature)'), textIn(h.secret, function (v) { h.secret = v; }, 'password')));
 			body.appendChild(ruleEditor(h, t('only_send_when', 'Only send when conditions match')));
 		});
 	}
