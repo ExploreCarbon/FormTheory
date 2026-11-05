@@ -27,6 +27,9 @@ class FormTheory_Fields {
 		$cfg['submit_label']   = sanitize_text_field( $raw['submit_label'] ?? 'Submit' );
 		$cfg['confirmation']   = wp_kses_post( $raw['confirmation'] ?? '' );
 		$cfg['notify_subject'] = sanitize_text_field( $raw['notify_subject'] ?? '' );
+		$cfg['confirmation_type'] = in_array( $raw['confirmation_type'] ?? '', array( 'message', 'page', 'redirect' ), true ) ? $raw['confirmation_type'] : 'message';
+		$cfg['confirmation_page'] = absint( $raw['confirmation_page'] ?? 0 );
+		$cfg['confirmation_url']  = self::sanitize_url_template( $raw['confirmation_url'] ?? '' );
 		$to                    = array_filter( array_map( 'sanitize_email', array_map( 'trim', explode( ',', (string) ( $raw['notify_to'] ?? '' ) ) ) ) );
 		$cfg['notify_to']      = implode( ',', $to );
 
@@ -98,6 +101,24 @@ class FormTheory_Fields {
 			}
 		}
 		return self::migrate_config( $cfg );
+	}
+
+	/**
+	 * http(s) URL that may contain merge tags. Tags are shielded from
+	 * esc_url_raw (which strips braces) and restored afterwards.
+	 */
+	public static function sanitize_url_template( $url ) {
+		$tags = array();
+		$url  = preg_replace_callback( '/\{[a-z_]+(?::[a-z0-9_]+)?\}/', function ( $m ) use ( &$tags ) {
+			$key          = 'fttag' . count( $tags ) . 'x';
+			$tags[ $key ] = $m[0];
+			return $key;
+		}, trim( (string) $url ) );
+		if ( ! preg_match( '#^https?://#i', $url ) ) {
+			return '';
+		}
+		$url = esc_url_raw( $url );
+		return '' === $url ? '' : strtr( $url, $tags );
 	}
 
 	/** Recipient list: emails or {field:ID} tags, comma separated. */

@@ -68,6 +68,9 @@ class FormTheory_DB {
 			'confirmation'  => 'Thanks! Your submission was received.',
 			'notify_to'     => get_option( 'admin_email' ),
 			'notify_subject'=> 'New form submission',
+			'confirmation_type' => 'message',
+			'confirmation_page' => 0,
+			'confirmation_url'  => '',
 		);
 	}
 

@@ -272,6 +272,13 @@
 		var conf = el('textarea', { rows: 3, class: 'large-text', oninput: function (e) { cfg.confirmation = e.target.value; } });
 		conf.value = cfg.confirmation || '';
 		settings.appendChild(labelled('Confirmation message', conf));
+		settings.appendChild(labelled('After submit', select({ message: 'Show message', page: 'Go to page (ID)', redirect: 'Redirect to URL' }, cfg.confirmation_type || 'message', function (v) { cfg.confirmation_type = v; render(); })));
+		if (cfg.confirmation_type === 'page') {
+			settings.appendChild(labelled('Page ID', textIn(cfg.confirmation_page || '', function (v) { cfg.confirmation_page = parseInt(v, 10) || 0; }, 'number')));
+		}
+		if (cfg.confirmation_type === 'redirect') {
+			settings.appendChild(labelled('Redirect URL (merge tags allowed in path/query)', textIn(cfg.confirmation_url, function (v) { cfg.confirmation_url = v; }, 'url')));
+		}
 
 		root.appendChild(palette);
 		root.appendChild(list);

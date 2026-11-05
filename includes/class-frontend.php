@@ -111,6 +111,12 @@ class FormTheory_Frontend {
 		$entry_id = FormTheory_DB::insert_entry( $form_id, $data );
 		FormTheory_Notify::send( $form, $data, $entry_id );
 		do_action( 'formtheory_after_submission', $entry_id, $form, $data );
+		$target = self::confirmation_target( $form, array( 'form' => $form, 'data' => $data, 'entry_id' => $entry_id ) );
+		if ( $target ) {
+			// Host was fixed by the admin in the form config; allow it even if off-site.
+			wp_redirect( $target ); // phpcs:ignore WordPress.Security.SafeRedirect -- validated in confirmation_target().
+			exit;
+		}
 		$this->redirect_done( $form_id, $entry_id );
 	}
 
@@ -136,6 +142,31 @@ class FormTheory_Frontend {
 		}
 		$entry = FormTheory_DB::get_entry( (int) get_transient( 'formtheory_done_' . $token ) );
 		return $entry && (int) $entry['form_id'] === (int) $form_id ? $entry : null;
+	}
+
+	/**
+	 * Where to send the visitor after a successful submit, or null to show
+	 * the confirmation message. Redirect URLs resolve merge tags URL-encoded,
+	 * and are refused if a value changed the configured host.
+	 */
+	public static function confirmation_target( array $form, array $ctx ) {
+		$cfg = $form['config'];
+		$type = $cfg['confirmation_type'] ?? 'message';
+		if ( 'page' === $type ) {
+			$id = (int) ( $cfg['confirmation_page'] ?? 0 );
+			return $id && 'publish' === get_post_status( $id ) ? (string) get_permalink( $id ) : null;
+		}
+		if ( 'redirect' !== $type || empty( $cfg['confirmation_url'] ) ) {
+			return null;
+		}
+		$template = (string) $cfg['confirmation_url'];
+		$url      = FormTheory_Merge::replace( $template, $ctx, 'url' );
+		$expected = wp_parse_url( preg_replace( '/\{[^}]*\}/', '', $template ), PHP_URL_HOST );
+		$actual   = wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! $expected || strtolower( (string) $expected ) !== strtolower( (string) $actual ) || ! preg_match( '#^https?://#i', $url ) ) {
+			return null;
+		}
+		return $url;
 	}
 
 	/** Confirmation message HTML with merge tags resolved. */
