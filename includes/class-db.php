@@ -144,10 +144,10 @@ class FormTheory_DB {
 	public static function default_config() {
 		return array(
 			'fields'        => array(),
-			'submit_label'  => 'Submit',
-			'confirmation'  => 'Thanks! Your submission was received.',
+			'submit_label'  => __( 'Submit', 'formtheory' ),
+			'confirmation'  => __( 'Thanks! Your submission was received.', 'formtheory' ),
 			'notify_to'     => get_option( 'admin_email' ),
-			'notify_subject'=> 'New form submission',
+			'notify_subject'=> __( 'New form submission', 'formtheory' ),
 			'ajax'              => true,
 			'confirmation_type' => 'message',
 			'confirmation_page' => 0,

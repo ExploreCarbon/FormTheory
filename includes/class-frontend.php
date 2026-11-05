@@ -18,6 +18,24 @@ class FormTheory_Frontend {
 	public function register_assets() {
 		wp_register_style( 'formtheory', FORMTHEORY_URL . 'assets/front.css', array(), FORMTHEORY_VERSION );
 		wp_register_script( 'formtheory', FORMTHEORY_URL . 'assets/front.js', array(), FORMTHEORY_VERSION, true );
+		wp_localize_script( 'formtheory', 'FormTheoryI18n', self::i18n() );
+	}
+
+	/** Strings for assets/front.js (read as FormTheoryI18n.key). */
+	public static function i18n() {
+		return array(
+			'required'     => __( 'This field is required.', 'formtheory' ),
+			'attach_file'  => __( 'Please attach a file.', 'formtheory' ),
+			'invalid_email' => __( 'Enter a valid email address.', 'formtheory' ),
+			'invalid_number' => __( 'Enter a number.', 'formtheory' ),
+			'invalid_phone' => __( 'Enter a valid phone number.', 'formtheory' ),
+			/* translators: %d: maximum file size in megabytes. */
+			'file_too_big' => __( 'File must be under %d MB.', 'formtheory' ),
+			/* translators: 1: current step number, 2: total number of steps. */
+			'step_of'      => __( 'Step %1$d of %2$d', 'formtheory' ),
+			'went_wrong'   => __( 'Something went wrong. Please reload the page before submitting again.', 'formtheory' ),
+			'fix_errors'   => __( 'Please fix the errors below.', 'formtheory' ),
+		);
 	}
 
 	/** Server-rendered block wrapping the shortcode (no build step). */
@@ -299,7 +317,7 @@ class FormTheory_Frontend {
 			return __( 'Upload failed.', 'formtheory' );
 		}
 		if ( $file['size'] > $f['max_mb'] * MB_IN_BYTES ) {
-			/* translators: %d: megabytes */
+			/* translators: %d: maximum file size in megabytes. */
 			return sprintf( __( 'File must be under %d MB.', 'formtheory' ), $f['max_mb'] );
 		}
 		$check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'], $this->allowed_mimes( $f ) );
@@ -375,7 +393,7 @@ class FormTheory_Frontend {
 		echo '<input type="hidden" name="formtheory_id" value="' . (int) $form_id . '">';
 		wp_nonce_field( 'formtheory_submit_' . $form_id, '_ft_nonce', false );
 		echo '<input type="hidden" name="ft_ts" value="' . esc_attr( FormTheory_Spam::stamp() ) . '">';
-		echo '<div class="ft-hp" aria-hidden="true"><label>Leave empty<input type="text" name="ft_hp" tabindex="-1" autocomplete="off"></label></div>';
+		echo '<div class="ft-hp" aria-hidden="true"><label>' . esc_html__( 'Leave empty', 'formtheory' ) . '<input type="text" name="ft_hp" tabindex="-1" autocomplete="off"></label></div>';
 
 		if ( $errors ) {
 			echo '<div class="ft-error-summary" role="alert" tabindex="-1"><p>' . esc_html( $errors['_form'] ?? __( 'Please fix the errors below.', 'formtheory' ) ) . '</p></div>';
@@ -387,7 +405,7 @@ class FormTheory_Frontend {
 		foreach ( $pages as $i => $page ) {
 			$title = $page['_title'] ?? '';
 			unset( $page['_title'] );
-			echo '<div class="ft-page" data-ft-page="' . (int) $i . '"' . ( $multi ? ' role="group" aria-label="' . esc_attr( $title ? $title : sprintf( 'Step %d', $i + 1 ) ) . '"' : '' ) . '>';
+			echo '<div class="ft-page" data-ft-page="' . (int) $i . '"' . ( $multi ? ' role="group" aria-label="' . esc_attr( $title ? $title : sprintf( /* translators: %d: step number. */ __( 'Step %d', 'formtheory' ), $i + 1 ) ) . '"' : '' ) . '>';
 			if ( $multi && $title ) {
 				echo '<h3 class="ft-page-title">' . esc_html( $title ) . '</h3>';
 			}

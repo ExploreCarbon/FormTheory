@@ -24,7 +24,7 @@ class FormTheory_Fields {
 		if ( ! is_array( $raw ) ) {
 			return $cfg;
 		}
-		$cfg['submit_label']   = sanitize_text_field( $raw['submit_label'] ?? 'Submit' );
+		$cfg['submit_label']   = sanitize_text_field( $raw['submit_label'] ?? __( 'Submit', 'formtheory' ) );
 		$cfg['confirmation']   = wp_kses_post( $raw['confirmation'] ?? '' );
 		$cfg['notify_subject'] = sanitize_text_field( $raw['notify_subject'] ?? '' );
 		$cfg['ajax']              = ! array_key_exists( 'ajax', $raw ) || ! empty( $raw['ajax'] );

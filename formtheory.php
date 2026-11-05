@@ -7,6 +7,7 @@
  * Requires PHP: 7.4
  * License: GPL-2.0-or-later
  * Text Domain: formtheory
+ * Domain Path: /languages
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -27,6 +28,10 @@ require_once FORMTHEORY_DIR . 'includes/class-portable.php';
 require_once FORMTHEORY_DIR . 'includes/class-privacy.php';
 require_once FORMTHEORY_DIR . 'includes/class-admin.php';
 require_once FORMTHEORY_DIR . 'includes/class-frontend.php';
+
+add_action( 'init', function () {
+	load_plugin_textdomain( 'formtheory', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+} );
 
 register_activation_hook( __FILE__, array( 'FormTheory_DB', 'install' ) );
 

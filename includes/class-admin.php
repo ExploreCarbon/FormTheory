@@ -25,11 +25,11 @@ class FormTheory_Admin {
 
 	public function menu() {
 		add_menu_page( 'FormTheory', 'FormTheory', self::CAP, 'formtheory', array( $this, 'page_forms' ), 'dashicons-feedback', 30 );
-		add_submenu_page( 'formtheory', 'Forms', 'Forms', self::CAP, 'formtheory', array( $this, 'page_forms' ) );
-		add_submenu_page( 'formtheory', 'New Form', 'New Form', self::CAP, 'formtheory-edit', array( $this, 'page_edit' ) );
-		add_submenu_page( 'formtheory', 'Entries', 'Entries', self::CAP, 'formtheory-entries', array( $this, 'page_entries' ) );
+		add_submenu_page( 'formtheory', __( 'Forms', 'formtheory' ), __( 'Forms', 'formtheory' ), self::CAP, 'formtheory', array( $this, 'page_forms' ) );
+		add_submenu_page( 'formtheory', __( 'New Form', 'formtheory' ), __( 'New Form', 'formtheory' ), self::CAP, 'formtheory-edit', array( $this, 'page_edit' ) );
+		add_submenu_page( 'formtheory', __( 'Entries', 'formtheory' ), __( 'Entries', 'formtheory' ), self::CAP, 'formtheory-entries', array( $this, 'page_entries' ) );
 		add_submenu_page( 'formtheory', __( 'Webhook Log', 'formtheory' ), __( 'Webhook Log', 'formtheory' ), self::CAP, 'formtheory-webhooks', array( $this, 'page_webhooks' ) );
-		add_submenu_page( 'formtheory', 'Settings', 'Settings', self::CAP, 'formtheory-settings', array( $this, 'page_settings' ) );
+		add_submenu_page( 'formtheory', __( 'Settings', 'formtheory' ), __( 'Settings', 'formtheory' ), self::CAP, 'formtheory-settings', array( $this, 'page_settings' ) );
 	}
 
 	public function assets( $hook ) {
@@ -40,7 +40,139 @@ class FormTheory_Admin {
 		wp_enqueue_script( 'formtheory-admin', FORMTHEORY_URL . 'assets/admin.js', array(), FORMTHEORY_VERSION, true );
 		if ( false !== strpos( $hook, 'formtheory-edit' ) ) {
 			wp_enqueue_script( 'formtheory-builder', FORMTHEORY_URL . 'assets/builder.js', array(), FORMTHEORY_VERSION, true );
+			wp_localize_script( 'formtheory-builder', 'FormTheoryBuilderI18n', self::builder_i18n() );
 		}
+	}
+
+	/**
+	 * Strings for assets/builder.js (read as FormTheoryBuilderI18n.key).
+	 * Printf-style placeholders (%s, %d, %1$s) are substituted client-side.
+	 */
+	public static function builder_i18n() {
+		return array(
+			'types'            => array(
+				'text'     => __( 'Text', 'formtheory' ),
+				'email'    => __( 'Email', 'formtheory' ),
+				'phone'    => __( 'Phone', 'formtheory' ),
+				'number'   => __( 'Number', 'formtheory' ),
+				'date'     => __( 'Date', 'formtheory' ),
+				'textarea' => __( 'Paragraph', 'formtheory' ),
+				'select'   => __( 'Dropdown', 'formtheory' ),
+				'radio'    => __( 'Radio buttons', 'formtheory' ),
+				'checkbox' => __( 'Checkboxes', 'formtheory' ),
+				'file'     => __( 'File upload', 'formtheory' ),
+				'page'     => __( 'Page break', 'formtheory' ),
+				'hidden'   => __( 'Hidden', 'formtheory' ),
+				'consent'  => __( 'Consent', 'formtheory' ),
+				'html'     => __( 'HTML block', 'formtheory' ),
+			),
+			'ops'              => array(
+				'is'       => __( 'is', 'formtheory' ),
+				'isnot'    => __( 'is not', 'formtheory' ),
+				'contains' => __( 'contains', 'formtheory' ),
+				'gt'       => __( 'greater than', 'formtheory' ),
+				'lt'       => __( 'less than', 'formtheory' ),
+				'empty'    => __( 'is empty', 'formtheory' ),
+				'notempty' => __( 'is not empty', 'formtheory' ),
+			),
+			/* translators: %d: new position of the field in the list. */
+			'moved_to'         => __( 'Moved to position %d', 'formtheory' ),
+			'no_label'         => __( '(no label)', 'formtheory' ),
+			'enable_cond'      => __( 'Enable conditional logic', 'formtheory' ),
+			'add_fields_first' => __( 'Add other fields first.', 'formtheory' ),
+			/* translators: 1: Show or Hide (dropdown), 2: all or any (dropdown). */
+			'cond_sentence'    => __( '%1$s this field if %2$s of these match:', 'formtheory' ),
+			'show'             => __( 'Show', 'formtheory' ),
+			'hide'             => __( 'Hide', 'formtheory' ),
+			'all'              => __( 'all', 'formtheory' ),
+			'any'              => __( 'any', 'formtheory' ),
+			/* translators: %s: all or any (dropdown). */
+			'when_sentence'    => __( 'When %s of these match:', 'formtheory' ),
+			'value'            => __( 'Value', 'formtheory' ),
+			'field'            => __( 'Field', 'formtheory' ),
+			'operator'         => __( 'Operator', 'formtheory' ),
+			'remove'           => __( 'Remove', 'formtheory' ),
+			/* translators: %d: rule number. */
+			'remove_rule'      => __( 'Remove rule %d', 'formtheory' ),
+			'add_rule'         => __( 'Add rule', 'formtheory' ),
+			/* translators: %s: list of merge tags. Do not translate the tags. */
+			'merge_tags'       => __( 'Merge tags: %s', 'formtheory' ),
+			'notifications'    => __( 'Notifications', 'formtheory' ),
+			/* translators: %d: notification number. */
+			'notification_n'   => __( 'Notification %d', 'formtheory' ),
+			/* translators: %d: notification number. */
+			'remove_notif_n'   => __( 'Remove notification %d', 'formtheory' ),
+			'notif_removed'    => __( 'Notification removed', 'formtheory' ),
+			'add_notif'        => __( 'Add notification', 'formtheory' ),
+			'notif_added'      => __( 'Notification added', 'formtheory' ),
+			'webhooks'         => __( 'Webhooks', 'formtheory' ),
+			/* translators: %d: webhook number. */
+			'webhook_n'        => __( 'Webhook %d', 'formtheory' ),
+			/* translators: %d: webhook number. */
+			'remove_hook_n'    => __( 'Remove webhook %d', 'formtheory' ),
+			'hook_removed'     => __( 'Webhook removed', 'formtheory' ),
+			'add_hook'         => __( 'Add webhook', 'formtheory' ),
+			'hook_added'       => __( 'Webhook added', 'formtheory' ),
+			/* translators: Default email subject. Keep {form_title} unchanged. */
+			'default_subject'  => __( 'New submission: {form_title}', 'formtheory' ),
+			/* translators: Do not translate {field:ID}. */
+			'send_to'          => __( 'Send to (emails or {field:ID}, comma separated)', 'formtheory' ),
+			'subject'          => __( 'Subject', 'formtheory' ),
+			'message'          => __( 'Message', 'formtheory' ),
+			/* translators: Do not translate {field:ID}. */
+			'reply_to'         => __( 'Reply-To (email or {field:ID})', 'formtheory' ),
+			'attach_files'     => __( 'Attach uploaded files', 'formtheory' ),
+			'only_send_when'   => __( 'Only send when conditions match', 'formtheory' ),
+			'endpoint_url'     => __( 'Endpoint URL (https only)', 'formtheory' ),
+			'format'           => __( 'Format', 'formtheory' ),
+			'form_encoded'     => __( 'Form-encoded', 'formtheory' ),
+			'signing_secret'   => __( 'Signing secret (optional, sent as X-FormTheory-Signature)', 'formtheory' ),
+			/* translators: 1: field type label, 2: field label. */
+			'card_title'       => __( '%1$s: %2$s', 'formtheory' ),
+			'page_title'       => __( 'Page title', 'formtheory' ),
+			'label'            => __( 'Label', 'formtheory' ),
+			/* translators: Do not translate {query:param}. */
+			'default_value'    => __( 'Default value (use {query:param} to fill from URL)', 'formtheory' ),
+			'consent_text'     => __( 'Consent text (HTML links allowed)', 'formtheory' ),
+			'html_content'     => __( 'HTML content', 'formtheory' ),
+			'required'         => __( 'Required', 'formtheory' ),
+			'placeholder'      => __( 'Placeholder', 'formtheory' ),
+			'help_text'        => __( 'Help text', 'formtheory' ),
+			'choices'          => __( 'Choices (one per line)', 'formtheory' ),
+			'allowed_ext'      => __( 'Allowed extensions (comma separated)', 'formtheory' ),
+			'max_size'         => __( 'Max size (MB)', 'formtheory' ),
+			/* translators: %s: field title. */
+			'move_up'          => __( 'Move %s up', 'formtheory' ),
+			/* translators: %s: field title. */
+			'move_down'        => __( 'Move %s down', 'formtheory' ),
+			/* translators: %s: field title. */
+			'duplicate_field'  => __( 'Duplicate %s', 'formtheory' ),
+			/* translators: %s: field title. */
+			'delete_field'     => __( 'Delete %s', 'formtheory' ),
+			'up'               => __( 'Up', 'formtheory' ),
+			'down'             => __( 'Down', 'formtheory' ),
+			'duplicate'        => __( 'Duplicate', 'formtheory' ),
+			'delete'           => __( 'Delete', 'formtheory' ),
+			'field_duplicated' => __( 'Field duplicated', 'formtheory' ),
+			'confirm_delete'   => __( 'Delete this field?', 'formtheory' ),
+			'field_deleted'    => __( 'Field deleted', 'formtheory' ),
+			'add_field'        => __( 'Add field', 'formtheory' ),
+			/* translators: %s: field type label. */
+			'field_added'      => __( '%s field added', 'formtheory' ),
+			'option_1'         => __( 'Option 1', 'formtheory' ),
+			'option_2'         => __( 'Option 2', 'formtheory' ),
+			'no_fields'        => __( 'No fields yet. Use the buttons above to add one.', 'formtheory' ),
+			'settings'         => __( 'Settings', 'formtheory' ),
+			'submit_text'      => __( 'Submit button text', 'formtheory' ),
+			'confirmation_msg' => __( 'Confirmation message', 'formtheory' ),
+			'ajax'             => __( 'Submit without page reload (AJAX)', 'formtheory' ),
+			'after_submit'     => __( 'After submit', 'formtheory' ),
+			'show_message'     => __( 'Show message', 'formtheory' ),
+			'go_to_page'       => __( 'Go to page (ID)', 'formtheory' ),
+			'redirect_to_url'  => __( 'Redirect to URL', 'formtheory' ),
+			'page_id'          => __( 'Page ID', 'formtheory' ),
+			'redirect_url'     => __( 'Redirect URL (merge tags allowed in path/query)', 'formtheory' ),
+		);
 	}
 
 	private function guard( $action ) {
@@ -62,19 +194,19 @@ class FormTheory_Admin {
 
 	public function page_forms() {
 		$forms = FormTheory_DB::get_forms();
-		echo '<div class="wrap"><h1 class="wp-heading-inline">Forms</h1> ';
-		echo '<a class="page-title-action" href="' . esc_url( $this->admin_url( 'formtheory-edit' ) ) . '">Add New</a>';
+		echo '<div class="wrap"><h1 class="wp-heading-inline">' . esc_html__( 'Forms', 'formtheory' ) . '</h1> ';
+		echo '<a class="page-title-action" href="' . esc_url( $this->admin_url( 'formtheory-edit' ) ) . '">' . esc_html__( 'Add New', 'formtheory' ) . '</a>';
 		$this->notice();
-		echo '<table class="widefat striped ft-table"><thead><tr><th scope="col">Title</th><th scope="col">Shortcode</th><th scope="col">Entries</th><th scope="col">Updated</th><th scope="col"><span class="screen-reader-text">Actions</span></th></tr></thead><tbody>';
+		echo '<table class="widefat striped ft-table"><thead><tr><th scope="col">' . esc_html__( 'Title', 'formtheory' ) . '</th><th scope="col">' . esc_html__( 'Shortcode', 'formtheory' ) . '</th><th scope="col">' . esc_html__( 'Entries', 'formtheory' ) . '</th><th scope="col">' . esc_html__( 'Updated', 'formtheory' ) . '</th><th scope="col"><span class="screen-reader-text">' . esc_html__( 'Actions', 'formtheory' ) . '</span></th></tr></thead><tbody>';
 		if ( ! $forms ) {
-			echo '<tr><td colspan="5">No forms yet.</td></tr>';
+			echo '<tr><td colspan="5">' . esc_html__( 'No forms yet.', 'formtheory' ) . '</td></tr>';
 		}
 		foreach ( $forms as $f ) {
 			$id = (int) $f['id'];
 			printf(
-				'<tr><td><a href="%1$s"><strong>%2$s</strong></a></td><td><code>[formtheory id="%3$d"]</code></td><td><a href="%4$s">%5$d</a></td><td>%6$s</td><td><a href="%1$s">Edit</a> | <a href="%4$s">Entries</a> | <a href="%9$s">%11$s<span class="screen-reader-text"> %2$s</span></a> | <a href="%10$s">%12$s<span class="screen-reader-text"> %2$s</span></a> | <a class="ft-danger"href="%7$s" data-ft-confirm="%8$s">Delete<span class="screen-reader-text"> %2$s</span></a></td></tr>',
+				'<tr><td><a href="%1$s"><strong>%2$s</strong></a></td><td><code>[formtheory id="%3$d"]</code></td><td><a href="%4$s">%5$d</a></td><td>%6$s</td><td><a href="%1$s">%13$s</a> | <a href="%4$s">%14$s</a> | <a href="%9$s">%11$s<span class="screen-reader-text"> %2$s</span></a> | <a href="%10$s">%12$s<span class="screen-reader-text"> %2$s</span></a> | <a class="ft-danger"href="%7$s" data-ft-confirm="%8$s">%15$s<span class="screen-reader-text"> %2$s</span></a></td></tr>',
 				esc_url( $this->admin_url( 'formtheory-edit', array( 'id' => $id ) ) ),
-				esc_html( $f['title'] ? $f['title'] : '(untitled)' ),
+				esc_html( $f['title'] ? $f['title'] : __( '(untitled)', 'formtheory' ) ),
 				$id,
 				esc_url( $this->admin_url( 'formtheory-entries', array( 'form' => $id ) ) ),
 				FormTheory_DB::count_entries( $id ),
@@ -84,7 +216,10 @@ class FormTheory_Admin {
 				esc_url( $this->action_url( 'formtheory_duplicate', array( 'id' => $id ) ) ),
 				esc_url( $this->action_url( 'formtheory_export_form', array( 'id' => $id ) ) ),
 				esc_html__( 'Duplicate', 'formtheory' ),
-				esc_html__( 'Export JSON', 'formtheory' )
+				esc_html__( 'Export JSON', 'formtheory' ),
+				esc_html__( 'Edit', 'formtheory' ),
+				esc_html__( 'Entries', 'formtheory' ),
+				esc_html__( 'Delete', 'formtheory' )
 			);
 		}
 		echo '</tbody></table>';
@@ -106,19 +241,23 @@ class FormTheory_Admin {
 		}
 		$title  = $form ? $form['title'] : '';
 		$config = $form ? $form['config'] : FormTheory_Fields::migrate_config( FormTheory_DB::default_config() );
-		echo '<div class="wrap"><h1>' . ( $id ? 'Edit Form' : 'New Form' ) . '</h1>';
+		echo '<div class="wrap"><h1>' . ( $id ? esc_html__( 'Edit Form', 'formtheory' ) : esc_html__( 'New Form', 'formtheory' ) ) . '</h1>';
 		$this->notice();
 		if ( $id ) {
-			echo '<p>Embed: <code>[formtheory id="' . (int) $id . '"]</code></p>';
+			printf(
+				/* translators: %s: shortcode wrapped in a code element. */
+				'<p>' . esc_html__( 'Embed: %s', 'formtheory' ) . '</p>',
+				'<code>[formtheory id="' . (int) $id . '"]</code>'
+			);
 		}
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" id="ft-builder-form">';
 		wp_nonce_field( 'formtheory_save' );
 		echo '<input type="hidden" name="action" value="formtheory_save">';
 		echo '<input type="hidden" name="id" value="' . (int) $id . '">';
-		echo '<p><label for="ft-title"><strong>Form title</strong></label><br><input type="text" class="regular-text" id="ft-title" name="title" required value="' . esc_attr( $title ) . '"></p>';
+		echo '<p><label for="ft-title"><strong>' . esc_html__( 'Form title', 'formtheory' ) . '</strong></label><br><input type="text" class="regular-text" id="ft-title" name="title" required value="' . esc_attr( $title ) . '"></p>';
 		echo '<textarea hidden name="config" id="ft-config">' . esc_textarea( wp_json_encode( $config ) ) . '</textarea>';
-		echo '<div id="ft-builder" data-types="' . esc_attr( wp_json_encode( FormTheory_Fields::TYPES ) ) . '"><noscript>The form builder requires JavaScript.</noscript></div>';
-		submit_button( 'Save Form' );
+		echo '<div id="ft-builder" data-types="' . esc_attr( wp_json_encode( FormTheory_Fields::TYPES ) ) . '"><noscript>' . esc_html__( 'The form builder requires JavaScript.', 'formtheory' ) . '</noscript></div>';
+		submit_button( __( 'Save Form', 'formtheory' ) );
 		echo '</form></div>';
 	}
 
@@ -126,7 +265,7 @@ class FormTheory_Admin {
 		$form_id = isset( $_GET['form'] ) ? absint( $_GET['form'] ) : 0;
 		$entry   = isset( $_GET['entry'] ) ? absint( $_GET['entry'] ) : 0;
 		$forms   = FormTheory_DB::get_forms();
-		echo '<div class="wrap"><h1>Entries</h1>';
+		echo '<div class="wrap"><h1>' . esc_html__( 'Entries', 'formtheory' ) . '</h1>';
 		$this->notice();
 
 		if ( $entry ) {
@@ -218,7 +357,7 @@ class FormTheory_Admin {
 
 		$pages = (int) ceil( $total / $per );
 		if ( $pages > 1 ) {
-			echo '<nav class="ft-pager" aria-label="Entries pages">';
+			echo '<nav class="ft-pager" aria-label="' . esc_attr__( 'Entries pages', 'formtheory' ) . '">';
 			echo paginate_links( array( // phpcs:ignore WordPress.Security.EscapeOutput -- core-escaped.
 				'base'    => add_query_arg( 'paged', '%#%' ),
 				'format'  => '',
@@ -234,17 +373,19 @@ class FormTheory_Admin {
 		$entry = FormTheory_DB::get_entry( $entry_id );
 		$form  = $entry ? FormTheory_DB::get_form( $entry['form_id'] ) : null;
 		if ( ! $entry || ! $form ) {
-			echo '<p>Entry not found.</p>';
+			echo '<p>' . esc_html__( 'Entry not found.', 'formtheory' ) . '</p>';
 			return;
 		}
 		if ( isset( $entry['status'] ) && 'unread' === $entry['status'] ) {
 			FormTheory_DB::set_entries_status( (int) $form['id'], array( (int) $entry['id'] ), 'read' );
 		}
 		$back = $this->admin_url( 'formtheory-entries', array( 'form' => (int) $form['id'] ) );
-		echo '<p><a href="' . esc_url( $back ) . '">&larr; Back to ' . esc_html( $form['title'] ) . '</a></p>';
-		echo '<h2>Entry #' . (int) $entry['id'] . '</h2><table class="widefat ft-entry"><tbody>';
-		echo '<tr><th scope="row">Submitted</th><td>' . esc_html( $entry['created_at'] ) . '</td></tr>';
-		echo '<tr><th scope="row">IP</th><td>' . esc_html( $entry['ip'] ) . '</td></tr>';
+		/* translators: %s: form title. */
+		echo '<p><a href="' . esc_url( $back ) . '">&larr; ' . esc_html( sprintf( __( 'Back to %s', 'formtheory' ), $form['title'] ) ) . '</a></p>';
+		/* translators: %d: entry number. */
+		echo '<h2>' . esc_html( sprintf( __( 'Entry #%d', 'formtheory' ), (int) $entry['id'] ) ) . '</h2><table class="widefat ft-entry"><tbody>';
+		echo '<tr><th scope="row">' . esc_html__( 'Submitted', 'formtheory' ) . '</th><td>' . esc_html( $entry['created_at'] ) . '</td></tr>';
+		echo '<tr><th scope="row">' . esc_html__( 'IP', 'formtheory' ) . '</th><td>' . esc_html( $entry['ip'] ) . '</td></tr>';
 		foreach ( $this->data_fields( $form ) as $f ) {
 			$val = $entry['data'][ $f['id'] ] ?? '';
 			echo '<tr><th scope="row">' . esc_html( $f['label'] ) . '</th><td>';
@@ -374,13 +515,13 @@ class FormTheory_Admin {
 			return;
 		}
 		$s = FormTheory_Spam::settings();
-		echo '<div class="wrap"><h1>FormTheory Settings</h1><form method="post" action="options.php">';
+		echo '<div class="wrap"><h1>' . esc_html__( 'FormTheory Settings', 'formtheory' ) . '</h1><form method="post" action="options.php">';
 		settings_fields( 'formtheory_settings' );
 		FormTheory_Recaptcha::fields();
-		echo '<h2>Cloudflare Turnstile</h2><p>Leave both blank to disable. A signed time-trap and honeypot are always on.</p>';
+		echo '<h2>' . esc_html__( 'Cloudflare Turnstile', 'formtheory' ) . '</h2><p>' . esc_html__( 'Leave both blank to disable. A signed time-trap and honeypot are always on.', 'formtheory' ) . '</p>';
 		echo '<table class="form-table" role="presentation">';
-		echo '<tr><th scope="row"><label for="ft-ts-site">Site key</label></th><td><input type="text" class="regular-text" id="ft-ts-site" name="formtheory_settings[turnstile_site]" value="' . esc_attr( $s['turnstile_site'] ) . '"></td></tr>';
-		echo '<tr><th scope="row"><label for="ft-ts-secret">Secret key</label></th><td><input type="password" class="regular-text" id="ft-ts-secret" name="formtheory_settings[turnstile_secret]" value="' . esc_attr( $s['turnstile_secret'] ) . '" autocomplete="off"></td></tr>';
+		echo '<tr><th scope="row"><label for="ft-ts-site">' . esc_html__( 'Site key', 'formtheory' ) . '</label></th><td><input type="text" class="regular-text" id="ft-ts-site" name="formtheory_settings[turnstile_site]" value="' . esc_attr( $s['turnstile_site'] ) . '"></td></tr>';
+		echo '<tr><th scope="row"><label for="ft-ts-secret">' . esc_html__( 'Secret key', 'formtheory' ) . '</label></th><td><input type="password" class="regular-text" id="ft-ts-secret" name="formtheory_settings[turnstile_secret]" value="' . esc_attr( $s['turnstile_secret'] ) . '" autocomplete="off"></td></tr>';
 		echo '</table>';
 		echo '<h2>' . esc_html__( 'Privacy', 'formtheory' ) . '</h2><table class="form-table" role="presentation"><tr><th scope="row"><label for="ft-ret">' . esc_html__( 'Delete entries after (days)', 'formtheory' ) . '</label></th><td><input type="number" min="0" max="3650" class="small-text" id="ft-ret" name="formtheory_settings[retention_days]" value="' . esc_attr( (string) FormTheory_Privacy::retention_days() ) . '"><p class="description">' . esc_html__( '0 keeps entries forever. Older entries and their uploaded files are deleted daily.', 'formtheory' ) . '</p></td></tr></table>';
 		echo '<h2>' . esc_html__( 'Uninstall', 'formtheory' ) . '</h2><table class="form-table" role="presentation"><tr><th scope="row">' . esc_html__( 'Data removal', 'formtheory' ) . '</th><td><label for="ft-del"><input type="checkbox" id="ft-del" name="formtheory_settings[delete_on_uninstall]" value="1"' . checked( ! empty( $s['delete_on_uninstall'] ), true, false ) . '> ' . esc_html__( 'Delete all FormTheory data when the plugin is deleted', 'formtheory' ) . '</label><p class="description">' . esc_html__( 'Warning: all forms, entries and uploaded files are permanently deleted when the plugin is deleted. This cannot be undone.', 'formtheory' ) . '</p></td></tr></table>';
@@ -402,8 +543,8 @@ class FormTheory_Admin {
 	private function notice() {
 		$msg = isset( $_GET['ft_msg'] ) ? sanitize_key( $_GET['ft_msg'] ) : '';
 		$map = array(
-			'saved'   => 'Form saved.',
-			'deleted' => 'Deleted.',
+			'saved'   => __( 'Form saved.', 'formtheory' ),
+			'deleted' => __( 'Deleted.', 'formtheory' ),
 			'bulk'    => __( 'Bulk action applied.', 'formtheory' ),
 			'note'    => __( 'Note saved.', 'formtheory' ),
 			'imported'   => __( 'Form imported.', 'formtheory' ),
@@ -605,7 +746,7 @@ class FormTheory_Admin {
 		$form_id = isset( $_GET['form'] ) ? absint( $_GET['form'] ) : 0;
 		$form    = FormTheory_DB::get_form( $form_id );
 		if ( ! $form ) {
-			wp_die( 'Form not found.' );
+			wp_die( esc_html__( 'Form not found.', 'formtheory' ) );
 		}
 		$fields = $this->data_fields( $form );
 		nocache_headers();
@@ -613,7 +754,7 @@ class FormTheory_Admin {
 		header( 'Content-Disposition: attachment; filename="formtheory-' . $form_id . '-' . gmdate( 'Ymd-His' ) . '.csv"' );
 		$out = fopen( 'php://output', 'w' );
 		fwrite( $out, "\xEF\xBB\xBF" );
-		$head = array( 'Entry ID', 'Date', 'IP' );
+		$head = array( __( 'Entry ID', 'formtheory' ), __( 'Date', 'formtheory' ), __( 'IP', 'formtheory' ) );
 		foreach ( $fields as $f ) {
 			$head[] = $this->csv_cell( $f['label'] );
 		}
@@ -635,11 +776,11 @@ class FormTheory_Admin {
 		$field = isset( $_GET['field'] ) ? sanitize_key( $_GET['field'] ) : '';
 		$val   = $entry['data'][ $field ] ?? null;
 		if ( ! is_array( $val ) || empty( $val['file'] ) ) {
-			wp_die( 'File not found.', 404 );
+			wp_die( esc_html__( 'File not found.', 'formtheory' ), 404 );
 		}
 		$path = FormTheory_DB::upload_dir() . '/' . basename( $val['file'] );
 		if ( ! is_file( $path ) ) {
-			wp_die( 'File not found.', 404 );
+			wp_die( esc_html__( 'File not found.', 'formtheory' ), 404 );
 		}
 		nocache_headers();
 		header( 'Content-Type: application/octet-stream' );

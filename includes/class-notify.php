@@ -14,10 +14,12 @@ class FormTheory_Notify {
 			if ( ! $to ) {
 				continue;
 			}
-			$subject = '' !== $n['subject'] ? $n['subject'] : 'New submission: {form_title}';
+			/* translators: Default email subject. Keep {form_title} unchanged. */
+			$subject = '' !==$n['subject'] ? $n['subject'] : __( 'New submission: {form_title}', 'formtheory' );
 			$subject = FormTheory_Merge::replace( $subject, $ctx, 'header' );
 			$body    = FormTheory_Merge::replace( '' !== $n['body'] ? $n['body'] : '{all_fields}', $ctx, 'text' );
-			$body   .= "\n\nView: " . add_query_arg( array( 'page' => 'formtheory-entries', 'entry' => (int) $entry_id ), admin_url( 'admin.php' ) );
+			/* translators: %s: URL of the entry in the admin. */
+			$body   .= "\n\n" . sprintf( __( 'View: %s', 'formtheory' ), add_query_arg( array( 'page' => 'formtheory-entries', 'entry' => (int) $entry_id ), admin_url( 'admin.php' ) ) );
 
 			$headers = array();
 			$reply   = self::emails( $n['reply_to'] ?? '', $ctx );

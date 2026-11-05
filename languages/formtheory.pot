@@ -1,0 +1,1120 @@
+# Copyright (C) 2026 
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: FormTheory 1.2.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/formtheory\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-05T15:39:13+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: formtheory\n"
+
+#. Plugin Name of the plugin
+#: formtheory.php
+msgid "FormTheory"
+msgstr ""
+
+#. Description of the plugin
+#: formtheory.php
+msgid "Lightweight form builder: conditional logic, file uploads, multi-page forms, entries, CSV export, email notifications."
+msgstr ""
+
+#: includes/class-admin.php:28
+#: includes/class-admin.php:197
+msgid "Forms"
+msgstr ""
+
+#: includes/class-admin.php:29
+#: includes/class-admin.php:244
+msgid "New Form"
+msgstr ""
+
+#: includes/class-admin.php:30
+#: includes/class-admin.php:200
+#: includes/class-admin.php:221
+#: includes/class-admin.php:268
+msgid "Entries"
+msgstr ""
+
+#: includes/class-admin.php:31
+#: includes/class-admin.php:450
+msgid "Webhook Log"
+msgstr ""
+
+#: includes/class-admin.php:32
+#: includes/class-admin.php:165
+msgid "Settings"
+msgstr ""
+
+#: includes/class-admin.php:54
+msgid "Text"
+msgstr ""
+
+#: includes/class-admin.php:55
+msgid "Email"
+msgstr ""
+
+#: includes/class-admin.php:56
+msgid "Phone"
+msgstr ""
+
+#: includes/class-admin.php:57
+msgid "Number"
+msgstr ""
+
+#: includes/class-admin.php:58
+#: includes/class-admin.php:335
+#: includes/class-admin.php:757
+msgid "Date"
+msgstr ""
+
+#: includes/class-admin.php:59
+msgid "Paragraph"
+msgstr ""
+
+#: includes/class-admin.php:60
+msgid "Dropdown"
+msgstr ""
+
+#: includes/class-admin.php:61
+msgid "Radio buttons"
+msgstr ""
+
+#: includes/class-admin.php:62
+msgid "Checkboxes"
+msgstr ""
+
+#: includes/class-admin.php:63
+msgid "File upload"
+msgstr ""
+
+#: includes/class-admin.php:64
+msgid "Page break"
+msgstr ""
+
+#: includes/class-admin.php:65
+msgid "Hidden"
+msgstr ""
+
+#: includes/class-admin.php:66
+msgid "Consent"
+msgstr ""
+
+#: includes/class-admin.php:67
+msgid "HTML block"
+msgstr ""
+
+#: includes/class-admin.php:70
+msgid "is"
+msgstr ""
+
+#: includes/class-admin.php:71
+msgid "is not"
+msgstr ""
+
+#: includes/class-admin.php:72
+msgid "contains"
+msgstr ""
+
+#: includes/class-admin.php:73
+msgid "greater than"
+msgstr ""
+
+#: includes/class-admin.php:74
+msgid "less than"
+msgstr ""
+
+#: includes/class-admin.php:75
+msgid "is empty"
+msgstr ""
+
+#: includes/class-admin.php:76
+msgid "is not empty"
+msgstr ""
+
+#. translators: %d: new position of the field in the list.
+#: includes/class-admin.php:79
+#, php-format
+msgid "Moved to position %d"
+msgstr ""
+
+#: includes/class-admin.php:80
+msgid "(no label)"
+msgstr ""
+
+#: includes/class-admin.php:81
+msgid "Enable conditional logic"
+msgstr ""
+
+#: includes/class-admin.php:82
+msgid "Add other fields first."
+msgstr ""
+
+#. translators: 1: Show or Hide (dropdown), 2: all or any (dropdown).
+#: includes/class-admin.php:84
+#, php-format
+msgid "%1$s this field if %2$s of these match:"
+msgstr ""
+
+#: includes/class-admin.php:85
+msgid "Show"
+msgstr ""
+
+#: includes/class-admin.php:86
+msgid "Hide"
+msgstr ""
+
+#: includes/class-admin.php:87
+msgid "all"
+msgstr ""
+
+#: includes/class-admin.php:88
+msgid "any"
+msgstr ""
+
+#. translators: %s: all or any (dropdown).
+#: includes/class-admin.php:90
+#, php-format
+msgid "When %s of these match:"
+msgstr ""
+
+#: includes/class-admin.php:91
+msgid "Value"
+msgstr ""
+
+#: includes/class-admin.php:92
+msgid "Field"
+msgstr ""
+
+#: includes/class-admin.php:93
+msgid "Operator"
+msgstr ""
+
+#: includes/class-admin.php:94
+msgid "Remove"
+msgstr ""
+
+#. translators: %d: rule number.
+#: includes/class-admin.php:96
+#, php-format
+msgid "Remove rule %d"
+msgstr ""
+
+#: includes/class-admin.php:97
+msgid "Add rule"
+msgstr ""
+
+#. translators: %s: list of merge tags. Do not translate the tags.
+#: includes/class-admin.php:99
+#, php-format
+msgid "Merge tags: %s"
+msgstr ""
+
+#: includes/class-admin.php:100
+msgid "Notifications"
+msgstr ""
+
+#. translators: %d: notification number.
+#: includes/class-admin.php:102
+#, php-format
+msgid "Notification %d"
+msgstr ""
+
+#. translators: %d: notification number.
+#: includes/class-admin.php:104
+#, php-format
+msgid "Remove notification %d"
+msgstr ""
+
+#: includes/class-admin.php:105
+msgid "Notification removed"
+msgstr ""
+
+#: includes/class-admin.php:106
+msgid "Add notification"
+msgstr ""
+
+#: includes/class-admin.php:107
+msgid "Notification added"
+msgstr ""
+
+#: includes/class-admin.php:108
+msgid "Webhooks"
+msgstr ""
+
+#. translators: %d: webhook number.
+#: includes/class-admin.php:110
+#, php-format
+msgid "Webhook %d"
+msgstr ""
+
+#. translators: %d: webhook number.
+#: includes/class-admin.php:112
+#, php-format
+msgid "Remove webhook %d"
+msgstr ""
+
+#: includes/class-admin.php:113
+msgid "Webhook removed"
+msgstr ""
+
+#: includes/class-admin.php:114
+msgid "Add webhook"
+msgstr ""
+
+#: includes/class-admin.php:115
+msgid "Webhook added"
+msgstr ""
+
+#. translators: Default email subject. Keep {form_title} unchanged.
+#: includes/class-admin.php:117
+#: includes/class-notify.php:18
+msgid "New submission: {form_title}"
+msgstr ""
+
+#. translators: Do not translate {field:ID}.
+#: includes/class-admin.php:119
+msgid "Send to (emails or {field:ID}, comma separated)"
+msgstr ""
+
+#: includes/class-admin.php:120
+msgid "Subject"
+msgstr ""
+
+#: includes/class-admin.php:121
+msgid "Message"
+msgstr ""
+
+#. translators: Do not translate {field:ID}.
+#: includes/class-admin.php:123
+msgid "Reply-To (email or {field:ID})"
+msgstr ""
+
+#: includes/class-admin.php:124
+msgid "Attach uploaded files"
+msgstr ""
+
+#: includes/class-admin.php:125
+msgid "Only send when conditions match"
+msgstr ""
+
+#: includes/class-admin.php:126
+msgid "Endpoint URL (https only)"
+msgstr ""
+
+#: includes/class-admin.php:127
+msgid "Format"
+msgstr ""
+
+#: includes/class-admin.php:128
+msgid "Form-encoded"
+msgstr ""
+
+#: includes/class-admin.php:129
+msgid "Signing secret (optional, sent as X-FormTheory-Signature)"
+msgstr ""
+
+#. translators: 1: field type label, 2: field label.
+#: includes/class-admin.php:131
+#, php-format
+msgid "%1$s: %2$s"
+msgstr ""
+
+#: includes/class-admin.php:132
+msgid "Page title"
+msgstr ""
+
+#: includes/class-admin.php:133
+msgid "Label"
+msgstr ""
+
+#. translators: Do not translate {query:param}.
+#: includes/class-admin.php:135
+msgid "Default value (use {query:param} to fill from URL)"
+msgstr ""
+
+#: includes/class-admin.php:136
+msgid "Consent text (HTML links allowed)"
+msgstr ""
+
+#: includes/class-admin.php:137
+msgid "HTML content"
+msgstr ""
+
+#: includes/class-admin.php:138
+msgid "Required"
+msgstr ""
+
+#: includes/class-admin.php:139
+msgid "Placeholder"
+msgstr ""
+
+#: includes/class-admin.php:140
+msgid "Help text"
+msgstr ""
+
+#: includes/class-admin.php:141
+msgid "Choices (one per line)"
+msgstr ""
+
+#: includes/class-admin.php:142
+msgid "Allowed extensions (comma separated)"
+msgstr ""
+
+#: includes/class-admin.php:143
+msgid "Max size (MB)"
+msgstr ""
+
+#. translators: %s: field title.
+#: includes/class-admin.php:145
+#, php-format
+msgid "Move %s up"
+msgstr ""
+
+#. translators: %s: field title.
+#: includes/class-admin.php:147
+#, php-format
+msgid "Move %s down"
+msgstr ""
+
+#. translators: %s: field title.
+#: includes/class-admin.php:149
+#, php-format
+msgid "Duplicate %s"
+msgstr ""
+
+#. translators: %s: field title.
+#: includes/class-admin.php:151
+#, php-format
+msgid "Delete %s"
+msgstr ""
+
+#: includes/class-admin.php:152
+msgid "Up"
+msgstr ""
+
+#: includes/class-admin.php:153
+msgid "Down"
+msgstr ""
+
+#: includes/class-admin.php:154
+#: includes/class-admin.php:218
+msgid "Duplicate"
+msgstr ""
+
+#: includes/class-admin.php:155
+#: includes/class-admin.php:222
+#: includes/class-admin.php:333
+msgid "Delete"
+msgstr ""
+
+#: includes/class-admin.php:156
+msgid "Field duplicated"
+msgstr ""
+
+#: includes/class-admin.php:157
+msgid "Delete this field?"
+msgstr ""
+
+#: includes/class-admin.php:158
+msgid "Field deleted"
+msgstr ""
+
+#: includes/class-admin.php:159
+msgid "Add field"
+msgstr ""
+
+#. translators: %s: field type label.
+#: includes/class-admin.php:161
+#, php-format
+msgid "%s field added"
+msgstr ""
+
+#: includes/class-admin.php:162
+msgid "Option 1"
+msgstr ""
+
+#: includes/class-admin.php:163
+msgid "Option 2"
+msgstr ""
+
+#: includes/class-admin.php:164
+msgid "No fields yet. Use the buttons above to add one."
+msgstr ""
+
+#: includes/class-admin.php:166
+msgid "Submit button text"
+msgstr ""
+
+#: includes/class-admin.php:167
+msgid "Confirmation message"
+msgstr ""
+
+#: includes/class-admin.php:168
+msgid "Submit without page reload (AJAX)"
+msgstr ""
+
+#: includes/class-admin.php:169
+msgid "After submit"
+msgstr ""
+
+#: includes/class-admin.php:170
+msgid "Show message"
+msgstr ""
+
+#: includes/class-admin.php:171
+msgid "Go to page (ID)"
+msgstr ""
+
+#: includes/class-admin.php:172
+msgid "Redirect to URL"
+msgstr ""
+
+#: includes/class-admin.php:173
+msgid "Page ID"
+msgstr ""
+
+#: includes/class-admin.php:174
+msgid "Redirect URL (merge tags allowed in path/query)"
+msgstr ""
+
+#: includes/class-admin.php:180
+#: includes/class-admin.php:435
+msgid "Not allowed."
+msgstr ""
+
+#: includes/class-admin.php:198
+msgid "Add New"
+msgstr ""
+
+#: includes/class-admin.php:200
+msgid "Title"
+msgstr ""
+
+#: includes/class-admin.php:200
+msgid "Shortcode"
+msgstr ""
+
+#: includes/class-admin.php:200
+msgid "Updated"
+msgstr ""
+
+#: includes/class-admin.php:200
+#: includes/class-admin.php:339
+#: includes/class-admin.php:469
+msgid "Actions"
+msgstr ""
+
+#: includes/class-admin.php:202
+msgid "No forms yet."
+msgstr ""
+
+#: includes/class-admin.php:209
+msgid "(untitled)"
+msgstr ""
+
+#: includes/class-admin.php:215
+msgid "Delete form and all its entries?"
+msgstr ""
+
+#: includes/class-admin.php:219
+msgid "Export JSON"
+msgstr ""
+
+#: includes/class-admin.php:220
+msgid "Edit"
+msgstr ""
+
+#: includes/class-admin.php:226
+msgid "Import form"
+msgstr ""
+
+#: includes/class-admin.php:230
+msgid "JSON file (max 1 MB)"
+msgstr ""
+
+#: includes/class-admin.php:231
+msgid "Or paste JSON"
+msgstr ""
+
+#: includes/class-admin.php:232
+msgid "Import"
+msgstr ""
+
+#: includes/class-admin.php:240
+#: includes/class-admin.php:612
+#: includes/class-admin.php:623
+#: includes/class-admin.php:710
+#: includes/class-admin.php:749
+#: includes/class-frontend.php:86
+msgid "Form not found."
+msgstr ""
+
+#: includes/class-admin.php:244
+msgid "Edit Form"
+msgstr ""
+
+#. translators: %s: shortcode wrapped in a code element.
+#: includes/class-admin.php:249
+#, php-format
+msgid "Embed: %s"
+msgstr ""
+
+#: includes/class-admin.php:257
+msgid "Form title"
+msgstr ""
+
+#: includes/class-admin.php:259
+msgid "The form builder requires JavaScript."
+msgstr ""
+
+#: includes/class-admin.php:260
+msgid "Save Form"
+msgstr ""
+
+#: includes/class-admin.php:281
+#: includes/class-admin.php:466
+msgid "Form"
+msgstr ""
+
+#: includes/class-admin.php:288
+msgid "Search"
+msgstr ""
+
+#. translators: %d: entry number.
+#: includes/class-admin.php:288
+#: includes/class-admin.php:354
+msgid "View"
+msgstr ""
+
+#: includes/class-admin.php:292
+msgid "No forms."
+msgstr ""
+
+#: includes/class-admin.php:301
+#: includes/class-admin.php:444
+msgid "All"
+msgstr ""
+
+#: includes/class-admin.php:302
+msgid "Unread"
+msgstr ""
+
+#: includes/class-admin.php:303
+msgid "Read"
+msgstr ""
+
+#: includes/class-admin.php:321
+msgid "Export CSV"
+msgstr ""
+
+#: includes/class-admin.php:333
+msgid "Bulk action"
+msgstr ""
+
+#: includes/class-admin.php:333
+msgid "Bulk actions"
+msgstr ""
+
+#: includes/class-admin.php:333
+msgid "Mark read"
+msgstr ""
+
+#: includes/class-admin.php:333
+msgid "Mark unread"
+msgstr ""
+
+#: includes/class-admin.php:333
+msgid "Delete the selected entries?"
+msgstr ""
+
+#: includes/class-admin.php:333
+msgid "Apply"
+msgstr ""
+
+#: includes/class-admin.php:335
+msgid "Select all entries"
+msgstr ""
+
+#: includes/class-admin.php:341
+msgid "No entries."
+msgstr ""
+
+#. translators: %d: entry number.
+#: includes/class-admin.php:348
+#, php-format
+msgid "Select entry %d"
+msgstr ""
+
+#: includes/class-admin.php:349
+msgid "(unread)"
+msgstr ""
+
+#. translators: %d: entry number.
+#: includes/class-admin.php:354
+#, php-format
+msgid "entry %d"
+msgstr ""
+
+#: includes/class-admin.php:360
+msgid "Entries pages"
+msgstr ""
+
+#: includes/class-admin.php:376
+#: includes/class-admin.php:727
+msgid "Entry not found."
+msgstr ""
+
+#. translators: %s: form title.
+#: includes/class-admin.php:384
+#, php-format
+msgid "Back to %s"
+msgstr ""
+
+#. translators: %d: entry number.
+#: includes/class-admin.php:386
+#, php-format
+msgid "Entry #%d"
+msgstr ""
+
+#: includes/class-admin.php:387
+#: includes/class-privacy.php:75
+msgid "Submitted"
+msgstr ""
+
+#: includes/class-admin.php:388
+#: includes/class-admin.php:757
+msgid "IP"
+msgstr ""
+
+#: includes/class-admin.php:401
+msgid "Delete this entry?"
+msgstr ""
+
+#: includes/class-admin.php:401
+msgid "Delete entry"
+msgstr ""
+
+#: includes/class-admin.php:402
+msgid "Notes"
+msgstr ""
+
+#: includes/class-admin.php:405
+msgid "Internal notes"
+msgstr ""
+
+#: includes/class-admin.php:406
+msgid "Save note"
+msgstr ""
+
+#: includes/class-admin.php:445
+msgid "Pending"
+msgstr ""
+
+#: includes/class-admin.php:446
+msgid "OK"
+msgstr ""
+
+#: includes/class-admin.php:447
+msgid "Failed"
+msgstr ""
+
+#: includes/class-admin.php:465
+msgid "Webhook deliveries"
+msgstr ""
+
+#: includes/class-admin.php:466
+msgid "Time"
+msgstr ""
+
+#: includes/class-admin.php:466
+msgid "URL"
+msgstr ""
+
+#: includes/class-admin.php:466
+msgid "Status"
+msgstr ""
+
+#: includes/class-admin.php:466
+msgid "Code"
+msgstr ""
+
+#: includes/class-admin.php:466
+msgid "Attempts"
+msgstr ""
+
+#: includes/class-admin.php:471
+msgid "No webhook deliveries."
+msgstr ""
+
+#. translators: %d: webhook log id.
+#: includes/class-admin.php:493
+#, php-format
+msgid "Retry webhook %d"
+msgstr ""
+
+#. translators: %d: webhook log id.
+#: includes/class-admin.php:493
+msgid "Retry"
+msgstr ""
+
+#: includes/class-admin.php:501
+msgid "Pagination"
+msgstr ""
+
+#: includes/class-admin.php:518
+msgid "FormTheory Settings"
+msgstr ""
+
+#: includes/class-admin.php:521
+msgid "Cloudflare Turnstile"
+msgstr ""
+
+#: includes/class-admin.php:521
+msgid "Leave both blank to disable. A signed time-trap and honeypot are always on."
+msgstr ""
+
+#: includes/class-admin.php:523
+#: includes/class-recaptcha.php:149
+msgid "Site key"
+msgstr ""
+
+#: includes/class-admin.php:524
+#: includes/class-recaptcha.php:153
+msgid "Secret key"
+msgstr ""
+
+#: includes/class-admin.php:526
+msgid "Privacy"
+msgstr ""
+
+#: includes/class-admin.php:526
+msgid "Delete entries after (days)"
+msgstr ""
+
+#: includes/class-admin.php:526
+msgid "0 keeps entries forever. Older entries and their uploaded files are deleted daily."
+msgstr ""
+
+#: includes/class-admin.php:527
+msgid "Uninstall"
+msgstr ""
+
+#: includes/class-admin.php:527
+msgid "Data removal"
+msgstr ""
+
+#: includes/class-admin.php:527
+msgid "Delete all FormTheory data when the plugin is deleted"
+msgstr ""
+
+#: includes/class-admin.php:527
+msgid "Warning: all forms, entries and uploaded files are permanently deleted when the plugin is deleted. This cannot be undone."
+msgstr ""
+
+#: includes/class-admin.php:546
+msgid "Form saved."
+msgstr ""
+
+#: includes/class-admin.php:547
+msgid "Deleted."
+msgstr ""
+
+#: includes/class-admin.php:548
+msgid "Bulk action applied."
+msgstr ""
+
+#: includes/class-admin.php:549
+msgid "Note saved."
+msgstr ""
+
+#: includes/class-admin.php:550
+msgid "Form imported."
+msgstr ""
+
+#: includes/class-admin.php:551
+msgid "Form duplicated."
+msgstr ""
+
+#: includes/class-admin.php:552
+msgid "Webhook retry scheduled."
+msgstr ""
+
+#: includes/class-admin.php:557
+#: includes/class-portable.php:31
+msgid "Import file is larger than 1 MB."
+msgstr ""
+
+#: includes/class-admin.php:558
+#: includes/class-portable.php:35
+msgid "Import file is not valid JSON."
+msgstr ""
+
+#: includes/class-admin.php:559
+#: includes/class-portable.php:38
+msgid "This is not a FormTheory export file."
+msgstr ""
+
+#: includes/class-admin.php:560
+msgid "No import data was provided."
+msgstr ""
+
+#: includes/class-admin.php:561
+msgid "The file could not be uploaded."
+msgstr ""
+
+#: includes/class-admin.php:563
+msgid "Import failed."
+msgstr ""
+
+#: includes/class-admin.php:568
+msgid "Webhook could not be rescheduled."
+msgstr ""
+
+#: includes/class-admin.php:572
+msgid "No entries were changed."
+msgstr ""
+
+#: includes/class-admin.php:757
+msgid "Entry ID"
+msgstr ""
+
+#: includes/class-admin.php:779
+#: includes/class-admin.php:783
+msgid "File not found."
+msgstr ""
+
+#: includes/class-db.php:147
+#: includes/class-fields.php:27
+msgid "Submit"
+msgstr ""
+
+#: includes/class-db.php:148
+msgid "Thanks! Your submission was received."
+msgstr ""
+
+#: includes/class-db.php:150
+msgid "New form submission"
+msgstr ""
+
+#. translators: %s: original form title
+#: includes/class-db.php:203
+#, php-format
+msgid "%s (copy)"
+msgstr ""
+
+#: includes/class-frontend.php:27
+#: includes/class-frontend.php:266
+msgid "This field is required."
+msgstr ""
+
+#: includes/class-frontend.php:28
+#: includes/class-frontend.php:314
+msgid "Please attach a file."
+msgstr ""
+
+#: includes/class-frontend.php:29
+#: includes/class-frontend.php:270
+msgid "Enter a valid email address."
+msgstr ""
+
+#: includes/class-frontend.php:30
+#: includes/class-frontend.php:272
+msgid "Enter a number."
+msgstr ""
+
+#: includes/class-frontend.php:31
+#: includes/class-frontend.php:274
+msgid "Enter a valid phone number."
+msgstr ""
+
+#. translators: %d: maximum file size in megabytes.
+#: includes/class-frontend.php:33
+#: includes/class-frontend.php:321
+#, php-format
+msgid "File must be under %d MB."
+msgstr ""
+
+#. translators: 1: current step number, 2: total number of steps.
+#: includes/class-frontend.php:35
+#, php-format
+msgid "Step %1$d of %2$d"
+msgstr ""
+
+#: includes/class-frontend.php:36
+msgid "Something went wrong. Please reload the page before submitting again."
+msgstr ""
+
+#: includes/class-frontend.php:37
+#: includes/class-frontend.php:399
+msgid "Please fix the errors below."
+msgstr ""
+
+#: includes/class-frontend.php:112
+msgid "Your session expired. Please submit again."
+msgstr ""
+
+#: includes/class-frontend.php:253
+msgid "Accepted"
+msgstr ""
+
+#: includes/class-frontend.php:276
+msgid "Enter a valid date."
+msgstr ""
+
+#: includes/class-frontend.php:279
+msgid "Choose a valid option."
+msgstr ""
+
+#: includes/class-frontend.php:281
+msgid "Too long."
+msgstr ""
+
+#: includes/class-frontend.php:317
+#: includes/class-frontend.php:344
+msgid "Upload failed."
+msgstr ""
+
+#: includes/class-frontend.php:325
+#: includes/class-frontend.php:338
+msgid "File type not allowed."
+msgstr ""
+
+#: includes/class-frontend.php:360
+msgid "FormTheory: form not found."
+msgstr ""
+
+#: includes/class-frontend.php:396
+msgid "Leave empty"
+msgstr ""
+
+#. translators: %d: step number.
+#: includes/class-frontend.php:408
+#, php-format
+msgid "Step %d"
+msgstr ""
+
+#: includes/class-frontend.php:420
+msgid "Previous"
+msgstr ""
+
+#: includes/class-frontend.php:423
+msgid "Next"
+msgstr ""
+
+#: includes/class-frontend.php:428
+msgid "This form needs JavaScript enabled for its spam check."
+msgstr ""
+
+#: includes/class-frontend.php:495
+msgid "— Select —"
+msgstr ""
+
+#. translators: 1: extensions, 2: MB
+#: includes/class-frontend.php:507
+#, php-format
+msgid "Allowed: %1$s. Max %2$d MB."
+msgstr ""
+
+#. translators: %s: URL of the entry in the admin.
+#: includes/class-notify.php:22
+#, php-format
+msgid "View: %s"
+msgstr ""
+
+#: includes/class-privacy.php:37
+#: includes/class-privacy.php:45
+msgid "FormTheory entries"
+msgstr ""
+
+#. translators: %d: number of days
+#: includes/class-privacy.php:58
+#, php-format
+msgid "Entries are automatically deleted after %d days."
+msgstr ""
+
+#: includes/class-privacy.php:60
+msgid "Entries are kept until an administrator deletes them."
+msgstr ""
+
+#: includes/class-privacy.php:62
+msgid "When a visitor submits a FormTheory form, the site stores the submitted field data (including any uploaded files), the visitor's IP address, the WordPress user ID if they are logged in, and the submission date."
+msgstr ""
+
+#: includes/class-privacy.php:74
+msgid "Form ID"
+msgstr ""
+
+#: includes/class-privacy.php:76
+msgid "IP address"
+msgstr ""
+
+#: includes/class-privacy.php:77
+msgid "User ID"
+msgstr ""
+
+#: includes/class-privacy.php:84
+msgid "Form entries"
+msgstr ""
+
+#: includes/class-recaptcha.php:72
+msgid "This site is protected by reCAPTCHA and the Google <a href=\"https://policies.google.com/privacy\">Privacy Policy</a> and <a href=\"https://policies.google.com/terms\">Terms of Service</a> apply."
+msgstr ""
+
+#: includes/class-recaptcha.php:89
+msgid "Please complete the reCAPTCHA check."
+msgstr ""
+
+#: includes/class-recaptcha.php:89
+#: includes/class-spam.php:32
+msgid "Spam check failed. Please try again."
+msgstr ""
+
+#: includes/class-recaptcha.php:104
+msgid "Could not verify the spam check. Please try again."
+msgstr ""
+
+#: includes/class-recaptcha.php:137
+msgid "Google reCAPTCHA"
+msgstr ""
+
+#: includes/class-recaptcha.php:138
+msgid "Applies to every form. Get keys at google.com/recaptcha/admin; key type must match the version chosen."
+msgstr ""
+
+#: includes/class-recaptcha.php:141
+msgid "Version"
+msgstr ""
+
+#: includes/class-recaptcha.php:143
+msgid "Off"
+msgstr ""
+
+#: includes/class-recaptcha.php:144
+msgid "v2 checkbox (\"I'm not a robot\")"
+msgstr ""
+
+#: includes/class-recaptcha.php:145
+msgid "v3 invisible (score)"
+msgstr ""
+
+#: includes/class-recaptcha.php:156
+msgid "Set in wp-config.php (FORMTHEORY_RECAPTCHA_SECRET_KEY)."
+msgstr ""
+
+#: includes/class-recaptcha.php:156
+msgid "Or define FORMTHEORY_RECAPTCHA_SITE_KEY / FORMTHEORY_RECAPTCHA_SECRET_KEY in wp-config.php."
+msgstr ""
+
+#: includes/class-recaptcha.php:160
+msgid "v3 score threshold"
+msgstr ""
+
+#: includes/class-recaptcha.php:163
+msgid "0.0 (bot) to 1.0 (human). Submissions scoring below are rejected. Default 0.5."
+msgstr ""
