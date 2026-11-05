@@ -289,6 +289,9 @@ class FormTheory_Frontend {
 				return preg_match( '/^[0-9 +().\-]{5,25}$/', $v ) ? '' : __( 'Enter a valid phone number.', 'formtheory' );
 			case 'date':
 				return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $v ) ? '' : __( 'Enter a valid date.', 'formtheory' );
+			case 'rating':
+				$max = FormTheory_Fields::rating_max( $f['max'] ?? 5 );
+				return preg_match( '/^[0-9]{1,2}$/', $v ) && (int) $v >= 1 && (int) $v <= $max ? '' : __( 'Choose a valid rating.', 'formtheory' );
 			case 'select':
 			case 'radio':
 				return in_array( $v, $f['options'], true ) ? '' : __( 'Choose a valid option.', 'formtheory' );
@@ -508,6 +511,24 @@ class FormTheory_Frontend {
 					esc_attr( $opt ),
 					checked( $checked, true, false ),
 					esc_html( $opt )
+				);
+			}
+			echo '</fieldset>';
+		} elseif ( 'rating' === $f['type'] ) {
+			// Real radios (values 1..max) in the same fieldset/legend structure as `radio`; stars are CSS-only.
+			echo '<fieldset class="ft-rating" role="radiogroup"' . $aria . '><legend>' . esc_html( $f['label'] ) . $req . '</legend>'; // phpcs:ignore -- $aria/$req static/escaped.
+			$max = FormTheory_Fields::rating_max( $f['max'] ?? 5 );
+			for ( $n = 1; $n <= $max; $n++ ) {
+				$oid = $id . '-' . $n;
+				/* translators: 1: chosen rating, 2: maximum rating (for example "3 of 5") */
+				$txt = sprintf( __( '%1$d of %2$d', 'formtheory' ), $n, $max );
+				printf(
+					'<div class="ft-choice ft-star"><input type="radio" id="%1$s" name="%2$s" value="%3$d"%4$s><label for="%1$s"><span class="ft-sr">%5$s</span></label></div>',
+					esc_attr( $oid ),
+					esc_attr( $name ),
+					$n,
+					checked( (string) $n, (string) $value, false ),
+					esc_html( $txt )
 				);
 			}
 			echo '</fieldset>';

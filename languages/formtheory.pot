@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-05T18:35:32+00:00\n"
+"POT-Creation-Date: 2026-11-05T18:43:42+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: formtheory\n"
@@ -25,29 +25,29 @@ msgid "Lightweight form builder: conditional logic, file uploads, multi-page for
 msgstr ""
 
 #: includes/class-admin.php:28
-#: includes/class-admin.php:205
+#: includes/class-admin.php:207
 msgid "Forms"
 msgstr ""
 
 #: includes/class-admin.php:29
-#: includes/class-admin.php:252
+#: includes/class-admin.php:254
 msgid "New Form"
 msgstr ""
 
 #: includes/class-admin.php:30
-#: includes/class-admin.php:208
-#: includes/class-admin.php:229
-#: includes/class-admin.php:276
+#: includes/class-admin.php:210
+#: includes/class-admin.php:231
+#: includes/class-admin.php:278
 msgid "Entries"
 msgstr ""
 
 #: includes/class-admin.php:31
-#: includes/class-admin.php:458
+#: includes/class-admin.php:460
 msgid "Webhook Log"
 msgstr ""
 
 #: includes/class-admin.php:32
-#: includes/class-admin.php:173
+#: includes/class-admin.php:175
 msgid "Settings"
 msgstr ""
 
@@ -68,7 +68,7 @@ msgid "Number"
 msgstr ""
 
 #: includes/class-admin.php:58
-#: includes/class-admin.php:343
+#: includes/class-admin.php:345
 msgid "Date"
 msgstr ""
 
@@ -112,808 +112,816 @@ msgstr ""
 msgid "Calculation"
 msgstr ""
 
-#: includes/class-admin.php:71
-msgid "is"
+#: includes/class-admin.php:69
+msgid "Rating"
 msgstr ""
 
 #: includes/class-admin.php:72
-msgid "is not"
+msgid "is"
 msgstr ""
 
 #: includes/class-admin.php:73
-msgid "contains"
+msgid "is not"
 msgstr ""
 
 #: includes/class-admin.php:74
-msgid "greater than"
+msgid "contains"
 msgstr ""
 
 #: includes/class-admin.php:75
-msgid "less than"
+msgid "greater than"
 msgstr ""
 
 #: includes/class-admin.php:76
-msgid "is empty"
+msgid "less than"
 msgstr ""
 
 #: includes/class-admin.php:77
+msgid "is empty"
+msgstr ""
+
+#: includes/class-admin.php:78
 msgid "is not empty"
 msgstr ""
 
 #. translators: %d: new position of the field in the list.
-#: includes/class-admin.php:80
+#: includes/class-admin.php:81
 #, php-format
 msgid "Moved to position %d"
 msgstr ""
 
-#: includes/class-admin.php:81
+#: includes/class-admin.php:82
 msgid "(no label)"
 msgstr ""
 
-#: includes/class-admin.php:82
+#: includes/class-admin.php:83
 msgid "Enable conditional logic"
 msgstr ""
 
-#: includes/class-admin.php:83
+#: includes/class-admin.php:84
 msgid "Add other fields first."
 msgstr ""
 
 #. translators: 1: Show or Hide (dropdown), 2: all or any (dropdown).
-#: includes/class-admin.php:85
+#: includes/class-admin.php:86
 #, php-format
 msgid "%1$s this field if %2$s of these match:"
 msgstr ""
 
-#: includes/class-admin.php:86
+#: includes/class-admin.php:87
 msgid "Show"
 msgstr ""
 
-#: includes/class-admin.php:87
+#: includes/class-admin.php:88
 msgid "Hide"
 msgstr ""
 
-#: includes/class-admin.php:88
+#: includes/class-admin.php:89
 msgid "all"
 msgstr ""
 
-#: includes/class-admin.php:89
+#: includes/class-admin.php:90
 msgid "any"
 msgstr ""
 
 #. translators: %s: all or any (dropdown).
-#: includes/class-admin.php:91
+#: includes/class-admin.php:92
 #, php-format
 msgid "When %s of these match:"
 msgstr ""
 
-#: includes/class-admin.php:92
+#: includes/class-admin.php:93
 msgid "Value"
 msgstr ""
 
-#: includes/class-admin.php:93
+#: includes/class-admin.php:94
 msgid "Field"
 msgstr ""
 
-#: includes/class-admin.php:94
+#: includes/class-admin.php:95
 msgid "Operator"
 msgstr ""
 
-#: includes/class-admin.php:95
+#: includes/class-admin.php:96
 msgid "Remove"
 msgstr ""
 
 #. translators: %d: rule number.
-#: includes/class-admin.php:97
+#: includes/class-admin.php:98
 #, php-format
 msgid "Remove rule %d"
 msgstr ""
 
-#: includes/class-admin.php:98
+#: includes/class-admin.php:99
 msgid "Add rule"
 msgstr ""
 
 #. translators: %s: list of merge tags. Do not translate the tags.
-#: includes/class-admin.php:100
+#: includes/class-admin.php:101
 #, php-format
 msgid "Merge tags: %s"
 msgstr ""
 
-#: includes/class-admin.php:101
+#: includes/class-admin.php:102
 msgid "Formula"
 msgstr ""
 
 #. translators: %s: list of field references such as {field:qty}. Do not translate the references.
-#: includes/class-admin.php:103
+#: includes/class-admin.php:104
 #, php-format
 msgid "Use numbers, + - * /, parentheses and field references: %s"
 msgstr ""
 
-#: includes/class-admin.php:104
+#: includes/class-admin.php:105
 msgid "Use numbers, + - * / and parentheses. Add fields above this one to reference them."
 msgstr ""
 
-#: includes/class-admin.php:105
+#: includes/class-admin.php:106
 msgid "Decimal places"
 msgstr ""
 
-#: includes/class-admin.php:106
-msgid "Prefix (for example $)"
-msgstr ""
-
 #: includes/class-admin.php:107
-msgid "Suffix (for example kg)"
+msgid "Number of stars (3-10)"
 msgstr ""
 
 #: includes/class-admin.php:108
-msgid "Notifications"
+msgid "Prefix (for example $)"
 msgstr ""
 
-#. translators: %d: notification number.
+#: includes/class-admin.php:109
+msgid "Suffix (for example kg)"
+msgstr ""
+
 #: includes/class-admin.php:110
-#, php-format
-msgid "Notification %d"
+msgid "Notifications"
 msgstr ""
 
 #. translators: %d: notification number.
 #: includes/class-admin.php:112
 #, php-format
+msgid "Notification %d"
+msgstr ""
+
+#. translators: %d: notification number.
+#: includes/class-admin.php:114
+#, php-format
 msgid "Remove notification %d"
 msgstr ""
 
-#: includes/class-admin.php:113
+#: includes/class-admin.php:115
 msgid "Notification removed"
 msgstr ""
 
-#: includes/class-admin.php:114
+#: includes/class-admin.php:116
 msgid "Add notification"
 msgstr ""
 
-#: includes/class-admin.php:115
+#: includes/class-admin.php:117
 msgid "Notification added"
 msgstr ""
 
-#: includes/class-admin.php:116
-msgid "Webhooks"
-msgstr ""
-
-#. translators: %d: webhook number.
 #: includes/class-admin.php:118
-#, php-format
-msgid "Webhook %d"
+msgid "Webhooks"
 msgstr ""
 
 #. translators: %d: webhook number.
 #: includes/class-admin.php:120
 #, php-format
+msgid "Webhook %d"
+msgstr ""
+
+#. translators: %d: webhook number.
+#: includes/class-admin.php:122
+#, php-format
 msgid "Remove webhook %d"
 msgstr ""
 
-#: includes/class-admin.php:121
+#: includes/class-admin.php:123
 msgid "Webhook removed"
 msgstr ""
 
-#: includes/class-admin.php:122
+#: includes/class-admin.php:124
 msgid "Add webhook"
 msgstr ""
 
-#: includes/class-admin.php:123
+#: includes/class-admin.php:125
 msgid "Webhook added"
 msgstr ""
 
 #. translators: Default email subject. Keep {form_title} unchanged.
-#: includes/class-admin.php:125
+#: includes/class-admin.php:127
 #: includes/class-notify.php:18
 msgid "New submission: {form_title}"
 msgstr ""
 
 #. translators: Do not translate {field:ID}.
-#: includes/class-admin.php:127
+#: includes/class-admin.php:129
 msgid "Send to (emails or {field:ID}, comma separated)"
 msgstr ""
 
-#: includes/class-admin.php:128
+#: includes/class-admin.php:130
 msgid "Subject"
 msgstr ""
 
-#: includes/class-admin.php:129
+#: includes/class-admin.php:131
 msgid "Message"
 msgstr ""
 
 #. translators: Do not translate {field:ID}.
-#: includes/class-admin.php:131
+#: includes/class-admin.php:133
 msgid "Reply-To (email or {field:ID})"
 msgstr ""
 
-#: includes/class-admin.php:132
+#: includes/class-admin.php:134
 msgid "Attach uploaded files"
 msgstr ""
 
-#: includes/class-admin.php:133
+#: includes/class-admin.php:135
 msgid "Only send when conditions match"
 msgstr ""
 
-#: includes/class-admin.php:134
+#: includes/class-admin.php:136
 msgid "Endpoint URL (https only)"
 msgstr ""
 
-#: includes/class-admin.php:135
+#: includes/class-admin.php:137
 msgid "Format"
 msgstr ""
 
-#: includes/class-admin.php:136
+#: includes/class-admin.php:138
 msgid "Form-encoded"
 msgstr ""
 
-#: includes/class-admin.php:137
+#: includes/class-admin.php:139
 msgid "Signing secret (optional, sent as X-FormTheory-Signature)"
 msgstr ""
 
 #. translators: 1: field type label, 2: field label.
-#: includes/class-admin.php:139
+#: includes/class-admin.php:141
 #, php-format
 msgid "%1$s: %2$s"
 msgstr ""
 
-#: includes/class-admin.php:140
+#: includes/class-admin.php:142
 msgid "Page title"
 msgstr ""
 
-#: includes/class-admin.php:141
+#: includes/class-admin.php:143
 msgid "Label"
 msgstr ""
 
 #. translators: Do not translate {query:param}.
-#: includes/class-admin.php:143
+#: includes/class-admin.php:145
 msgid "Default value (use {query:param} to fill from URL)"
 msgstr ""
 
-#: includes/class-admin.php:144
+#: includes/class-admin.php:146
 msgid "Consent text (HTML links allowed)"
 msgstr ""
 
-#: includes/class-admin.php:145
+#: includes/class-admin.php:147
 msgid "HTML content"
 msgstr ""
 
-#: includes/class-admin.php:146
+#: includes/class-admin.php:148
 msgid "Required"
 msgstr ""
 
-#: includes/class-admin.php:147
+#: includes/class-admin.php:149
 msgid "Placeholder"
 msgstr ""
 
-#: includes/class-admin.php:148
+#: includes/class-admin.php:150
 msgid "Help text"
 msgstr ""
 
-#: includes/class-admin.php:149
+#: includes/class-admin.php:151
 msgid "Choices (one per line)"
 msgstr ""
 
-#: includes/class-admin.php:150
+#: includes/class-admin.php:152
 msgid "Allowed extensions (comma separated)"
 msgstr ""
 
-#: includes/class-admin.php:151
-msgid "Max size (MB)"
-msgstr ""
-
-#. translators: %s: field title.
 #: includes/class-admin.php:153
-#, php-format
-msgid "Move %s up"
+msgid "Max size (MB)"
 msgstr ""
 
 #. translators: %s: field title.
 #: includes/class-admin.php:155
 #, php-format
-msgid "Move %s down"
+msgid "Move %s up"
 msgstr ""
 
 #. translators: %s: field title.
 #: includes/class-admin.php:157
 #, php-format
-msgid "Duplicate %s"
+msgid "Move %s down"
 msgstr ""
 
 #. translators: %s: field title.
 #: includes/class-admin.php:159
 #, php-format
+msgid "Duplicate %s"
+msgstr ""
+
+#. translators: %s: field title.
+#: includes/class-admin.php:161
+#, php-format
 msgid "Delete %s"
 msgstr ""
 
-#: includes/class-admin.php:160
+#: includes/class-admin.php:162
 msgid "Up"
 msgstr ""
 
-#: includes/class-admin.php:161
+#: includes/class-admin.php:163
 msgid "Down"
 msgstr ""
 
-#: includes/class-admin.php:162
-#: includes/class-admin.php:226
+#: includes/class-admin.php:164
+#: includes/class-admin.php:228
 msgid "Duplicate"
 msgstr ""
 
-#: includes/class-admin.php:163
-#: includes/class-admin.php:230
-#: includes/class-admin.php:341
+#: includes/class-admin.php:165
+#: includes/class-admin.php:232
+#: includes/class-admin.php:343
 msgid "Delete"
 msgstr ""
 
-#: includes/class-admin.php:164
+#: includes/class-admin.php:166
 msgid "Field duplicated"
 msgstr ""
 
-#: includes/class-admin.php:165
+#: includes/class-admin.php:167
 msgid "Delete this field?"
 msgstr ""
 
-#: includes/class-admin.php:166
+#: includes/class-admin.php:168
 msgid "Field deleted"
 msgstr ""
 
-#: includes/class-admin.php:167
+#: includes/class-admin.php:169
 msgid "Add field"
 msgstr ""
 
 #. translators: %s: field type label.
-#: includes/class-admin.php:169
+#: includes/class-admin.php:171
 #, php-format
 msgid "%s field added"
 msgstr ""
 
-#: includes/class-admin.php:170
+#: includes/class-admin.php:172
 msgid "Option 1"
 msgstr ""
 
-#: includes/class-admin.php:171
+#: includes/class-admin.php:173
 msgid "Option 2"
 msgstr ""
 
-#: includes/class-admin.php:172
+#: includes/class-admin.php:174
 msgid "No fields yet. Use the buttons above to add one."
 msgstr ""
 
-#: includes/class-admin.php:174
+#: includes/class-admin.php:176
 msgid "Submit button text"
 msgstr ""
 
-#: includes/class-admin.php:175
+#: includes/class-admin.php:177
 msgid "Confirmation message"
 msgstr ""
 
-#: includes/class-admin.php:176
+#: includes/class-admin.php:178
 msgid "Submit without page reload (AJAX)"
 msgstr ""
 
-#: includes/class-admin.php:177
+#: includes/class-admin.php:179
 msgid "After submit"
 msgstr ""
 
-#: includes/class-admin.php:178
+#: includes/class-admin.php:180
 msgid "Show message"
 msgstr ""
 
-#: includes/class-admin.php:179
+#: includes/class-admin.php:181
 msgid "Go to page (ID)"
 msgstr ""
 
-#: includes/class-admin.php:180
+#: includes/class-admin.php:182
 msgid "Redirect to URL"
 msgstr ""
 
-#: includes/class-admin.php:181
+#: includes/class-admin.php:183
 msgid "Page ID"
 msgstr ""
 
-#: includes/class-admin.php:182
+#: includes/class-admin.php:184
 msgid "Redirect URL (merge tags allowed in path/query)"
 msgstr ""
 
-#: includes/class-admin.php:188
-#: includes/class-admin.php:443
+#: includes/class-admin.php:190
+#: includes/class-admin.php:445
 msgid "Not allowed."
 msgstr ""
 
-#: includes/class-admin.php:206
+#: includes/class-admin.php:208
 msgid "Add New"
 msgstr ""
 
-#: includes/class-admin.php:208
+#: includes/class-admin.php:210
 msgid "Title"
 msgstr ""
 
-#: includes/class-admin.php:208
+#: includes/class-admin.php:210
 msgid "Shortcode"
 msgstr ""
 
-#: includes/class-admin.php:208
+#: includes/class-admin.php:210
 msgid "Updated"
 msgstr ""
 
-#: includes/class-admin.php:208
-#: includes/class-admin.php:347
-#: includes/class-admin.php:477
+#: includes/class-admin.php:210
+#: includes/class-admin.php:349
+#: includes/class-admin.php:479
 msgid "Actions"
 msgstr ""
 
-#: includes/class-admin.php:210
+#: includes/class-admin.php:212
 msgid "No forms yet."
 msgstr ""
 
-#: includes/class-admin.php:217
+#: includes/class-admin.php:219
 msgid "(untitled)"
 msgstr ""
 
-#: includes/class-admin.php:223
+#: includes/class-admin.php:225
 msgid "Delete form and all its entries?"
 msgstr ""
 
-#: includes/class-admin.php:227
+#: includes/class-admin.php:229
 msgid "Export JSON"
 msgstr ""
 
-#: includes/class-admin.php:228
+#: includes/class-admin.php:230
 msgid "Edit"
 msgstr ""
 
-#: includes/class-admin.php:234
+#: includes/class-admin.php:236
 msgid "Import form"
 msgstr ""
 
-#: includes/class-admin.php:238
+#: includes/class-admin.php:240
 msgid "JSON file (max 1 MB)"
 msgstr ""
 
-#: includes/class-admin.php:239
+#: includes/class-admin.php:241
 msgid "Or paste JSON"
 msgstr ""
 
-#: includes/class-admin.php:240
+#: includes/class-admin.php:242
 msgid "Import"
 msgstr ""
 
-#: includes/class-admin.php:248
-#: includes/class-admin.php:617
-#: includes/class-admin.php:628
-#: includes/class-admin.php:720
-#: includes/class-admin.php:759
+#: includes/class-admin.php:250
+#: includes/class-admin.php:619
+#: includes/class-admin.php:630
+#: includes/class-admin.php:722
+#: includes/class-admin.php:761
 #: includes/class-frontend.php:86
 msgid "Form not found."
 msgstr ""
 
-#: includes/class-admin.php:252
+#: includes/class-admin.php:254
 msgid "Edit Form"
 msgstr ""
 
 #. translators: %s: shortcode wrapped in a code element.
-#: includes/class-admin.php:257
+#: includes/class-admin.php:259
 #, php-format
 msgid "Embed: %s"
 msgstr ""
 
-#: includes/class-admin.php:265
+#: includes/class-admin.php:267
 msgid "Form title"
 msgstr ""
 
-#: includes/class-admin.php:267
+#: includes/class-admin.php:269
 msgid "The form builder requires JavaScript."
 msgstr ""
 
-#: includes/class-admin.php:268
+#: includes/class-admin.php:270
 msgid "Save Form"
 msgstr ""
 
-#: includes/class-admin.php:289
-#: includes/class-admin.php:474
+#: includes/class-admin.php:291
+#: includes/class-admin.php:476
 msgid "Form"
 msgstr ""
 
-#: includes/class-admin.php:296
+#: includes/class-admin.php:298
 msgid "Search"
 msgstr ""
 
 #. translators: %d: entry number.
-#: includes/class-admin.php:296
-#: includes/class-admin.php:362
+#: includes/class-admin.php:298
+#: includes/class-admin.php:364
 msgid "View"
 msgstr ""
 
-#: includes/class-admin.php:300
+#: includes/class-admin.php:302
 msgid "No forms."
 msgstr ""
 
-#: includes/class-admin.php:309
-#: includes/class-admin.php:452
+#: includes/class-admin.php:311
+#: includes/class-admin.php:454
 msgid "All"
 msgstr ""
 
-#: includes/class-admin.php:310
+#: includes/class-admin.php:312
 msgid "Unread"
 msgstr ""
 
-#: includes/class-admin.php:311
+#: includes/class-admin.php:313
 msgid "Read"
 msgstr ""
 
-#: includes/class-admin.php:329
+#: includes/class-admin.php:331
 msgid "Export CSV"
 msgstr ""
 
-#: includes/class-admin.php:341
+#: includes/class-admin.php:343
 msgid "Bulk action"
 msgstr ""
 
-#: includes/class-admin.php:341
+#: includes/class-admin.php:343
 msgid "Bulk actions"
 msgstr ""
 
-#: includes/class-admin.php:341
+#: includes/class-admin.php:343
 msgid "Mark read"
 msgstr ""
 
-#: includes/class-admin.php:341
+#: includes/class-admin.php:343
 msgid "Mark unread"
 msgstr ""
 
-#: includes/class-admin.php:341
+#: includes/class-admin.php:343
 msgid "Delete the selected entries?"
 msgstr ""
 
-#: includes/class-admin.php:341
+#: includes/class-admin.php:343
 msgid "Apply"
 msgstr ""
 
-#: includes/class-admin.php:343
+#: includes/class-admin.php:345
 msgid "Select all entries"
 msgstr ""
 
-#: includes/class-admin.php:349
+#: includes/class-admin.php:351
 msgid "No entries."
 msgstr ""
 
 #. translators: %d: entry number.
-#: includes/class-admin.php:356
+#: includes/class-admin.php:358
 #, php-format
 msgid "Select entry %d"
 msgstr ""
 
-#: includes/class-admin.php:357
+#: includes/class-admin.php:359
 msgid "(unread)"
 msgstr ""
 
 #. translators: %d: entry number.
-#: includes/class-admin.php:362
+#: includes/class-admin.php:364
 #, php-format
 msgid "entry %d"
 msgstr ""
 
-#: includes/class-admin.php:368
+#: includes/class-admin.php:370
 msgid "Entries pages"
 msgstr ""
 
-#: includes/class-admin.php:384
-#: includes/class-admin.php:737
+#: includes/class-admin.php:386
+#: includes/class-admin.php:739
 msgid "Entry not found."
 msgstr ""
 
 #. translators: %s: form title.
-#: includes/class-admin.php:392
+#: includes/class-admin.php:394
 #, php-format
 msgid "Back to %s"
 msgstr ""
 
 #. translators: %d: entry number.
-#: includes/class-admin.php:394
+#: includes/class-admin.php:396
 #, php-format
 msgid "Entry #%d"
 msgstr ""
 
-#: includes/class-admin.php:395
+#: includes/class-admin.php:397
 #: includes/class-privacy.php:80
 msgid "Submitted"
 msgstr ""
 
-#: includes/class-admin.php:396
+#: includes/class-admin.php:398
 msgid "IP"
 msgstr ""
 
-#: includes/class-admin.php:409
+#: includes/class-admin.php:411
 msgid "Delete this entry?"
 msgstr ""
 
-#: includes/class-admin.php:409
+#: includes/class-admin.php:411
 msgid "Delete entry"
 msgstr ""
 
-#: includes/class-admin.php:410
+#: includes/class-admin.php:412
 msgid "Notes"
 msgstr ""
 
-#: includes/class-admin.php:413
+#: includes/class-admin.php:415
 msgid "Internal notes"
 msgstr ""
 
-#: includes/class-admin.php:414
+#: includes/class-admin.php:416
 msgid "Save note"
 msgstr ""
 
-#: includes/class-admin.php:453
+#: includes/class-admin.php:455
 msgid "Pending"
 msgstr ""
 
-#: includes/class-admin.php:454
+#: includes/class-admin.php:456
 msgid "OK"
 msgstr ""
 
-#: includes/class-admin.php:455
+#: includes/class-admin.php:457
 msgid "Failed"
 msgstr ""
 
-#: includes/class-admin.php:473
+#: includes/class-admin.php:475
 msgid "Webhook deliveries"
 msgstr ""
 
-#: includes/class-admin.php:474
+#: includes/class-admin.php:476
 msgid "Time"
 msgstr ""
 
-#: includes/class-admin.php:474
+#: includes/class-admin.php:476
 msgid "URL"
 msgstr ""
 
-#: includes/class-admin.php:474
+#: includes/class-admin.php:476
 msgid "Status"
 msgstr ""
 
-#: includes/class-admin.php:474
+#: includes/class-admin.php:476
 msgid "Code"
 msgstr ""
 
-#: includes/class-admin.php:474
+#: includes/class-admin.php:476
 msgid "Attempts"
 msgstr ""
 
-#: includes/class-admin.php:479
+#: includes/class-admin.php:481
 msgid "No webhook deliveries."
 msgstr ""
 
 #. translators: %d: webhook log id.
-#: includes/class-admin.php:501
+#: includes/class-admin.php:503
 #, php-format
 msgid "Retry webhook %d"
 msgstr ""
 
 #. translators: %d: webhook log id.
-#: includes/class-admin.php:501
+#: includes/class-admin.php:503
 msgid "Retry"
 msgstr ""
 
-#: includes/class-admin.php:509
+#: includes/class-admin.php:511
 msgid "Pagination"
 msgstr ""
 
-#: includes/class-admin.php:526
+#: includes/class-admin.php:528
 msgid "FormTheory Settings"
 msgstr ""
 
-#: includes/class-admin.php:529
+#: includes/class-admin.php:531
 msgid "Cloudflare Turnstile"
 msgstr ""
 
-#: includes/class-admin.php:529
+#: includes/class-admin.php:531
 msgid "Leave both blank to disable. A signed time-trap and honeypot are always on."
 msgstr ""
 
-#: includes/class-admin.php:531
+#: includes/class-admin.php:533
 #: includes/class-recaptcha.php:149
 msgid "Site key"
 msgstr ""
 
-#: includes/class-admin.php:532
+#: includes/class-admin.php:534
 #: includes/class-recaptcha.php:153
 msgid "Secret key"
 msgstr ""
 
-#: includes/class-admin.php:534
+#: includes/class-admin.php:536
 msgid "Privacy"
 msgstr ""
 
-#: includes/class-admin.php:534
+#: includes/class-admin.php:536
 msgid "Delete entries after (days)"
 msgstr ""
 
-#: includes/class-admin.php:534
+#: includes/class-admin.php:536
 msgid "0 keeps entries forever. Older entries and their uploaded files are deleted daily."
 msgstr ""
 
-#: includes/class-admin.php:535
+#: includes/class-admin.php:537
 msgid "Uninstall"
 msgstr ""
 
-#: includes/class-admin.php:535
+#: includes/class-admin.php:537
 msgid "Data removal"
 msgstr ""
 
-#: includes/class-admin.php:535
+#: includes/class-admin.php:537
 msgid "Delete all FormTheory data when the plugin is deleted"
 msgstr ""
 
-#: includes/class-admin.php:535
+#: includes/class-admin.php:537
 msgid "Warning: all forms, entries and uploaded files are permanently deleted when the plugin is deleted. This cannot be undone."
 msgstr ""
 
-#: includes/class-admin.php:551
+#: includes/class-admin.php:553
 msgid "Form saved."
 msgstr ""
 
-#: includes/class-admin.php:552
+#: includes/class-admin.php:554
 msgid "Deleted."
 msgstr ""
 
-#: includes/class-admin.php:553
+#: includes/class-admin.php:555
 msgid "Bulk action applied."
 msgstr ""
 
-#: includes/class-admin.php:554
+#: includes/class-admin.php:556
 msgid "Note saved."
 msgstr ""
 
-#: includes/class-admin.php:555
+#: includes/class-admin.php:557
 msgid "Form imported."
 msgstr ""
 
-#: includes/class-admin.php:556
+#: includes/class-admin.php:558
 msgid "Form duplicated."
 msgstr ""
 
-#: includes/class-admin.php:557
+#: includes/class-admin.php:559
 msgid "Webhook retry scheduled."
 msgstr ""
 
-#: includes/class-admin.php:562
+#: includes/class-admin.php:564
 #: includes/class-portable.php:32
 msgid "Import file is larger than 1 MB."
 msgstr ""
 
-#: includes/class-admin.php:563
+#: includes/class-admin.php:565
 #: includes/class-portable.php:36
 msgid "Import file is not valid JSON."
 msgstr ""
 
-#: includes/class-admin.php:564
+#: includes/class-admin.php:566
 #: includes/class-portable.php:39
 msgid "This is not a FormTheory export file."
 msgstr ""
 
-#: includes/class-admin.php:565
+#: includes/class-admin.php:567
 msgid "No import data was provided."
 msgstr ""
 
-#: includes/class-admin.php:566
+#: includes/class-admin.php:568
 msgid "The file could not be uploaded."
 msgstr ""
 
-#: includes/class-admin.php:568
+#: includes/class-admin.php:570
 msgid "Import failed."
 msgstr ""
 
-#: includes/class-admin.php:573
+#: includes/class-admin.php:575
 msgid "Webhook could not be rescheduled."
 msgstr ""
 
-#: includes/class-admin.php:577
+#: includes/class-admin.php:579
 msgid "No entries were changed."
 msgstr ""
 
-#: includes/class-admin.php:632
+#: includes/class-admin.php:634
 msgid "Export failed."
 msgstr ""
 
-#: includes/class-admin.php:790
-#: includes/class-admin.php:794
+#: includes/class-admin.php:792
+#: includes/class-admin.php:796
 msgid "File not found."
 msgstr ""
 
@@ -937,45 +945,45 @@ msgid "%s (copy)"
 msgstr ""
 
 #. translators: %s: name typed by the signer.
-#: includes/class-fields.php:277
+#: includes/class-fields.php:280
 #, php-format
 msgid "[signature] %s"
 msgstr ""
 
 #. translators: %s: name typed as a signature.
-#: includes/class-fields.php:281
+#: includes/class-fields.php:284
 #, php-format
 msgid "%s (typed)"
 msgstr ""
 
 #: includes/class-frontend.php:27
-#: includes/class-frontend.php:279
+#: includes/class-frontend.php:281
 msgid "This field is required."
 msgstr ""
 
 #: includes/class-frontend.php:28
-#: includes/class-frontend.php:327
+#: includes/class-frontend.php:332
 msgid "Please attach a file."
 msgstr ""
 
 #: includes/class-frontend.php:29
-#: includes/class-frontend.php:283
+#: includes/class-frontend.php:285
 msgid "Enter a valid email address."
 msgstr ""
 
 #: includes/class-frontend.php:30
-#: includes/class-frontend.php:285
+#: includes/class-frontend.php:287
 msgid "Enter a number."
 msgstr ""
 
 #: includes/class-frontend.php:31
-#: includes/class-frontend.php:287
+#: includes/class-frontend.php:289
 msgid "Enter a valid phone number."
 msgstr ""
 
 #. translators: %d: maximum file size in megabytes.
 #: includes/class-frontend.php:33
-#: includes/class-frontend.php:334
+#: includes/class-frontend.php:339
 #, php-format
 msgid "File must be under %d MB."
 msgstr ""
@@ -991,7 +999,7 @@ msgid "Something went wrong. Please reload the page before submitting again."
 msgstr ""
 
 #: includes/class-frontend.php:37
-#: includes/class-frontend.php:413
+#: includes/class-frontend.php:418
 msgid "Please fix the errors below."
 msgstr ""
 
@@ -999,68 +1007,78 @@ msgstr ""
 msgid "Your session expired. Please submit again."
 msgstr ""
 
-#: includes/class-frontend.php:266
+#: includes/class-frontend.php:268
 msgid "Accepted"
 msgstr ""
 
-#: includes/class-frontend.php:289
+#: includes/class-frontend.php:291
 msgid "Enter a valid date."
 msgstr ""
 
-#: includes/class-frontend.php:292
+#: includes/class-frontend.php:294
+msgid "Choose a valid rating."
+msgstr ""
+
+#: includes/class-frontend.php:297
 msgid "Choose a valid option."
 msgstr ""
 
-#: includes/class-frontend.php:294
+#: includes/class-frontend.php:299
 msgid "Too long."
 msgstr ""
 
-#: includes/class-frontend.php:330
-#: includes/class-frontend.php:357
+#: includes/class-frontend.php:335
+#: includes/class-frontend.php:362
 msgid "Upload failed."
 msgstr ""
 
-#: includes/class-frontend.php:338
-#: includes/class-frontend.php:351
+#: includes/class-frontend.php:343
+#: includes/class-frontend.php:356
 msgid "File type not allowed."
 msgstr ""
 
-#: includes/class-frontend.php:373
+#: includes/class-frontend.php:378
 msgid "FormTheory: form not found."
 msgstr ""
 
-#: includes/class-frontend.php:410
+#: includes/class-frontend.php:415
 msgid "Leave empty"
 msgstr ""
 
 #. translators: %d: step number.
-#: includes/class-frontend.php:432
+#: includes/class-frontend.php:437
 #, php-format
 msgid "Step %d"
 msgstr ""
 
-#: includes/class-frontend.php:444
+#: includes/class-frontend.php:449
 msgid "Previous"
 msgstr ""
 
-#: includes/class-frontend.php:447
+#: includes/class-frontend.php:452
 msgid "Next"
 msgstr ""
 
-#: includes/class-frontend.php:452
+#: includes/class-frontend.php:457
 msgid "This form needs JavaScript enabled for its spam check."
 msgstr ""
 
-#: includes/class-frontend.php:482
+#: includes/class-frontend.php:487
 msgid "(required)"
 msgstr ""
 
-#: includes/class-frontend.php:532
+#. translators: 1: chosen rating, 2: maximum rating (for example "3 of 5")
+#: includes/class-frontend.php:524
+#, php-format
+msgid "%1$d of %2$d"
+msgstr ""
+
+#: includes/class-frontend.php:555
 msgid "— Select —"
 msgstr ""
 
 #. translators: 1: extensions, 2: MB
-#: includes/class-frontend.php:544
+#: includes/class-frontend.php:567
 #, php-format
 msgid "Allowed: %1$s. Max %2$d MB."
 msgstr ""

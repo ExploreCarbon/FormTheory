@@ -66,6 +66,7 @@ class FormTheory_Admin {
 				'consent'  => __( 'Consent', 'formtheory' ),
 				'html'     => __( 'HTML block', 'formtheory' ),
 				'calc'     => __( 'Calculation', 'formtheory' ),
+				'rating'   => __( 'Rating', 'formtheory' ),
 			),
 			'ops'              => array(
 				'is'       => __( 'is', 'formtheory' ),
@@ -103,6 +104,7 @@ class FormTheory_Admin {
 			'formula_hint'     => __( 'Use numbers, + - * /, parentheses and field references: %s', 'formtheory' ),
 			'formula_no_refs'  => __( 'Use numbers, + - * / and parentheses. Add fields above this one to reference them.', 'formtheory' ),
 			'decimals'         => __( 'Decimal places', 'formtheory' ),
+			'rating_max'       => __( 'Number of stars (3-10)', 'formtheory' ),
 			'prefix'           => __( 'Prefix (for example $)', 'formtheory' ),
 			'suffix'           => __( 'Suffix (for example kg)', 'formtheory' ),
 			'notifications'    => __( 'Notifications', 'formtheory' ),

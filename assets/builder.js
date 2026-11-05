@@ -26,7 +26,7 @@
 		});
 		return out;
 	}
-	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation' }, I18N.types || {});
+	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation', rating: 'Rating' }, I18N.types || {});
 	var OPS = Object.assign({ is: 'is', isnot: 'is not', contains: 'contains', gt: 'greater than', lt: 'less than', empty: 'is empty', notempty: 'is not empty' }, I18N.ops || {});
 	var uid = 0;
 
@@ -261,6 +261,11 @@
 			body.appendChild(labelled(t('suffix', 'Suffix (for example kg)'), suf));
 			body.appendChild(labelled(t('help_text', 'Help text'), textIn(f.help, function (v) { f.help = v; })));
 		}
+		if (f.type === 'rating') {
+			var rm = textIn(f.max == null ? 5 : f.max, function (v) { var n = parseInt(v, 10); f.max = isNaN(n) ? 5 : Math.max(3, Math.min(10, n)); }, 'number');
+			rm.min = 3; rm.max = 10;
+			body.appendChild(labelled(t('rating_max', 'Number of stars (3-10)'), rm));
+		}
 		if (['page', 'html', 'hidden', 'calc'].indexOf(f.type) === -1) {
 			body.appendChild(check(t('required', 'Required'), f.required, function (v) { f.required = v; }));
 			if (['text', 'email', 'phone', 'number', 'textarea', 'select'].indexOf(f.type) !== -1) {
@@ -316,6 +321,7 @@
 			palette.appendChild(el('button', { type: 'button', class: 'button', text: LABELS[tp] || tp, onclick: function () {
 				var f = { id: nextId(), type: tp, label: tp === 'page' ? '' : LABELS[tp], required: false, options: ['select', 'radio', 'checkbox'].indexOf(tp) !== -1 ? [t('option_1', 'Option 1'), t('option_2', 'Option 2')] : [], cond: { enabled: false, action: 'show', logic: 'all', rules: [] } };
 				if (tp === 'file') { f.allowed = 'jpg,jpeg,png,pdf'; f.max_mb = 5; }
+				if (tp === 'rating') f.max = 5;
 				if (tp === 'calc') { f.formula = ''; f.decimals = 2; f.prefix = ''; f.suffix = ''; }
 				cfg.fields.push(f);
 				render(f.id, null, true);

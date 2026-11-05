@@ -124,4 +124,19 @@ class RenderTest extends TestCase {
 		$this->assertStringContainsString( '<fieldset aria-describedby="ft-7-f1-err" aria-invalid="true"><legend>', $html );
 		$this->assertDoesNotMatchRegularExpression( '/<input type="checkbox"[^>]*aria-invalid/', $html );
 	}
+
+	public function test_rating_renders_radiogroup_of_real_radios_with_accessible_labels() {
+		$html = $this->render( array( 'type' => 'rating', 'label' => 'Score', 'max' => 4, 'required' => true ), '2', 'Bad' );
+		$this->assertStringContainsString( '<fieldset class="ft-rating" role="radiogroup"', $html );
+		$this->assertStringContainsString( 'aria-required="true"', $html );
+		$this->assertStringContainsString( 'aria-invalid="true"', $html );
+		$this->assertStringContainsString( '<legend>Score', $html );
+		$this->assertSame( 4, substr_count( $html, 'type="radio"' ) );
+		$this->assertStringContainsString( 'name="ft[f1]"', $html );
+		$this->assertStringContainsString( 'value="4"', $html );
+		$this->assertStringNotContainsString( 'value="5"', $html );
+		$this->assertStringContainsString( '<span class="ft-sr">3 of 4</span>', $html );
+		$this->assertStringContainsString( 'id="ft-7-f1-2" name="ft[f1]" value="2" checked="checked"', $html );
+		$this->assertSame( 4, substr_count( $html, '<label for="ft-7-f1-' ) );
+	}
 }

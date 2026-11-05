@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class FormTheory_Fields {
 
-	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html', 'calc' );
+	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html', 'calc', 'rating' );
 	/** Layout-only types: never validated or stored. */
 	const NON_DATA = array( 'page', 'html' );
 	const OPS   = array( 'is', 'isnot', 'contains', 'gt', 'lt', 'empty', 'notempty' );
@@ -69,6 +69,9 @@ class FormTheory_Fields {
 				}, explode( ',', (string) ( $f['allowed'] ?? 'jpg,jpeg,png,pdf' ) ) ) );
 				$field['allowed'] = implode( ',', array_diff( $exts, self::BLOCKED_EXT ) );
 				$field['max_mb']  = max( 1, min( 100, (int) ( $f['max_mb'] ?? 5 ) ) );
+			}
+			if ( 'rating' === $type ) {
+				$field['max'] = self::rating_max( $f['max'] ?? 5 );
 			}
 			if ( 'hidden' === $type ) {
 				$field['default'] = sanitize_text_field( $f['default'] ?? '' );
@@ -302,6 +305,11 @@ class FormTheory_Fields {
 	}
 
 	/** Mirror of assets/front.js evaluateRule(). */
+	/** Rating scale size: integer 3-10, default 5 for missing or non-numeric input. */
+	public static function rating_max( $v ) {
+		return is_numeric( $v ) ? max( 3, min( 10, (int) $v ) ) : 5;
+	}
+
 	public static function rule_matches( $rule, $value ) {
 		$vals = is_array( $value ) ? array_map( 'strval', $value ) : array( (string) $value );
 		$vals = array_values( array_filter( $vals, 'strlen' ) );

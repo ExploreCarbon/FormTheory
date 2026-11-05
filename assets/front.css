@@ -19,6 +19,18 @@
 .ft-choice { display: flex; align-items: center; gap: .5rem; min-height: 1.75rem; margin: .25rem 0; }
 .ft-choice input { width: 1.5rem; height: 1.5rem; min-width: 24px; min-height: 24px; margin: 0; flex: none; }
 .ft-choice label { padding-block: .15rem; }
+/* Rating: real radios, visually stars. Filled vs outline glyph shapes (not colour alone); works without JS. */
+.ft-rating { display: flex; flex-wrap: wrap; align-items: center; }
+.ft-rating legend { flex: 0 0 100%; }
+.ft-rating .ft-star { position: relative; margin: .25rem 0; gap: 0; }
+.ft-rating .ft-star input { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 24px; min-height: 24px; opacity: 0; cursor: pointer; z-index: 1; }
+.ft-rating .ft-star label { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; padding: 0; font-size: 1.75rem; line-height: 1; color: var(--ft-accent); }
+.ft-rating .ft-star label::before { content: "°6"; content: "°6" / ""; }
+.ft-rating .ft-star:hover label::before, .ft-rating .ft-star:has(~ .ft-star:hover) label::before,
+.ft-rating .ft-star input:checked + label::before, .ft-rating .ft-star:has(~ .ft-star input:checked) label::before { content: "°5"; content: "°5" / ""; }
+.ft-rating:hover .ft-star:hover ~ .ft-star label::before { content: "°6"; content: "°6" / ""; }
+.ft-rating .ft-star input:focus-visible + label { outline: 3px solid var(--ft-accent); outline-offset: 2px; box-shadow: 0 0 0 2px #fff; }
+.ft-rating .ft-star input:focus-visible { outline: 0; box-shadow: none; }
 /* White inner ring + accent outline: visible on light and dark host backgrounds. */
 .ft-form :focus-visible, .ft-confirmation:focus-visible, .ft-error-summary:focus-visible {
 	outline: 3px solid var(--ft-accent); outline-offset: 2px; box-shadow: 0 0 0 2px #fff;
