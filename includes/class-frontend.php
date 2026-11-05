@@ -50,6 +50,12 @@ class FormTheory_Frontend {
 		if ( ! empty( $_POST['ft_hp'] ) ) {
 			$this->redirect_done( $form_id );
 		}
+		if ( ! $errors ) {
+			$captcha = FormTheory_Recaptcha::verify();
+			if ( $captcha ) {
+				$errors['_form'] = $captcha;
+			}
+		}
 
 		$raw    = isset( $_POST['ft'] ) && is_array( $_POST['ft'] ) ? wp_unslash( $_POST['ft'] ) : array(); // phpcs:ignore -- sanitized per field.
 		$fields = array_values( array_filter( $form['config']['fields'], function ( $f ) {
@@ -111,8 +117,8 @@ class FormTheory_Frontend {
 	}
 
 	private function redirect_done( $form_id ) {
-		$ref = wp_get_referer();
-		$url = $ref ? $ref : home_url( '/' );
+		// wp_get_referer() is false when the form posts back to its own URL (the normal case), so validate the raw referer instead.
+		$url = wp_validate_redirect( (string) wp_get_raw_referer(), home_url( '/' ) );
 		wp_safe_redirect( add_query_arg( 'ft_done', $form_id, remove_query_arg( 'ft_done', $url ) ) . '#formtheory-' . $form_id );
 		exit;
 	}
@@ -310,6 +316,9 @@ class FormTheory_Frontend {
 			}
 			foreach ( $page as $f ) {
 				$this->render_field( $form_id, $f, $values[ $f['id'] ] ?? ( 'checkbox' === $f['type'] ? array() : '' ), $errors[ $f['id'] ] ?? '' );
+			}
+			if ( $i === count( $pages ) - 1 ) {
+				echo FormTheory_Recaptcha::render(); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in render().
 			}
 			echo '<div class="ft-nav">';
 			if ( $multi && $i > 0 ) {

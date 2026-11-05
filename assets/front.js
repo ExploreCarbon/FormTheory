@@ -139,6 +139,21 @@
 			}
 			if (!ok) { e.preventDefault(); return; }
 			var btn = form.querySelector('.ft-submit');
+			var rc = form.querySelector('[data-ft-recaptcha-v3]');
+			if (rc && !rc.value && window.grecaptcha) {
+				// v3: fetch a fresh token, then submit for real (form.submit() skips this handler).
+				e.preventDefault();
+				if (btn) btn.disabled = true;
+				window.grecaptcha.ready(function () {
+					window.grecaptcha.execute(rc.getAttribute('data-ft-recaptcha-v3'), { action: rc.getAttribute('data-ft-recaptcha-action') }).then(function (token) {
+						rc.value = token;
+						form.submit();
+					}, function () {
+						if (btn) btn.disabled = false;
+					});
+				});
+				return;
+			}
 			if (btn) btn.disabled = true;
 		});
 	}

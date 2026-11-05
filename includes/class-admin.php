@@ -13,6 +13,7 @@ class FormTheory_Admin {
 		add_action( 'admin_post_formtheory_delete_entry', array( $this, 'handle_delete_entry' ) );
 		add_action( 'admin_post_formtheory_export', array( $this, 'handle_export' ) );
 		add_action( 'admin_post_formtheory_file', array( $this, 'handle_file' ) );
+		add_action( 'admin_init', array( 'FormTheory_Recaptcha', 'register_setting' ) );
 	}
 
 	public function menu() {
@@ -20,6 +21,7 @@ class FormTheory_Admin {
 		add_submenu_page( 'formtheory', 'Forms', 'Forms', self::CAP, 'formtheory', array( $this, 'page_forms' ) );
 		add_submenu_page( 'formtheory', 'New Form', 'New Form', self::CAP, 'formtheory-edit', array( $this, 'page_edit' ) );
 		add_submenu_page( 'formtheory', 'Entries', 'Entries', self::CAP, 'formtheory-entries', array( $this, 'page_entries' ) );
+		add_submenu_page( 'formtheory', 'Settings', 'Settings', self::CAP, 'formtheory-settings', array( 'FormTheory_Recaptcha', 'page' ) );
 	}
 
 	public function assets( $hook ) {
