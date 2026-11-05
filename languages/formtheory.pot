@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: FormTheory 1.2.0\n"
+"Project-Id-Version: FormTheory 1.3.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/formtheory\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-05T19:54:15+00:00\n"
+"POT-Creation-Date: 2026-11-05T20:01:09+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: formtheory\n"
@@ -265,32 +265,32 @@ msgid "Default country (optional)"
 msgstr ""
 
 #: includes/class-admin.php:113
-#: includes/class-frontend.php:1200
+#: includes/class-frontend.php:1203
 msgid "Street address"
 msgstr ""
 
 #: includes/class-admin.php:114
-#: includes/class-frontend.php:1201
+#: includes/class-frontend.php:1204
 msgid "Apartment, suite, etc."
 msgstr ""
 
 #: includes/class-admin.php:115
-#: includes/class-frontend.php:1202
+#: includes/class-frontend.php:1205
 msgid "City"
 msgstr ""
 
 #: includes/class-admin.php:116
-#: includes/class-frontend.php:1203
+#: includes/class-frontend.php:1206
 msgid "State / Province"
 msgstr ""
 
 #: includes/class-admin.php:117
-#: includes/class-frontend.php:1204
+#: includes/class-frontend.php:1207
 msgid "ZIP / Postal code"
 msgstr ""
 
 #: includes/class-admin.php:118
-#: includes/class-frontend.php:1205
+#: includes/class-frontend.php:1208
 msgid "Country"
 msgstr ""
 
@@ -700,7 +700,7 @@ msgstr ""
 #: includes/class-admin.php:663
 #: includes/class-admin.php:755
 #: includes/class-admin.php:794
-#: includes/class-frontend.php:215
+#: includes/class-frontend.php:218
 msgid "Form not found."
 msgstr ""
 
@@ -728,7 +728,7 @@ msgstr ""
 
 #: includes/class-admin.php:319
 #: includes/class-admin.php:509
-#: includes/class-frontend.php:150
+#: includes/class-frontend.php:153
 msgid "Form"
 msgstr ""
 
@@ -1064,7 +1064,7 @@ msgid "%s (copy)"
 msgstr ""
 
 #: includes/class-drafts.php:75
-#: includes/class-frontend.php:281
+#: includes/class-frontend.php:284
 msgid "There is too much to save. Please shorten some answers and try again."
 msgstr ""
 
@@ -1073,7 +1073,7 @@ msgid "Your progress could not be saved. Please try again."
 msgstr ""
 
 #: includes/class-fields.php:96
-#: includes/class-frontend.php:1228
+#: includes/class-frontend.php:1231
 msgid "Add row"
 msgstr ""
 
@@ -1090,47 +1090,47 @@ msgid "%s (typed)"
 msgstr ""
 
 #: includes/class-frontend.php:34
-#: includes/class-frontend.php:723
-#: includes/class-frontend.php:821
+#: includes/class-frontend.php:726
+#: includes/class-frontend.php:824
 msgid "This field is required."
 msgstr ""
 
 #: includes/class-frontend.php:35
-#: includes/class-frontend.php:795
+#: includes/class-frontend.php:798
 msgid "Please attach a file."
 msgstr ""
 
 #: includes/class-frontend.php:36
-#: includes/class-frontend.php:734
+#: includes/class-frontend.php:737
 msgid "Please complete the address."
 msgstr ""
 
 #: includes/class-frontend.php:37
-#: includes/class-frontend.php:276
-#: includes/class-frontend.php:748
+#: includes/class-frontend.php:279
+#: includes/class-frontend.php:751
 msgid "Enter a valid email address."
 msgstr ""
 
 #: includes/class-frontend.php:38
-#: includes/class-frontend.php:750
+#: includes/class-frontend.php:753
 msgid "Enter a number."
 msgstr ""
 
 #: includes/class-frontend.php:39
-#: includes/class-frontend.php:752
+#: includes/class-frontend.php:755
 msgid "Enter a valid phone number."
 msgstr ""
 
 #. translators: %d: row number.
 #: includes/class-frontend.php:41
-#: includes/class-frontend.php:1100
+#: includes/class-frontend.php:1103
 #, php-format
 msgid "Row %d"
 msgstr ""
 
 #. translators: %d: row number.
 #: includes/class-frontend.php:43
-#: includes/class-frontend.php:1125
+#: includes/class-frontend.php:1128
 #, php-format
 msgid "Remove row %d"
 msgstr ""
@@ -1145,27 +1145,27 @@ msgstr ""
 
 #. translators: %d: minimum number of rows (2 or more).
 #: includes/class-frontend.php:46
-#: includes/class-frontend.php:700
+#: includes/class-frontend.php:703
 msgid "Add at least 1 row."
 msgstr ""
 
 #. translators: %d: minimum number of rows (2 or more).
 #: includes/class-frontend.php:48
-#: includes/class-frontend.php:700
+#: includes/class-frontend.php:703
 #, php-format
 msgid "Add at least %d rows."
 msgstr ""
 
 #. translators: 1: row number, 2: column label, 3: error message.
 #: includes/class-frontend.php:50
-#: includes/class-frontend.php:710
+#: includes/class-frontend.php:713
 #, php-format
 msgid "Row %1$d, %2$s: %3$s"
 msgstr ""
 
 #. translators: %d: maximum file size in megabytes.
 #: includes/class-frontend.php:52
-#: includes/class-frontend.php:802
+#: includes/class-frontend.php:805
 #, php-format
 msgid "File must be under %d MB."
 msgstr ""
@@ -1181,7 +1181,7 @@ msgid "Something went wrong. Please reload the page before submitting again."
 msgstr ""
 
 #: includes/class-frontend.php:56
-#: includes/class-frontend.php:1016
+#: includes/class-frontend.php:1019
 msgid "Please fix the errors below."
 msgstr ""
 
@@ -1201,70 +1201,70 @@ msgstr ""
 msgid "The link is selected. Copy it with your keyboard or menu."
 msgstr ""
 
-#: includes/class-frontend.php:82
-#: includes/class-frontend.php:148
+#: includes/class-frontend.php:85
+#: includes/class-frontend.php:151
 msgid "FormTheory Form"
 msgstr ""
 
-#: includes/class-frontend.php:136
+#: includes/class-frontend.php:139
 msgid "— Select a form —"
 msgstr ""
 
 #. translators: %d: form ID, shown when a form has no title.
-#: includes/class-frontend.php:140
+#: includes/class-frontend.php:143
 #, php-format
 msgid "Untitled form #%d"
 msgstr ""
 
-#: includes/class-frontend.php:149
+#: includes/class-frontend.php:152
 msgid "Embed a form built with FormTheory."
 msgstr ""
 
-#: includes/class-frontend.php:151
+#: includes/class-frontend.php:154
 msgid "Choose which form to show here."
 msgstr ""
 
-#: includes/class-frontend.php:152
+#: includes/class-frontend.php:155
 msgid "The selected form no longer exists. Choose another form."
 msgstr ""
 
-#: includes/class-frontend.php:153
+#: includes/class-frontend.php:156
 msgid "No forms yet. Create one under FormTheory first."
 msgstr ""
 
 #. translators: %d: form ID.
-#: includes/class-frontend.php:155
+#: includes/class-frontend.php:158
 #, php-format
 msgid "Form #%d (not found)"
 msgstr ""
 
-#: includes/class-frontend.php:261
+#: includes/class-frontend.php:264
 msgid "Saving is not available for this form."
 msgstr ""
 
-#: includes/class-frontend.php:265
+#: includes/class-frontend.php:268
 #: includes/class-recaptcha.php:89
 #: includes/class-spam.php:32
 #: includes/class-spam.php:42
 msgid "Spam check failed. Please try again."
 msgstr ""
 
-#: includes/class-frontend.php:268
+#: includes/class-frontend.php:271
 msgid "Your session expired. Please reload the page and try again."
 msgstr ""
 
-#: includes/class-frontend.php:286
+#: includes/class-frontend.php:289
 msgid "Too many requests."
 msgstr ""
 
 #. translators: %s: site name.
-#: includes/class-frontend.php:320
+#: includes/class-frontend.php:323
 #, php-format
 msgid "Your saved form on %s"
 msgstr ""
 
 #. translators: 1: site name, 2: resume link, 3: expiry date.
-#: includes/class-frontend.php:322
+#: includes/class-frontend.php:325
 #, php-format
 msgid ""
 "You saved your progress on a form at %1$s. Use this link to continue where you left off:\n"
@@ -1274,158 +1274,158 @@ msgid ""
 "The link works until %3$s. Anyone who has this link can see the answers you saved, so do not share it."
 msgstr ""
 
-#: includes/class-frontend.php:376
+#: includes/class-frontend.php:379
 msgid "This saved link has expired or is not valid."
 msgstr ""
 
-#: includes/class-frontend.php:383
+#: includes/class-frontend.php:386
 msgid "Your saved answers have been restored."
 msgstr ""
 
-#: includes/class-frontend.php:408
+#: includes/class-frontend.php:411
 msgid "Your session expired. Please submit again."
 msgstr ""
 
-#: includes/class-frontend.php:620
+#: includes/class-frontend.php:623
 msgid "Accepted"
 msgstr ""
 
-#: includes/class-frontend.php:696
-#: includes/class-frontend.php:719
+#: includes/class-frontend.php:699
+#: includes/class-frontend.php:722
 msgid "Too many rows."
 msgstr ""
 
-#: includes/class-frontend.php:744
-#: includes/class-frontend.php:757
+#: includes/class-frontend.php:747
+#: includes/class-frontend.php:760
 msgid "Choose a valid rating."
 msgstr ""
 
-#: includes/class-frontend.php:744
+#: includes/class-frontend.php:747
 msgid "Invalid value."
 msgstr ""
 
-#: includes/class-frontend.php:754
+#: includes/class-frontend.php:757
 msgid "Enter a valid date."
 msgstr ""
 
-#: includes/class-frontend.php:760
+#: includes/class-frontend.php:763
 msgid "Choose a valid option."
 msgstr ""
 
-#: includes/class-frontend.php:762
+#: includes/class-frontend.php:765
 msgid "Too long."
 msgstr ""
 
-#: includes/class-frontend.php:798
-#: includes/class-frontend.php:904
-#: includes/class-frontend.php:923
+#: includes/class-frontend.php:801
+#: includes/class-frontend.php:907
+#: includes/class-frontend.php:926
 msgid "Upload failed."
 msgstr ""
 
-#: includes/class-frontend.php:806
-#: includes/class-frontend.php:917
+#: includes/class-frontend.php:809
+#: includes/class-frontend.php:920
 msgid "File type not allowed."
 msgstr ""
 
-#: includes/class-frontend.php:831
+#: includes/class-frontend.php:834
 msgid "The signature could not be read. Please clear it and sign again."
 msgstr ""
 
-#: includes/class-frontend.php:837
-#: includes/class-frontend.php:844
+#: includes/class-frontend.php:840
+#: includes/class-frontend.php:847
 msgid "The signature image is too large. Please clear it and sign again."
 msgstr ""
 
-#: includes/class-frontend.php:939
+#: includes/class-frontend.php:942
 msgid "FormTheory: form not found."
 msgstr ""
 
-#: includes/class-frontend.php:1013
+#: includes/class-frontend.php:1016
 msgid "Leave empty"
 msgstr ""
 
 #. translators: %d: step number.
-#: includes/class-frontend.php:1035
+#: includes/class-frontend.php:1038
 #, php-format
 msgid "Step %d"
 msgstr ""
 
-#: includes/class-frontend.php:1050
+#: includes/class-frontend.php:1053
 msgid "Save and continue later"
 msgstr ""
 
-#: includes/class-frontend.php:1053
+#: includes/class-frontend.php:1056
 msgid "Previous"
 msgstr ""
 
-#: includes/class-frontend.php:1056
+#: includes/class-frontend.php:1059
 msgid "Next"
 msgstr ""
 
-#: includes/class-frontend.php:1061
+#: includes/class-frontend.php:1064
 msgid "This form needs JavaScript enabled for its spam check."
 msgstr ""
 
-#: includes/class-frontend.php:1071
+#: includes/class-frontend.php:1074
 msgid "Get a private link to finish this form later. Uploaded files and drawn signatures are not saved."
 msgstr ""
 
-#: includes/class-frontend.php:1072
+#: includes/class-frontend.php:1075
 msgid "Email me the link (optional)"
 msgstr ""
 
-#: includes/class-frontend.php:1074
+#: includes/class-frontend.php:1077
 msgid "Save my progress"
 msgstr ""
 
-#: includes/class-frontend.php:1077
+#: includes/class-frontend.php:1080
 msgid "Your link"
 msgstr ""
 
-#: includes/class-frontend.php:1079
+#: includes/class-frontend.php:1082
 msgid "Copy link"
 msgstr ""
 
-#: includes/class-frontend.php:1114
-#: includes/class-frontend.php:1275
+#: includes/class-frontend.php:1117
+#: includes/class-frontend.php:1278
 msgid "— Select —"
 msgstr ""
 
 #. translators: %d: row number.
-#: includes/class-frontend.php:1125
+#: includes/class-frontend.php:1128
 msgid "Remove row"
 msgstr ""
 
-#: includes/class-frontend.php:1149
+#: includes/class-frontend.php:1152
 msgid "(required)"
 msgstr ""
 
 #. translators: 1: chosen rating, 2: maximum rating (for example "3 of 5")
-#: includes/class-frontend.php:1186
+#: includes/class-frontend.php:1189
 #, php-format
 msgid "%1$d of %2$d"
 msgstr ""
 
 #. translators: %d: maximum number of rows.
-#: includes/class-frontend.php:1230
+#: includes/class-frontend.php:1233
 #, php-format
 msgid "Maximum of %d rows reached."
 msgstr ""
 
-#: includes/class-frontend.php:1249
+#: includes/class-frontend.php:1252
 msgid "Optional drawing area: sign with a mouse, pen or finger, or type your name below."
 msgstr ""
 
-#: includes/class-frontend.php:1250
+#: includes/class-frontend.php:1253
 msgid "Clear signature"
 msgstr ""
 
-#: includes/class-frontend.php:1252
+#: includes/class-frontend.php:1255
 msgid "Or type your full name to sign"
 msgstr ""
 
 #. translators: 1: extensions, 2: MB
-#: includes/class-frontend.php:1287
+#: includes/class-frontend.php:1290
 #, php-format
 msgid "Allowed: %1$s. Max %2$d MB."
 msgstr ""
