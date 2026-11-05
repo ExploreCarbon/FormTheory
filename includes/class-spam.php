@@ -27,6 +27,16 @@ class FormTheory_Spam {
 		return $time . '.' . wp_hash( 'formtheory_ts|' . $time );
 	}
 
+	/** Signed time-trap only (no Turnstile: its token is single use and must stay for the real submit). @return true|WP_Error */
+	public static function check_stamp( array $post ) {
+		$fail  = new WP_Error( 'ft_spam', __( 'Spam check failed. Please try again.', 'formtheory' ) );
+		$parts = explode( '.', (string) ( $post['ft_ts'] ?? '' ), 2 );
+		if ( 2 !== count( $parts ) || ! ctype_digit( $parts[0] ) || ! hash_equals( wp_hash( 'formtheory_ts|' . $parts[0] ), $parts[1] ) ) {
+			return $fail;
+		}
+		return time() - (int) $parts[0] < self::MIN_SECONDS ? $fail : true;
+	}
+
 	/** @return true|WP_Error */
 	public static function check( array $post ) {
 		$fail  = new WP_Error( 'ft_spam', __( 'Spam check failed. Please try again.', 'formtheory' ) );

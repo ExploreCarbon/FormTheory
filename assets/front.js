@@ -10,9 +10,133 @@
 		return str.replace(/%(?:(\d+)\$)?[sd]/g, function (m, pos) { return args[pos ? pos - 1 : n++]; });
 	}
 
+	// calc:start -- Mirror of FormTheory_Calc (tokenizer + shunting-yard; no eval/Function).
+	var CALC_PREC = { '+': 1, '-': 1, '*': 2, '/': 2, neg: 3 };
+	function compileFormula(s) {
+		s = String(s || '');
+		if (!s.length || s.length > 500) return null;
+		var out = [], ops = [], depth = 0, expect = true, i = 0, m;
+		var numRe = /^(?:\d+(?:\.\d+)?|\.\d+)/, refRe = /^\{field:([a-z0-9_]+)\}/;
+		while (i < s.length) {
+			var c = s.charAt(i);
+			if (c === ' ' || c === '\t' || c === '\n' || c === '\r') { i++; continue; }
+			if (expect) {
+				var rest = s.slice(i);
+				if ((m = numRe.exec(rest))) { out.push(['num', parseFloat(m[0])]); i += m[0].length; expect = false; }
+				else if ((m = refRe.exec(rest))) { out.push(['ref', m[1]]); i += m[0].length; expect = false; }
+				else if (c === '(') { if (++depth > 50) return null; ops.push('('); i++; }
+				else if (c === '-') { ops.push('neg'); i++; }
+				else if (c === '+') { i++; }
+				else return null;
+				continue;
+			}
+			if (c === ')') {
+				if (depth < 1) return null;
+				while (ops[ops.length - 1] !== '(') out.push(['op', ops.pop()]);
+				ops.pop(); depth--; i++;
+				continue;
+			}
+			if (!Object.prototype.hasOwnProperty.call(CALC_PREC, c) || c === 'neg') return null;
+			while (ops.length && ops[ops.length - 1] !== '(' && CALC_PREC[ops[ops.length - 1]] >= CALC_PREC[c]) out.push(['op', ops.pop()]);
+			ops.push(c); expect = true; i++;
+		}
+		if (expect || depth) return null;
+		while (ops.length) out.push(['op', ops.pop()]);
+		return out;
+	}
+	function toNumber(v) {
+		v = String(v == null ? '' : v).trim();
+		return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(v) ? parseFloat(v) : 0;
+	}
+	// getValue(id) returns the raw value of field id; non-numeric => 0. Null on syntax error / division by zero.
+	function evaluateFormula(formula, getValue) {
+		var rpn = compileFormula(formula);
+		if (!rpn) return null;
+		var st = [];
+		for (var k = 0; k < rpn.length; k++) {
+			var tk = rpn[k];
+			if (tk[0] === 'num') st.push(tk[1]);
+			else if (tk[0] === 'ref') st.push(toNumber(getValue(tk[1])));
+			else if (tk[1] === 'neg') st.push(-st.pop());
+			else {
+				var b = st.pop(), a = st.pop();
+				if (tk[1] === '+') st.push(a + b);
+				else if (tk[1] === '-') st.push(a - b);
+				else if (tk[1] === '*') st.push(a * b);
+				else { if (b === 0) return null; st.push(a / b); }
+			}
+		}
+		var r = st.pop();
+		return isFinite(r) ? r : null;
+	}
+	// Mirror of FormTheory_Calc::format(): half away from zero, fixed places, no "-0".
+	function formatCalc(v, d) {
+		d = Math.max(0, Math.min(6, parseInt(d, 10) || 0));
+		var p = Math.pow(10, d);
+		var r = (v < 0 ? -1 : 1) * Math.round(Math.abs(v) * p * (1 + Number.EPSILON)) / p;
+		if (r === 0) r = 0;
+		return r.toFixed(d);
+	}
+	// calc:end
+
+	// rep:start -- Pure repeater helpers (row re-indexing and limits); exercised from Node, no layout/global access.
+	// Rename one attribute value from row index `from` to `to`: name `ft[ID][from]...`, id/for `PREFIX-from-...`, row label id `PREFIX-rfrom-...`.
+	function repRename(val, prefix, name, from, to) {
+		var pairs = [
+			[name + '[' + from + ']', name + '[' + to + ']'],
+			[prefix + '-' + from + '-', prefix + '-' + to + '-'],
+			[prefix + '-r' + from + '-', prefix + '-r' + to + '-']
+		];
+		for (var i = 0; i < pairs.length; i++) {
+			if (val.indexOf(pairs[i][0]) === 0) return pairs[i][1] + val.slice(pairs[i][0].length);
+		}
+		return val;
+	}
+	// Re-index a row element (and its descendants) from index `from` to `to`; DOM use limited to get/setAttribute + querySelectorAll.
+	function repReindexRow(row, prefix, name, from, to) {
+		var nodes = [row].concat(Array.prototype.slice.call(row.querySelectorAll('[name],[id],[for],[aria-labelledby],[aria-describedby]')));
+		nodes.forEach(function (n) {
+			['name', 'id', 'for', 'aria-labelledby', 'aria-describedby'].forEach(function (a) {
+				var v = n.getAttribute(a);
+				if (v != null) n.setAttribute(a, repRename(v, prefix, name, from, to));
+			});
+		});
+		row.setAttribute('data-ft-rep-idx', String(to));
+	}
+	function repCanAdd(count, max) { return count < max; }
+	function repCanRemove(count, min) { return count > Math.max(1, min); }
+	// Rows a (possibly required) repeater needs: mirrors FormTheory_Frontend::validate_repeater().
+	function repNeed(required, min) { return Math.max(required ? 1 : 0, min); }
+	// After removing the row at `idx` leaving `count` rows: index of the row to focus, or -1 for the Add button.
+	function repFocusAfterRemove(idx, count) { return idx < count ? idx : -1; }
+	// rep:end
+
+	// Recompute every calc output in field order; later/unknown calc refs read as 0 (matches the server).
+	function updateCalcs(form) {
+		var outs = Array.prototype.slice.call(form.querySelectorAll('output[data-ft-calc]'));
+		var done = {};
+		var calcIds = {};
+		outs.forEach(function (o) { calcIds[o.closest('[data-ft-field]').getAttribute('data-ft-field')] = true; });
+		outs.forEach(function (o) {
+			var wrap = o.closest('[data-ft-field]');
+			var id = wrap.getAttribute('data-ft-field');
+			var r = evaluateFormula(o.getAttribute('data-ft-calc'), function (ref) {
+				if (calcIds[ref]) return done[ref] || ''; // '' when hidden (set below).
+				var v = fieldValue(form, ref);
+				return v.length ? v[0] : '';
+			});
+			var val = r === null ? '' : formatCalc(r, o.getAttribute('data-ft-decimals'));
+			done[id] = wrap.hidden ? '' : val; // Hidden calc feeds 0 into later formulas (server: compute() with $visible).
+			o.setAttribute('data-ft-value', val);
+			o.textContent = val === '' ? '' : (o.getAttribute('data-ft-prefix') || '') + val + (o.getAttribute('data-ft-suffix') || '');
+		});
+	}
+
 	function fieldValue(form, id) {
 		var wrap = form.querySelector('[data-ft-field="' + id + '"]');
 		if (!wrap || wrap.hidden) return [];
+		var calc = wrap.querySelector('output[data-ft-calc]');
+		if (calc) { var cv = calc.getAttribute('data-ft-value') || ''; return cv === '' ? [] : [cv]; }
 		var inputs = wrap.querySelectorAll('input, select, textarea');
 		var out = [];
 		inputs.forEach(function (el) {
@@ -70,19 +194,62 @@
 		if (ids.length) ctl.setAttribute('aria-describedby', ids.join(' ')); else ctl.removeAttribute('aria-describedby');
 	}
 
+	// Type-specific format message for one non-empty value, or ''.
+	function valueMsg(type, v) {
+		if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return t('invalid_email', 'Enter a valid email address.');
+		if (type === 'number' && isNaN(v)) return t('invalid_number', 'Enter a number.');
+		if (type === 'phone' && !/^[0-9 +().\-]{5,25}$/.test(v)) return t('invalid_phone', 'Enter a valid phone number.');
+		return '';
+	}
+
+	// Basic mirror of the server repeater rules: row count, per-column required, per-cell email/number/phone. First problem wins.
+	function repeaterMsg(wrap) {
+		var fs = wrap.querySelector('[data-ft-repeater]');
+		if (!fs) return '';
+		var isReq = wrap.getAttribute('data-ft-required') === '1';
+		var allRows = Array.prototype.slice.call(fs.querySelectorAll('[data-ft-rep-row]'));
+		var filled = allRows.filter(function (r) {
+			return Array.prototype.some.call(r.querySelectorAll('input, select, textarea'), function (c) { return c.value.trim() !== ''; });
+		});
+		if (!filled.length) return isReq ? t('required', 'This field is required.') : '';
+		var need = repNeed(isReq, parseInt(fs.getAttribute('data-ft-min'), 10) || 0);
+		if (filled.length < need) return need === 1 ? t('min_row', 'Add at least 1 row.') : fmt(t('min_rows', 'Add at least %d rows.'), need);
+		var kinds = { email: 'email', number: 'number', tel: 'phone' };
+		for (var i = 0; i < filled.length; i++) {
+			var ctls = filled[i].querySelectorAll('input, select, textarea');
+			for (var j = 0; j < ctls.length; j++) {
+				var c = ctls[j], v = c.value.trim(), m = '';
+				if (v === '') { if (c.getAttribute('aria-required') === 'true') m = t('required', 'This field is required.'); }
+				else m = valueMsg(kinds[c.type] || '', v);
+				if (m) {
+					var lab = filled[i].querySelector('label[for="' + c.id + '"]');
+					return fmt(t('row_error', 'Row %1$d, %2$s: %3$s'), allRows.indexOf(filled[i]) + 1, lab && lab.firstChild ? lab.firstChild.textContent.trim() : '', m);
+				}
+			}
+		}
+		return '';
+	}
+
 	function validateWrap(wrap) {
 		if (wrap.hidden) { setError(wrap, ''); return true; }
 		var type = wrap.getAttribute('data-ft-type');
 		var vals = fieldValue(wrap.closest('form'), wrap.getAttribute('data-ft-field'));
 		var msg = '';
-		if (!vals.length) {
+		if (type === 'repeater') {
+			msg = repeaterMsg(wrap);
+		} else if (type === 'address') {
+			// Mirror of the server rule: required = every part marked aria-required (all enabled parts but street2) filled.
+			var isReq = wrap.getAttribute('data-ft-required') === '1';
+			var anyFilled = vals.some(function (v) { return v.trim() !== ''; });
+			if (!anyFilled) {
+				if (isReq) msg = t('required', 'This field is required.');
+			} else if (isReq && Array.prototype.some.call(wrap.querySelectorAll('input[aria-required="true"]'), function (el) { return el.value.trim() === ''; })) {
+				msg = t('complete_address', 'Please complete the address.');
+			}
+		} else if (!vals.length) {
 			if (wrap.getAttribute('data-ft-required') === '1') msg = type === 'file' ? t('attach_file', 'Please attach a file.') : t('required', 'This field is required.');
-		} else if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vals[0])) {
-			msg = t('invalid_email', 'Enter a valid email address.');
-		} else if (type === 'number' && isNaN(vals[0])) {
-			msg = t('invalid_number', 'Enter a number.');
-		} else if (type === 'phone' && !/^[0-9 +().\-]{5,25}$/.test(vals[0])) {
-			msg = t('invalid_phone', 'Enter a valid phone number.');
+		} else if (valueMsg(type, vals[0])) {
+			msg = valueMsg(type, vals[0]);
 		} else if (type === 'file') {
 			var input = wrap.querySelector('input[type=file]');
 			var max = parseInt(input.getAttribute('data-ft-maxmb'), 10) || 0;
@@ -104,7 +271,159 @@
 		return !first;
 	}
 
+	// Progressive enhancement: reveals Add/Remove, clones the server-rendered <template>, keeps indexes contiguous.
+	function initRepeater(fs) {
+		var rowsBox = fs.querySelector('[data-ft-rep-rows]');
+		var tpl = fs.querySelector('template[data-ft-rep-template]');
+		var addBtn = fs.querySelector('[data-ft-rep-add]');
+		var maxMsg = fs.querySelector('[data-ft-rep-max]');
+		var live = fs.querySelector('[data-ft-rep-live]');
+		if (!rowsBox || !tpl || !tpl.content || !tpl.content.firstElementChild || !addBtn || !maxMsg || !live) return; // No template support: rows stay fixed.
+		var prefix = fs.getAttribute('data-ft-rep-prefix');
+		var name = fs.getAttribute('data-ft-rep-name');
+		var min = parseInt(fs.getAttribute('data-ft-min'), 10) || 0;
+		var max = parseInt(fs.getAttribute('data-ft-max'), 10) || 1;
+
+		function rows() { return Array.prototype.slice.call(rowsBox.querySelectorAll(':scope > [data-ft-rep-row]')); }
+		function say(msg) { live.textContent = ''; setTimeout(function () { live.textContent = msg; }, 30); }
+		function focusFirst(row) { var c = row.querySelector('input, select, textarea'); if (c) c.focus(); }
+		function sync() {
+			var rs = rows(), n = rs.length;
+			rs.forEach(function (r, i) {
+				var cur = r.getAttribute('data-ft-rep-idx');
+				if (cur !== String(i)) repReindexRow(r, prefix, name, cur, i);
+				r.querySelector('[data-ft-rep-title]').textContent = fmt(t('row_n', 'Row %d'), i + 1);
+				var rb = r.querySelector('[data-ft-rep-remove]');
+				rb.hidden = false;
+				rb.setAttribute('aria-label', fmt(t('remove_row_n', 'Remove row %d'), i + 1));
+				if (repCanRemove(n, min)) rb.removeAttribute('aria-disabled'); else rb.setAttribute('aria-disabled', 'true');
+			});
+			var full = !repCanAdd(n, max);
+			addBtn.hidden = false;
+			if (full) { addBtn.setAttribute('aria-disabled', 'true'); addBtn.setAttribute('aria-describedby', maxMsg.id); }
+			else { addBtn.removeAttribute('aria-disabled'); addBtn.removeAttribute('aria-describedby'); }
+			maxMsg.hidden = !full;
+		}
+
+		fs.addEventListener('click', function (e) {
+			var rm = e.target.closest('[data-ft-rep-remove]');
+			if (rm) {
+				if (rm.getAttribute('aria-disabled') === 'true') return;
+				var row = rm.closest('[data-ft-rep-row]');
+				var idx = rows().indexOf(row);
+				row.parentNode.removeChild(row);
+				sync();
+				var rs = rows(), j = repFocusAfterRemove(idx, rs.length);
+				if (j >= 0) focusFirst(rs[j]); else addBtn.focus();
+				say(t('row_removed', 'Row removed'));
+				return;
+			}
+			if (e.target.closest('[data-ft-rep-add]')) {
+				if (addBtn.getAttribute('aria-disabled') === 'true') return;
+				var fresh = tpl.content.firstElementChild.cloneNode(true);
+				rowsBox.appendChild(fresh);
+				repReindexRow(fresh, prefix, name, '__ROW__', rows().length - 1);
+				sync();
+				focusFirst(fresh);
+				say(t('row_added', 'Row added'));
+			}
+		});
+		sync();
+	}
+
+	// The resume token now lives in the hidden ft_resume input: drop it from the address bar so it is not
+	// kept in history or sent as a Referer by later navigations.
+	function stripResumeParam() {
+		if (!window.history || !history.replaceState || !window.URL) return;
+		try {
+			var u = new URL(window.location.href);
+			if (!u.searchParams.has('ft_resume')) return;
+			u.searchParams.delete('ft_resume');
+			history.replaceState(history.state, '', u.toString());
+		} catch (e) { /* old browser: leave the URL alone */ }
+	}
+
+	// Save and continue later: progressive enhancement (button and panel stay hidden without fetch/FormData).
+	function initSave(form, pages, getCurrent) {
+		var url = form.getAttribute('data-ft-save-url');
+		var panel = form.querySelector('[data-ft-save-panel]');
+		var openers = Array.prototype.slice.call(form.querySelectorAll('[data-ft-save]'));
+		if (!url || !panel || !openers.length || !window.fetch || !window.FormData) return;
+		var email = panel.querySelector('[data-ft-save-email]');
+		var go = panel.querySelector('[data-ft-save-go]');
+		var err = panel.querySelector('[data-ft-save-err]');
+		var result = panel.querySelector('[data-ft-save-result]');
+		var link = panel.querySelector('[data-ft-save-link]');
+		var copy = panel.querySelector('[data-ft-save-copy]');
+		var live = panel.querySelector('[data-ft-save-live]');
+		if (form.querySelector('input[name="ft_resume"]')) stripResumeParam();
+		openers.forEach(function (b) { b.hidden = false; });
+
+		function say(msg) { live.textContent = ''; setTimeout(function () { live.textContent = msg; }, 30); }
+		function showErr(msg) { err.textContent = msg; err.hidden = !msg; }
+
+		openers.forEach(function (b) {
+			b.addEventListener('click', function () {
+				var open = panel.hidden;
+				panel.hidden = !open;
+				openers.forEach(function (o) { o.setAttribute('aria-expanded', open ? 'true' : 'false'); });
+				if (open) {
+					// Keep the panel next to the button that opened it (each page has its own).
+					b.closest('.ft-nav').insertAdjacentElement('afterend', panel);
+					email.focus();
+				}
+			});
+		});
+
+		function save() {
+			var data = new FormData(form);
+			// Never upload files or drawn signatures with a draft.
+			form.querySelectorAll('input[type=file], [data-ft-sig-data]').forEach(function (el) { if (el.name) data.delete(el.name); });
+			data.delete('action');
+			data.append('action', 'formtheory_save_draft');
+			data.append('ft_page', String(getCurrent()));
+			data.append('_wp_http_referer', window.location.href.split('#')[0]);
+			if (email.value.trim()) data.append('email', email.value.trim());
+			showErr('');
+			go.disabled = true;
+			panel.setAttribute('aria-busy', 'true');
+			fetch(url, { method: 'POST', body: data, credentials: 'same-origin' })
+				.then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+				.then(function (res) {
+					go.disabled = false;
+					panel.removeAttribute('aria-busy');
+					if (!res || !res.ok || !res.url) {
+						showErr((res && res.error) || t('went_wrong', 'Something went wrong. Please reload the page before submitting again.'));
+						return;
+					}
+					link.value = res.url;
+					result.hidden = false;
+					say(res.emailed ? t('save_emailed', 'Your progress is saved and the link was emailed to you. You can also copy it below.') : t('save_saved', 'Your progress is saved. Copy the link below to continue later.'));
+					link.focus();
+					link.select();
+				})
+				.catch(function () {
+					go.disabled = false;
+					panel.removeAttribute('aria-busy');
+					showErr(t('went_wrong', 'Something went wrong. Please reload the page before submitting again.'));
+				});
+		}
+
+		go.addEventListener('click', save);
+		// Enter in the email box saves instead of submitting the whole form.
+		email.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+		copy.addEventListener('click', function () {
+			function manual() { link.focus(); link.select(); say(t('copy_manual', 'The link is selected. Copy it with your keyboard or menu.')); }
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(link.value).then(function () { say(t('link_copied', 'Link copied.')); }, manual);
+			} else {
+				manual();
+			}
+		});
+	}
+
 	function init(form) {
+		form.querySelectorAll('[data-ft-repeater]').forEach(initRepeater);
 		var pages = Array.prototype.slice.call(form.querySelectorAll('[data-ft-page]'));
 		var progress = form.querySelector('[data-ft-progress]');
 		var current = 0;
@@ -119,16 +438,19 @@
 			}
 		}
 
-		// Server errors: open first page containing one.
+		// Server errors: open first page containing one; otherwise a resumed draft's saved page.
 		var errPage = pages.findIndex(function (p) { return p.querySelector('.ft-has-error'); });
-		if (pages.length > 1) show(errPage > -1 ? errPage : 0, false);
+		var startPage = Math.min(Math.max(parseInt(form.getAttribute('data-ft-start-page'), 10) || 0, 0), Math.max(pages.length - 1, 0));
+		if (pages.length > 1) show(errPage > -1 ? errPage : startPage, false);
+		initSave(form, pages, function () { return current; });
 		var summary = form.querySelector('.ft-error-summary');
 		if (summary) summary.focus();
 
-		applyConditions(form);
-		form.addEventListener('input', function () { applyConditions(form); });
+		function refresh() { updateCalcs(form); applyConditions(form); updateCalcs(form); }
+		refresh();
+		form.addEventListener('input', refresh);
 		form.addEventListener('change', function (e) {
-			applyConditions(form);
+			refresh();
 			var w = e.target.closest('[data-ft-field]');
 			if (w && w.classList.contains('ft-has-error')) validateWrap(w);
 		});

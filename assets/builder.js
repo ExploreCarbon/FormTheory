@@ -26,7 +26,14 @@
 		});
 		return out;
 	}
-	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block' }, I18N.types || {});
+	var LABELS = Object.assign({ text: 'Text', email: 'Email', phone: 'Phone', number: 'Number', date: 'Date', textarea: 'Paragraph', select: 'Dropdown', radio: 'Radio buttons', checkbox: 'Checkboxes', file: 'File upload', page: 'Page break', hidden: 'Hidden', consent: 'Consent', html: 'HTML block', calc: 'Calculation', rating: 'Rating', address: 'Address', signature: 'Signature', repeater: 'Repeater' }, I18N.types || {});
+	var COL_TYPES = ['text', 'email', 'number', 'phone', 'date', 'textarea', 'select'];
+	var MAX_COLS = 6;
+	var ADDRESS_PARTS = ['street', 'street2', 'city', 'state', 'zip', 'country'];
+	var ADDRESS_DEFAULT = ['street', 'city', 'state', 'zip', 'country'];
+	var PART_LABELS = { street: 'Street address', street2: 'Apartment, suite, etc.', city: 'City', state: 'State / Province', zip: 'ZIP / Postal code', country: 'Country' };
+	// Structured types (mirror FormTheory_Fields::NON_COND_SOURCE) cannot be conditional-logic sources.
+	var NON_COND_SOURCE = ['address', 'signature', 'repeater'];
 	var OPS = Object.assign({ is: 'is', isnot: 'is not', contains: 'contains', gt: 'greater than', lt: 'less than', empty: 'is empty', notempty: 'is not empty' }, I18N.ops || {});
 	var uid = 0;
 
@@ -98,7 +105,7 @@
 		f.cond = f.cond || { enabled: false, action: 'show', logic: 'all', rules: [] };
 		var box = el('div', { class: 'ftb-cond' });
 		var others = {};
-		cfg.fields.forEach(function (o) { if (o.id !== f.id && o.type !== 'page' && o.type !== 'html') others[o.id] = (o.label || t('no_label', '(no label)')) + ' [' + o.id + ']'; });
+		cfg.fields.forEach(function (o) { if (o.id !== f.id && o.type !== 'page' && o.type !== 'html' && NON_COND_SOURCE.indexOf(o.type) === -1) others[o.id] = (o.label || t('no_label', '(no label)')) + ' [' + o.id + ']'; });
 
 		function draw() {
 			box.textContent = '';
@@ -152,7 +159,7 @@
 		item.cond = item.cond || newCond();
 		var box = el('div', { class: 'ftb-cond' });
 		var others = {};
-		cfg.fields.forEach(function (o) { if (o.type !== 'page' && o.type !== 'html') others[o.id] = (o.label || t('no_label', '(no label)')) + ' [' + o.id + ']'; });
+		cfg.fields.forEach(function (o) { if (o.type !== 'page' && o.type !== 'html' && NON_COND_SOURCE.indexOf(o.type) === -1) others[o.id] = (o.label || t('no_label', '(no label)')) + ' [' + o.id + ']'; });
 		function draw() {
 			box.textContent = '';
 			box.appendChild(check(labelText, item.cond.enabled, function (v) {
@@ -224,6 +231,52 @@
 		});
 	}
 
+	// Repeater columns: label, type, dropdown choices, required; focus is restored after every redraw (WCAG 2.4.3).
+	function columnsEditor(f) {
+		f.columns = Array.isArray(f.columns) ? f.columns : [];
+		var typeOpts = {};
+		COL_TYPES.forEach(function (k) { typeOpts[k] = LABELS[k] || k; });
+		var fs = el('fieldset', { class: 'ftb-cols' }, [el('legend', { text: t('repeater_columns', 'Columns (1-6)') })]);
+		function nextColId() {
+			var max = 0;
+			f.columns.forEach(function (c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10); if (n > max) max = n; });
+			return 'c' + (max + 1);
+		}
+		function draw(focus) {
+			while (fs.childNodes.length > 1) fs.removeChild(fs.lastChild);
+			f.columns.forEach(function (c, i) {
+				var lab = textIn(c.label, function (v) { c.label = v; });
+				lab.setAttribute('data-ftb-col', i + ':label');
+				var typ = select(typeOpts, c.type || 'text', function (v) { c.type = v; if (v === 'select' && !(c.options || []).length) c.options = [t('option_1', 'Option 1'), t('option_2', 'Option 2')]; draw(i + ':type'); });
+				typ.setAttribute('data-ftb-col', i + ':type');
+				var kids = [labelled(t('column_label', 'Column label'), lab), labelled(t('column_type', 'Column type'), typ)];
+				if (c.type === 'select') {
+					var ta = el('textarea', { rows: 3, class: 'large-text', oninput: function (e) { c.options = e.target.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); } });
+					ta.value = (c.options || []).join('\n');
+					kids.push(labelled(t('column_choices', 'Dropdown choices (one per line)'), ta));
+				}
+				kids.push(check(t('required', 'Required'), c.required, function (v) { c.required = v; }));
+				var rm = el('button', { type: 'button', class: 'button ftb-danger', text: t('remove', 'Remove'), 'aria-label': fmt(t('remove_column_n', 'Remove column %d'), i + 1), 'data-ftb-col': i + ':remove', onclick: function () {
+					if (f.columns.length <= 1) return;
+					f.columns.splice(i, 1); draw(Math.min(i, f.columns.length - 1) + ':label'); announce(t('column_removed', 'Column removed'));
+				} });
+				if (f.columns.length <= 1) rm.setAttribute('aria-disabled', 'true');
+				kids.push(rm);
+				fs.appendChild(el('div', { class: 'ftb-col', role: 'group', 'aria-label': fmt(t('column_n', 'Column %d'), i + 1) }, kids));
+			});
+			var add = el('button', { type: 'button', class: 'button', text: t('add_column', 'Add column'), 'data-ftb-col': 'add', onclick: function () {
+				if (f.columns.length >= MAX_COLS) return;
+				f.columns.push({ id: nextColId(), label: '', type: 'text', options: [], required: false });
+				draw((f.columns.length - 1) + ':label'); announce(t('column_added', 'Column added'));
+			} });
+			if (f.columns.length >= MAX_COLS) add.setAttribute('aria-disabled', 'true');
+			fs.appendChild(add);
+			if (focus) { var tg = fs.querySelector('[data-ftb-col="' + focus + '"]'); if (tg) tg.focus(); }
+		}
+		draw();
+		return fs;
+	}
+
 	function card(f, i) {
 		var n = cfg.fields.length;
 		function cardTitle(label) { var tl = LABELS[f.type] || f.type; return label ? fmt(t('card_title', '%1$s: %2$s'), tl, label) : tl; }
@@ -244,7 +297,73 @@
 			rich.value = f[key] || '';
 			body.appendChild(labelled(f.type === 'consent' ? t('consent_text', 'Consent text (HTML links allowed)') : t('html_content', 'HTML content'), rich));
 		}
-		if (['page', 'html', 'hidden'].indexOf(f.type) === -1) {
+		if (f.type === 'calc') {
+			var refs = [];
+			for (var ri = 0; ri < i; ri++) { var o = cfg.fields[ri]; if (o.type !== 'page' && o.type !== 'html') refs.push('{field:' + o.id + '}'); }
+			var hintId = 'ftb-' + (++uid);
+			var fx = textIn(f.formula, function (v) { f.formula = v; });
+			fx.setAttribute('aria-describedby', hintId);
+			fx.setAttribute('spellcheck', 'false');
+			body.appendChild(labelled(t('formula', 'Formula'), fx));
+			body.appendChild(el('p', { class: 'description', id: hintId, text: refs.length ? fmt(t('formula_hint', 'Use numbers, + - * /, parentheses and field references: %s'), refs.join(', ')) : t('formula_no_refs', 'Use numbers, + - * / and parentheses. Add fields above this one to reference them.') }));
+			var dec = {}; for (var dn = 0; dn <= 6; dn++) dec[dn] = String(dn);
+			body.appendChild(labelled(t('decimals', 'Decimal places'), select(dec, String(f.decimals == null ? 2 : f.decimals), function (v) { f.decimals = parseInt(v, 10); })));
+			var pre = textIn(f.prefix, function (v) { f.prefix = v; }); pre.maxLength = 20;
+			body.appendChild(labelled(t('prefix', 'Prefix (for example $)'), pre));
+			var suf = textIn(f.suffix, function (v) { f.suffix = v; }); suf.maxLength = 20;
+			body.appendChild(labelled(t('suffix', 'Suffix (for example kg)'), suf));
+			body.appendChild(labelled(t('help_text', 'Help text'), textIn(f.help, function (v) { f.help = v; })));
+		}
+		if (f.type === 'rating') {
+			var rm = textIn(f.max == null ? 5 : f.max, function (v) { var n = parseInt(v, 10); f.max = isNaN(n) ? 5 : Math.max(3, Math.min(10, n)); }, 'number');
+			rm.min = 3; rm.max = 10;
+			body.appendChild(labelled(t('rating_max', 'Number of stars (3-10)'), rm));
+		}
+		if (f.type === 'repeater') {
+			body.appendChild(columnsEditor(f));
+			var minIn = textIn(f.min_rows == null ? 1 : f.min_rows, function () {}, 'number');
+			var maxIn = textIn(f.max_rows == null ? 5 : f.max_rows, function () {}, 'number');
+			minIn.min = 0; minIn.max = 20; maxIn.min = 1; maxIn.max = 20;
+			// Typing only stores the in-range value; the min <= max reconciliation, display rewrite and announcement wait for `change` (blur/Enter).
+			minIn.addEventListener('input', function (e) {
+				var n = parseInt(e.target.value, 10);
+				f.min_rows = isNaN(n) ? 1 : Math.max(0, Math.min(20, n));
+			});
+			maxIn.addEventListener('input', function (e) {
+				var n = parseInt(e.target.value, 10);
+				f.max_rows = isNaN(n) ? 5 : Math.max(1, Math.min(20, n));
+			});
+			function reconcileRows() {
+				var lo = f.min_rows == null ? 1 : f.min_rows;
+				var hi = f.max_rows == null ? 5 : f.max_rows;
+				minIn.value = String(lo);
+				if (hi < lo) {
+					f.max_rows = lo;
+					maxIn.value = String(lo);
+					announce(fmt(t('max_rows_raised', 'Maximum rows raised to %d to match the minimum.'), lo));
+				} else {
+					maxIn.value = String(hi);
+				}
+			}
+			minIn.addEventListener('change', reconcileRows);
+			maxIn.addEventListener('change', reconcileRows);
+			body.appendChild(labelled(t('min_rows_label', 'Minimum rows (0-20)'), minIn));
+			body.appendChild(labelled(t('max_rows_label', 'Maximum rows (1-20)'), maxIn));
+			var addIn = textIn(f.add_label, function (v) { f.add_label = v; }); addIn.maxLength = 60;
+			body.appendChild(labelled(t('add_row_label', 'Add button text'), addIn));
+		}
+		if (f.type === 'address') {
+			if (!Array.isArray(f.parts) || !f.parts.length) f.parts = ADDRESS_DEFAULT.slice();
+			var pfs = el('fieldset', { class: 'ftb-parts' }, [el('legend', { text: t('address_parts', 'Address parts to show') })]);
+			ADDRESS_PARTS.forEach(function (part) {
+				pfs.appendChild(check(t('part_' + part, PART_LABELS[part]), f.parts.indexOf(part) !== -1, function (v) {
+					f.parts = ADDRESS_PARTS.filter(function (p) { return p === part ? v : f.parts.indexOf(p) !== -1; });
+				}));
+			});
+			body.appendChild(pfs);
+			body.appendChild(labelled(t('country_default', 'Default country (optional)'), textIn(f.country_default, function (v) { f.country_default = v; })));
+		}
+		if (['page', 'html', 'hidden', 'calc'].indexOf(f.type) === -1) {
 			body.appendChild(check(t('required', 'Required'), f.required, function (v) { f.required = v; }));
 			if (['text', 'email', 'phone', 'number', 'textarea', 'select'].indexOf(f.type) !== -1) {
 				body.appendChild(labelled(t('placeholder', 'Placeholder'), textIn(f.placeholder, function (v) { f.placeholder = v; })));
@@ -299,6 +418,10 @@
 			palette.appendChild(el('button', { type: 'button', class: 'button', text: LABELS[tp] || tp, onclick: function () {
 				var f = { id: nextId(), type: tp, label: tp === 'page' ? '' : LABELS[tp], required: false, options: ['select', 'radio', 'checkbox'].indexOf(tp) !== -1 ? [t('option_1', 'Option 1'), t('option_2', 'Option 2')] : [], cond: { enabled: false, action: 'show', logic: 'all', rules: [] } };
 				if (tp === 'file') { f.allowed = 'jpg,jpeg,png,pdf'; f.max_mb = 5; }
+				if (tp === 'rating') f.max = 5;
+				if (tp === 'repeater') { f.columns = [{ id: 'c1', label: fmt(t('column_n', 'Column %d'), 1), type: 'text', options: [], required: false }]; f.min_rows = 1; f.max_rows = 5; f.add_label = ''; }
+				if (tp === 'address') { f.parts = ADDRESS_DEFAULT.slice(); f.country_default = ''; }
+				if (tp === 'calc') { f.formula = ''; f.decimals = 2; f.prefix = ''; f.suffix = ''; }
 				cfg.fields.push(f);
 				render(f.id, null, true);
 				announce(fmt(t('field_added', '%s field added'), LABELS[tp] || tp));
@@ -319,6 +442,7 @@
 		conf.value = cfg.confirmation || '';
 		settings.appendChild(labelled(t('confirmation_msg', 'Confirmation message'), conf));
 		settings.appendChild(check(t('ajax', 'Submit without page reload (AJAX)'), cfg.ajax !== false, function (v) { cfg.ajax = v; }));
+		settings.appendChild(check(t('save_resume', 'Allow visitors to save and continue later'), !!cfg.save_resume, function (v) { cfg.save_resume = v; }));
 		var afterSel = select({ message: t('show_message', 'Show message'), page: t('go_to_page', 'Go to page (ID)'), redirect: t('redirect_to_url', 'Redirect to URL') }, cfg.confirmation_type || 'message', function (v) { cfg.confirmation_type = v; render(); var again = root.querySelector('[data-ftb-after]'); if (again) again.focus(); });
 		afterSel.setAttribute('data-ftb-after', '1');
 		settings.appendChild(labelled(t('after_submit', 'After submit'), afterSel));

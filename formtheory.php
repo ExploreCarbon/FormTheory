@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FormTheory
  * Description: Lightweight form builder: conditional logic, file uploads, multi-page forms, entries, CSV export, email notifications.
- * Version: 1.2.0
+ * Version: 1.3.0
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * License: GPL-2.0-or-later
@@ -12,13 +12,15 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FORMTHEORY_VERSION', '1.2.0' );
+define( 'FORMTHEORY_VERSION', '1.3.0' );
 define( 'FORMTHEORY_FILE', __FILE__ );
 define( 'FORMTHEORY_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FORMTHEORY_URL', plugin_dir_url( __FILE__ ) );
 
 require_once FORMTHEORY_DIR . 'includes/class-db.php';
 require_once FORMTHEORY_DIR . 'includes/class-fields.php';
+require_once FORMTHEORY_DIR . 'includes/class-drafts.php';
+require_once FORMTHEORY_DIR . 'includes/class-calc.php';
 require_once FORMTHEORY_DIR . 'includes/class-merge.php';
 require_once FORMTHEORY_DIR . 'includes/class-spam.php';
 require_once FORMTHEORY_DIR . 'includes/class-notify.php';

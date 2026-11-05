@@ -34,10 +34,7 @@ class FormTheory_Merge {
 
 	/** Plain-text value of a stored entry value. */
 	public static function plain( $val ) {
-		if ( is_array( $val ) ) {
-			return isset( $val['file'] ) ? (string) ( $val['name'] ?? '' ) : implode( ', ', array_map( 'strval', $val ) );
-		}
-		return (string) $val;
+		return FormTheory_Fields::value_to_text( $val );
 	}
 
 	/** Returns null for an unknown tag. */

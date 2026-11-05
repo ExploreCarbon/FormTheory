@@ -14,6 +14,8 @@
 .ftb-row label { display: block; font-weight: 600; margin-bottom: .2rem; }
 .ftb-check { display: flex; align-items: center; gap: .4rem; }
 .ftb-check label { display: inline; margin: 0; }
+.ftb-parts { border: 0; margin: 0 0 .5rem; padding: 0; }
+.ftb-parts legend { font-weight: 600; margin-bottom: .2rem; }
 .ftb-inline { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
 .ftb-inline .button-link, .ftb-card .button-link { display: inline-flex; align-items: center; min-height: 24px; min-width: 24px; padding: 0 .35rem; }
 .ftb-check input[type="checkbox"] { min-width: 24px; min-height: 24px; }
@@ -29,3 +31,6 @@
 #ft-bulk-form .check-column { width: 2.5rem; padding: .5rem; }
 #ft-bulk-form input[type="checkbox"] { min-width: 24px; min-height: 24px; }
 .ft-notes textarea:focus-visible, #ft-bulk-form :focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+.ftb-cols { border: 0; margin: 0 0 .5rem; padding: 0; }
+.ftb-cols legend { font-weight: 600; margin-bottom: .2rem; }
+.ftb-col { margin: 0 0 .75rem; padding: .5rem; border: 1px solid #c3c4c7; }

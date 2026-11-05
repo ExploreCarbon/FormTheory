@@ -6,7 +6,17 @@ defined( 'ABSPATH' ) || exit;
  */
 class FormTheory_Fields {
 
-	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html' );
+	const TYPES = array( 'text', 'email', 'phone', 'number', 'date', 'textarea', 'select', 'radio', 'checkbox', 'file', 'page', 'hidden', 'consent', 'html', 'calc', 'rating', 'address', 'signature', 'repeater' );
+	/** Types whose value is structured: never a conditional-logic source. */
+	const NON_COND_SOURCE = array( 'address', 'signature', 'repeater' );
+	/** Repeater column types, the column cap, and ids value_to_text() treats as markers. */
+	const REPEATER_COL_TYPES = array( 'text', 'email', 'number', 'phone', 'date', 'textarea', 'select' );
+	const REPEATER_MAX_COLS  = 6;
+	const REPEATER_RESERVED  = array( 'file', 'sig', 'typed' );
+	/** Address parts in canonical (render and storage) order. */
+	const ADDRESS_PARTS = array( 'street', 'street2', 'city', 'state', 'zip', 'country' );
+	/** Address parts enabled when none are configured. */
+	const ADDRESS_DEFAULT_PARTS = array( 'street', 'city', 'state', 'zip', 'country' );
 	/** Layout-only types: never validated or stored. */
 	const NON_DATA = array( 'page', 'html' );
 	const OPS   = array( 'is', 'isnot', 'contains', 'gt', 'lt', 'empty', 'notempty' );
@@ -28,6 +38,7 @@ class FormTheory_Fields {
 		$cfg['confirmation']   = wp_kses_post( $raw['confirmation'] ?? '' );
 		$cfg['notify_subject'] = sanitize_text_field( $raw['notify_subject'] ?? '' );
 		$cfg['ajax']              = ! array_key_exists( 'ajax', $raw ) || ! empty( $raw['ajax'] );
+		$cfg['save_resume']       = ! empty( $raw['save_resume'] );
 		$cfg['confirmation_type'] = in_array( $raw['confirmation_type'] ?? '', array( 'message', 'page', 'redirect' ), true ) ? $raw['confirmation_type'] : 'message';
 		$cfg['confirmation_page'] = absint( $raw['confirmation_page'] ?? 0 );
 		$cfg['confirmation_url']  = self::sanitize_url_template( $raw['confirmation_url'] ?? '' );
@@ -50,7 +61,7 @@ class FormTheory_Fields {
 				'id'          => $id,
 				'type'        => $type,
 				'label'       => sanitize_text_field( $f['label'] ?? '' ),
-				'required'    => ! empty( $f['required'] ) && ! in_array( $type, array( 'page', 'html', 'hidden' ), true ),
+				'required'    => ! empty( $f['required'] ) && ! in_array( $type, array( 'page', 'html', 'hidden', 'calc' ), true ),
 				'placeholder' => sanitize_text_field( $f['placeholder'] ?? '' ),
 				'help'        => sanitize_text_field( $f['help'] ?? '' ),
 				'options'     => array(),
@@ -70,6 +81,23 @@ class FormTheory_Fields {
 				$field['allowed'] = implode( ',', array_diff( $exts, self::BLOCKED_EXT ) );
 				$field['max_mb']  = max( 1, min( 100, (int) ( $f['max_mb'] ?? 5 ) ) );
 			}
+			if ( 'rating' === $type ) {
+				$field['max'] = self::rating_max( $f['max'] ?? 5 );
+			}
+			if ( 'address' === $type ) {
+				$field['parts']           = self::address_parts( $f['parts'] ?? array() );
+				$field['country_default'] = mb_substr( sanitize_text_field( $f['country_default'] ?? '' ), 0, 100 );
+			}
+			if ( 'repeater' === $type ) {
+				$field['columns']   = self::repeater_columns( $f['columns'] ?? array() );
+				$field['min_rows']  = is_numeric( $f['min_rows'] ?? null ) ? max( 0, min( 20, (int) $f['min_rows'] ) ) : 1;
+				$field['max_rows']  = max( $field['min_rows'], is_numeric( $f['max_rows'] ?? null ) ? max( 1, min( 20, (int) $f['max_rows'] ) ) : 5 );
+				$add_label          = mb_substr( sanitize_text_field( $f['add_label'] ?? '' ), 0, 60 );
+				$field['add_label'] = '' !== $add_label ? $add_label : __( 'Add row', 'formtheory' );
+				if ( ! $field['columns'] ) {
+					$field['required'] = false; // Nothing to fill in, so it can never be satisfied.
+				}
+			}
 			if ( 'hidden' === $type ) {
 				$field['default'] = sanitize_text_field( $f['default'] ?? '' );
 			}
@@ -79,8 +107,21 @@ class FormTheory_Fields {
 			if ( 'html' === $type ) {
 				$field['content'] = wp_kses_post( $f['content'] ?? '' );
 			}
+			if ( 'calc' === $type ) {
+				$formula           = trim( (string) ( $f['formula'] ?? '' ) );
+				$field['formula']  = FormTheory_Calc::is_valid( $formula ) ? $formula : '';
+				$field['decimals'] = max( 0, min( 6, (int) ( $f['decimals'] ?? 2 ) ) );
+				$field['prefix']   = mb_substr( sanitize_text_field( $f['prefix'] ?? '' ), 0, 20 );
+				$field['suffix']   = mb_substr( sanitize_text_field( $f['suffix'] ?? '' ), 0, 20 );
+			}
 			$field['cond'] = self::sanitize_cond( $f['cond'] ?? array() );
 			$fields[]      = $field;
+		}
+		// A calc field with no (valid) formula, and structured types (address, ...), are never condition sources.
+		foreach ( $fields as $cf ) {
+			if ( ( 'calc' === $cf['type'] && '' === $cf['formula'] ) || in_array( $cf['type'], self::NON_COND_SOURCE, true ) ) {
+				unset( $ids[ $cf['id'] ] );
+			}
 		}
 		// Drop condition rules pointing to unknown fields.
 		foreach ( $fields as &$field ) {
@@ -246,6 +287,117 @@ class FormTheory_Fields {
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Plain-text form of any stored value (scalar, list, file, signature,
+	 * address parts, repeater rows).
+	 */
+	public static function value_to_text( $value ) {
+		if ( ! is_array( $value ) ) {
+			return is_scalar( $value ) ? (string) $value : '';
+		}
+		if ( isset( $value['file'] ) ) {
+			return (string) ( $value['name'] ?? '' );
+		}
+		if ( isset( $value['sig'] ) ) {
+			/* translators: %s: name typed by the signer. */
+			return trim( sprintf( __( '[signature] %s', 'formtheory' ), (string) ( $value['name'] ?? '' ) ) );
+		}
+		if ( isset( $value['typed'] ) ) {
+			/* translators: %s: name typed as a signature. */
+			return sprintf( __( '%s (typed)', 'formtheory' ), (string) $value['typed'] );
+		}
+		$is_list = array_keys( $value ) === range( 0, count( $value ) - 1 );
+		if ( $is_list && $value && is_array( reset( $value ) ) ) {
+			$rows = array();
+			foreach ( $value as $row ) {
+				$t = self::value_to_text( $row );
+				if ( '' !== $t ) {
+					$rows[] = $t;
+				}
+			}
+			return implode( '; ', $rows );
+		}
+		$parts = array();
+		foreach ( $value as $v ) {
+			$t = self::value_to_text( $v );
+			if ( '' !== $t ) {
+				$parts[] = $t;
+			}
+		}
+		return implode( ', ', $parts );
+	}
+
+	/** Whitelisted address parts in canonical order; empty or invalid input falls back to the defaults. */
+	public static function address_parts( $raw ) {
+		$parts = array_values( array_intersect( self::ADDRESS_PARTS, is_array( $raw ) ? array_filter( $raw, 'is_string' ) : array() ) );
+		return $parts ? $parts : self::ADDRESS_DEFAULT_PARTS;
+	}
+
+	/**
+	 * Repeater columns: 1-6 of { id, label, type, options, required }. Invalid
+	 * types, reserved marker ids (file/sig/typed) and duplicate ids are dropped;
+	 * a missing, unusable or all-digit id gets a server-generated cN id.
+	 */
+	public static function repeater_columns( $raw ) {
+		$raw  = is_array( $raw ) ? $raw : array();
+		$used = array();
+		// Ids the visitor-supplied columns ask for, so generated ids never collide with a later explicit one.
+		foreach ( $raw as $c ) {
+			if ( is_array( $c ) ) {
+				$used[ self::column_id( $c['id'] ?? '' ) ] = true;
+			}
+		}
+		$out  = array();
+		$seen = array();
+		$next = 0;
+		foreach ( $raw as $c ) {
+			if ( ! is_array( $c ) || ! in_array( $c['type'] ?? '', self::REPEATER_COL_TYPES, true ) ) {
+				continue;
+			}
+			$id = self::column_id( $c['id'] ?? '' );
+			if ( in_array( $id, self::REPEATER_RESERVED, true ) || isset( $seen[ $id ] ) ) {
+				continue;
+			}
+			if ( '' === $id ) {
+				do {
+					$id = 'c' . ( ++$next );
+				} while ( isset( $used[ $id ] ) || isset( $seen[ $id ] ) );
+			}
+			$seen[ $id ] = true;
+			$options     = array();
+			if ( 'select' === $c['type'] ) {
+				foreach ( (array) ( $c['options'] ?? array() ) as $o ) {
+					$o = is_string( $o ) ? sanitize_text_field( $o ) : '';
+					if ( '' !== $o ) {
+						$options[] = $o;
+					}
+				}
+			}
+			$out[] = array(
+				'id'       => $id,
+				'label'    => mb_substr( sanitize_text_field( is_string( $c['label'] ?? '' ) ? ( $c['label'] ?? '' ) : '' ), 0, 100 ),
+				'type'     => $c['type'],
+				'options'  => $options,
+				'required' => ! empty( $c['required'] ),
+			);
+			if ( count( $out ) >= self::REPEATER_MAX_COLS ) {
+				break;
+			}
+		}
+		return $out;
+	}
+
+	/** Column id from the safe pattern [a-z0-9_]+; '' when empty or all digits (PHP would turn those into int keys). */
+	private static function column_id( $raw ) {
+		$id = preg_replace( '/[^a-z0-9_]/', '', strtolower( is_string( $raw ) ? $raw : '' ) );
+		return ctype_digit( $id ) ? '' : $id;
+	}
+
+	/** Rating scale size: integer 3-10, default 5 for missing or non-numeric input. */
+	public static function rating_max( $v ) {
+		return is_numeric( $v ) ? max( 3, min( 10, (int) $v ) ) : 5;
 	}
 
 	/** Mirror of assets/front.js evaluateRule(). */

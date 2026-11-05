@@ -16,7 +16,12 @@ class FormTheory_Webhooks {
 	public static function payload( array $form, array $data, $entry_id ) {
 		$fields = array();
 		foreach ( $data as $id => $v ) {
-			$fields[ $id ] = ( is_array( $v ) && isset( $v['file'] ) ) ? (string) ( $v['name'] ?? '' ) : $v;
+			if ( is_array( $v ) && ( isset( $v['file'] ) || isset( $v['sig'] ) ) ) {
+				$v = (string) ( $v['name'] ?? '' );
+			} elseif ( is_array( $v ) && isset( $v['typed'] ) ) {
+				$v = (string) $v['typed'];
+			}
+			$fields[ $id ] = $v;
 		}
 		return array(
 			'form_id'      => (int) $form['id'],

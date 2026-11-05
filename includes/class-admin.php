@@ -65,6 +65,11 @@ class FormTheory_Admin {
 				'hidden'   => __( 'Hidden', 'formtheory' ),
 				'consent'  => __( 'Consent', 'formtheory' ),
 				'html'     => __( 'HTML block', 'formtheory' ),
+				'calc'     => __( 'Calculation', 'formtheory' ),
+				'rating'   => __( 'Rating', 'formtheory' ),
+				'address'  => __( 'Address', 'formtheory' ),
+				'signature' => __( 'Signature', 'formtheory' ),
+				'repeater' => __( 'Repeater', 'formtheory' ),
 			),
 			'ops'              => array(
 				'is'       => __( 'is', 'formtheory' ),
@@ -97,6 +102,38 @@ class FormTheory_Admin {
 			'add_rule'         => __( 'Add rule', 'formtheory' ),
 			/* translators: %s: list of merge tags. Do not translate the tags. */
 			'merge_tags'       => __( 'Merge tags: %s', 'formtheory' ),
+			'formula'          => __( 'Formula', 'formtheory' ),
+			/* translators: %s: list of field references such as {field:qty}. Do not translate the references. */
+			'formula_hint'     => __( 'Use numbers, + - * /, parentheses and field references: %s', 'formtheory' ),
+			'formula_no_refs'  => __( 'Use numbers, + - * / and parentheses. Add fields above this one to reference them.', 'formtheory' ),
+			'decimals'         => __( 'Decimal places', 'formtheory' ),
+			'rating_max'       => __( 'Number of stars (3-10)', 'formtheory' ),
+			'address_parts'    => __( 'Address parts to show', 'formtheory' ),
+			'country_default'  => __( 'Default country (optional)', 'formtheory' ),
+			'part_street'      => __( 'Street address', 'formtheory' ),
+			'part_street2'     => __( 'Apartment, suite, etc.', 'formtheory' ),
+			'part_city'        => __( 'City', 'formtheory' ),
+			'part_state'       => __( 'State / Province', 'formtheory' ),
+			'part_zip'         => __( 'ZIP / Postal code', 'formtheory' ),
+			'part_country'     => __( 'Country', 'formtheory' ),
+			'repeater_columns' => __( 'Columns (1-6)', 'formtheory' ),
+			/* translators: %d: column number. */
+			'column_n'         => __( 'Column %d', 'formtheory' ),
+			/* translators: %d: column number. */
+			'remove_column_n'  => __( 'Remove column %d', 'formtheory' ),
+			'column_label'     => __( 'Column label', 'formtheory' ),
+			'column_type'      => __( 'Column type', 'formtheory' ),
+			'column_choices'   => __( 'Dropdown choices (one per line)', 'formtheory' ),
+			'add_column'       => __( 'Add column', 'formtheory' ),
+			'column_added'     => __( 'Column added', 'formtheory' ),
+			'column_removed'   => __( 'Column removed', 'formtheory' ),
+			'min_rows_label'   => __( 'Minimum rows (0-20)', 'formtheory' ),
+			'max_rows_label'   => __( 'Maximum rows (1-20)', 'formtheory' ),
+			/* translators: %d: maximum number of rows. */
+			'max_rows_raised'  => __( 'Maximum rows raised to %d to match the minimum.', 'formtheory' ),
+			'add_row_label'    => __( 'Add button text', 'formtheory' ),
+			'prefix'           => __( 'Prefix (for example $)', 'formtheory' ),
+			'suffix'           => __( 'Suffix (for example kg)', 'formtheory' ),
 			'notifications'    => __( 'Notifications', 'formtheory' ),
 			/* translators: %d: notification number. */
 			'notification_n'   => __( 'Notification %d', 'formtheory' ),
@@ -166,6 +203,7 @@ class FormTheory_Admin {
 			'submit_text'      => __( 'Submit button text', 'formtheory' ),
 			'confirmation_msg' => __( 'Confirmation message', 'formtheory' ),
 			'ajax'             => __( 'Submit without page reload (AJAX)', 'formtheory' ),
+			'save_resume'      => __( 'Allow visitors to save and continue later', 'formtheory' ),
 			'after_submit'     => __( 'After submit', 'formtheory' ),
 			'show_message'     => __( 'Show message', 'formtheory' ),
 			'go_to_page'       => __( 'Go to page (ID)', 'formtheory' ),
@@ -392,6 +430,11 @@ class FormTheory_Admin {
 			if ( is_array( $val ) && isset( $val['file'] ) ) {
 				$url = $this->action_url( 'formtheory_file', array( 'entry' => (int) $entry['id'], 'field' => $f['id'] ) );
 				echo '<a href="' . esc_url( $url ) . '">' . esc_html( $val['name'] ) . '</a>';
+			} elseif ( is_array( $val ) && isset( $val['sig'] ) ) {
+				$url = $this->action_url( 'formtheory_file', array( 'entry' => (int) $entry['id'], 'field' => $f['id'] ) );
+				/* translators: %s: field label. */
+				$alt = sprintf( __( 'Signature drawn for %s', 'formtheory' ), $f['label'] );
+				echo '<img class="ft-sig-img" src="' . esc_url( $url ) . '" alt="' . esc_attr( $alt ) . '" style="max-width:100%;height:auto;background:#fff;border:1px solid #8c8f94">';
 			} else {
 				echo nl2br( esc_html( $this->plain_value( $val ) ) );
 			}
@@ -534,10 +577,7 @@ class FormTheory_Admin {
 	}
 
 	public function plain_value( $val ) {
-		if ( is_array( $val ) ) {
-			return isset( $val['file'] ) ? (string) $val['name'] : implode( ', ', array_map( 'strval', $val ) );
-		}
-		return (string) $val;
+		return FormTheory_Fields::value_to_text( $val );
 	}
 
 	private function notice() {
@@ -776,22 +816,50 @@ class FormTheory_Admin {
 		exit;
 	}
 
+	/**
+	 * Download headers for a stored value. image/png inline only for a drawn
+	 * signature ('sig') whose bytes start with the PNG magic; everything else
+	 * is an octet-stream attachment. Always nosniff.
+	 *
+	 * @param array  $val  Stored entry value.
+	 * @param string $head First 8 bytes of the stored file.
+	 * @return string[]
+	 */
+	public static function file_headers( array $val, $head ) {
+		$is_png = isset( $val['sig'] ) && ! isset( $val['file'] ) && "\x89PNG\r\n\x1a\n" === $head;
+		$name   = str_replace( array( '"', '\\', "\r", "\n" ), '', (string) ( $val['name'] ?? '' ) );
+		if ( '' === $name ) {
+			$name = 'download';
+		}
+		return array(
+			'Content-Type: ' . ( $is_png ? 'image/png' : 'application/octet-stream' ),
+			'X-Content-Type-Options: nosniff',
+			'Content-Disposition: ' . ( $is_png ? 'inline' : 'attachment' ) . '; filename="' . $name . '"',
+		);
+	}
+
 	public function handle_file() {
 		$this->guard( 'formtheory_file' );
 		$entry = FormTheory_DB::get_entry( isset( $_GET['entry'] ) ? absint( $_GET['entry'] ) : 0 );
 		$field = isset( $_GET['field'] ) ? sanitize_key( $_GET['field'] ) : '';
 		$val   = $entry['data'][ $field ] ?? null;
-		if ( ! is_array( $val ) || empty( $val['file'] ) ) {
+		$stored = is_array( $val ) ? ( $val['file'] ?? ( $val['sig'] ?? '' ) ) : '';
+		if ( ! is_string( $stored ) || '' === $stored ) {
 			wp_die( esc_html__( 'File not found.', 'formtheory' ), 404 );
 		}
-		$path = FormTheory_DB::upload_dir() . '/' . basename( $val['file'] );
+		$path = FormTheory_DB::upload_dir() . '/' . basename( $stored );
 		if ( ! is_file( $path ) ) {
 			wp_die( esc_html__( 'File not found.', 'formtheory' ), 404 );
 		}
+		$fh   = fopen( $path, 'rb' );
+		$head = $fh ? (string) fread( $fh, 8 ) : '';
+		if ( $fh ) {
+			fclose( $fh );
+		}
 		nocache_headers();
-		header( 'Content-Type: application/octet-stream' );
-		header( 'X-Content-Type-Options: nosniff' );
-		header( 'Content-Disposition: attachment; filename="' . str_replace( array( '"', "\r", "\n" ), '', $val['name'] ) . '"' );
+		foreach ( self::file_headers( $val, $head ) as $h ) {
+			header( $h );
+		}
 		header( 'Content-Length: ' . filesize( $path ) );
 		readfile( $path );
 		exit;

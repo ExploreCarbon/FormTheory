@@ -105,6 +105,32 @@ class ProcessTest extends TestCase {
 		$this->assertSame( 'Ann', $entry['data']['name'] );
 	}
 
+	public function test_checked_checkbox_option_submits_without_fatal() {
+		$form = array(
+			'id'     => 2,
+			'title'  => 'C',
+			'config' => \FormTheory_Fields::migrate_config( \FormTheory_Fields::sanitize_config( array(
+				'fields' => array(
+					array( 'id' => 'tags', 'type' => 'checkbox', 'label' => 'Tags', 'options' => array( 'A', 'B' ) ),
+				),
+			) ) ),
+		);
+		$r = $this->front->process( $form, $this->post( array( 'tags' => array( 'A', 'Z' ) ) ), array() );
+		$this->assertTrue( $r['ok'] );
+		$this->assertSame( array(), $r['errors'] );
+		$this->assertSame( array( 'A' ), $r['values']['tags'] );
+		$this->assertCount( 1, $GLOBALS['wpdb']->inserts );
+		$this->assertSame( array( 'A' ), json_decode( $GLOBALS['wpdb']->inserts[0]['data'], true )['tags'] );
+	}
+
+	public function test_validate_never_fatals_on_unexpected_array_values() {
+		$m = new \ReflectionMethod( \FormTheory_Frontend::class, 'validate' );
+		$m->setAccessible( true );
+		$f = array( 'type' => 'text', 'required' => false, 'options' => array() );
+		$this->assertSame( 'Invalid value.', $m->invoke( $this->front, $f, array( 'x' ) ) );
+		$this->assertSame( '', $m->invoke( $this->front, array( 'type' => 'checkbox' ) + $f, array( 'A' ) ) );
+	}
+
 	public function test_honeypot_returns_ok_without_insert() {
 		$p          = $this->post( array( 'name' => 'Ann' ) );
 		$p['ft_hp'] = 'bot';

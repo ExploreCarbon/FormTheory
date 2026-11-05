@@ -44,6 +44,17 @@ class RenderTest extends TestCase {
 		return ob_get_clean();
 	}
 
+	public function test_calc_output_is_labelled_and_escaped() {
+		$html = $this->render( array( 'type' => 'calc', 'label' => 'Total', 'formula' => '{field:qty}*2', 'decimals' => 2, 'prefix' => '<b>$', 'suffix' => '"x' ), '4.00' );
+		$this->assertStringContainsString( '<label for="ft-7-f1">Total</label>', $html );
+		$this->assertStringContainsString( '<output id="ft-7-f1"', $html );
+		$this->assertStringContainsString( 'for="ft-7-qty"', $html );
+		$this->assertStringContainsString( 'aria-live="off"', $html );
+		$this->assertStringContainsString( '&lt;b&gt;$4.00&quot;x</output>', $html );
+		$this->assertStringContainsString( 'data-ft-prefix="&lt;b&gt;$"', $html );
+		$this->assertStringNotContainsString( '<b>', $html );
+	}
+
 	public function test_label_is_associated_with_input() {
 		$html = $this->render( array() );
 		$this->assertStringContainsString( '<label for="ft-7-f1">Name</label>', $html );
@@ -112,5 +123,20 @@ class RenderTest extends TestCase {
 		$html = $this->render( array( 'type' => 'checkbox', 'label' => 'Pick', 'required' => true, 'options' => array( 'A' ) ), array(), 'Required' );
 		$this->assertStringContainsString( '<fieldset aria-describedby="ft-7-f1-err" aria-invalid="true"><legend>', $html );
 		$this->assertDoesNotMatchRegularExpression( '/<input type="checkbox"[^>]*aria-invalid/', $html );
+	}
+
+	public function test_rating_renders_radiogroup_of_real_radios_with_accessible_labels() {
+		$html = $this->render( array( 'type' => 'rating', 'label' => 'Score', 'max' => 4, 'required' => true ), '2', 'Bad' );
+		$this->assertStringContainsString( '<fieldset class="ft-rating" role="radiogroup"', $html );
+		$this->assertStringContainsString( 'aria-required="true"', $html );
+		$this->assertStringContainsString( 'aria-invalid="true"', $html );
+		$this->assertStringContainsString( '<legend>Score', $html );
+		$this->assertSame( 4, substr_count( $html, 'type="radio"' ) );
+		$this->assertStringContainsString( 'name="ft[f1]"', $html );
+		$this->assertStringContainsString( 'value="4"', $html );
+		$this->assertStringNotContainsString( 'value="5"', $html );
+		$this->assertStringContainsString( '<span class="ft-sr">3 of 4</span>', $html );
+		$this->assertStringContainsString( 'id="ft-7-f1-2" name="ft[f1]" value="2" checked="checked"', $html );
+		$this->assertSame( 4, substr_count( $html, '<label for="ft-7-f1-' ) );
 	}
 }
