@@ -453,7 +453,20 @@
 			refresh();
 			var w = e.target.closest('[data-ft-field]');
 			if (w && w.classList.contains('ft-has-error')) validateWrap(w);
+			maybeAutoAdvance(e.target);
 		});
+
+		// Optional (form setting): choosing a radio answer moves on, same path as the Next button.
+		// Only when this is not the last page and every visible required field on the page already has a value.
+		function maybeAutoAdvance(el) {
+			if (!form.hasAttribute('data-ft-autoadvance') || el.type !== 'radio' || current >= pages.length - 1) return;
+			var page = pages[current];
+			if (!page || !page.contains(el)) return;
+			var ready = Array.prototype.every.call(page.querySelectorAll('[data-ft-field]'), function (wrap) {
+				return wrap.hidden || wrap.getAttribute('data-ft-required') !== '1' || fieldValue(form, wrap.getAttribute('data-ft-field')).length > 0;
+			});
+			if (ready && validatePage(page)) show(current + 1, true);
+		}
 
 		form.addEventListener('click', function (e) {
 			var go = e.target.closest('[data-ft-goto]');

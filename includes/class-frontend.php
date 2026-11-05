@@ -187,6 +187,11 @@ class FormTheory_Frontend {
 	const SIG_MAX_W     = 2000;
 	const SIG_MAX_H     = 1000;
 
+	/** Form tag attribute that turns on radio auto-advance in front.js. */
+	public static function autoadvance_attr( array $config ) {
+		return ! empty( $config['auto_advance'] ) ? ' data-ft-autoadvance' : '';
+	}
+
 	/** Classic (non-JS) POST handler. */
 	public function maybe_submit() {
 		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || empty( $_POST['formtheory_id'] ) || wp_doing_ajax() ) {
@@ -1009,7 +1014,7 @@ class FormTheory_Frontend {
 		$start = max( 0, min( (int) $start, count( $pages ) - 1 ) );
 
 		ob_start();
-		$ajax = ! empty( $form['config']['ajax'] ) ? ' data-ft-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' : '';
+		$ajax = self::autoadvance_attr( $form['config'] ) . ( ! empty( $form['config']['ajax'] ) ? ' data-ft-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' : '' );
 		if ( $save ) {
 			$ajax .= ' data-ft-save-url="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' . ( $start ? ' data-ft-start-page="' . (int) $start . '"' : '' );
 		}

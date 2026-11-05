@@ -139,4 +139,10 @@ class RenderTest extends TestCase {
 		$this->assertStringContainsString( 'id="ft-7-f1-2" name="ft[f1]" value="2" checked="checked"', $html );
 		$this->assertSame( 4, substr_count( $html, '<label for="ft-7-f1-' ) );
 	}
+
+	public function test_autoadvance_attribute_only_when_enabled() {
+		$this->assertSame( ' data-ft-autoadvance', \FormTheory_Frontend::autoadvance_attr( array( 'auto_advance' => true ) ) );
+		$this->assertSame( '', \FormTheory_Frontend::autoadvance_attr( array( 'auto_advance' => false ) ) );
+		$this->assertSame( '', \FormTheory_Frontend::autoadvance_attr( array() ) );
+	}
 }
