@@ -324,17 +324,29 @@
 			var minIn = textIn(f.min_rows == null ? 1 : f.min_rows, function () {}, 'number');
 			var maxIn = textIn(f.max_rows == null ? 5 : f.max_rows, function () {}, 'number');
 			minIn.min = 0; minIn.max = 20; maxIn.min = 1; maxIn.max = 20;
+			// Typing only stores the in-range value; the min <= max reconciliation, display rewrite and announcement wait for `change` (blur/Enter).
 			minIn.addEventListener('input', function (e) {
 				var n = parseInt(e.target.value, 10);
 				f.min_rows = isNaN(n) ? 1 : Math.max(0, Math.min(20, n));
-				if ((f.max_rows == null ? 5 : f.max_rows) < f.min_rows) { f.max_rows = f.min_rows; maxIn.value = String(f.max_rows); announce(fmt(t('max_rows_raised', 'Maximum rows raised to %d to match the minimum.'), f.max_rows)); }
 			});
 			maxIn.addEventListener('input', function (e) {
 				var n = parseInt(e.target.value, 10);
-				var lo = f.min_rows == null ? 1 : f.min_rows;
-				f.max_rows = Math.max(lo, isNaN(n) ? 5 : Math.max(1, Math.min(20, n)));
-				if (!isNaN(n) && f.max_rows !== n && f.max_rows === lo && n < lo) { maxIn.value = String(f.max_rows); announce(fmt(t('max_rows_raised', 'Maximum rows raised to %d to match the minimum.'), f.max_rows)); }
+				f.max_rows = isNaN(n) ? 5 : Math.max(1, Math.min(20, n));
 			});
+			function reconcileRows() {
+				var lo = f.min_rows == null ? 1 : f.min_rows;
+				var hi = f.max_rows == null ? 5 : f.max_rows;
+				minIn.value = String(lo);
+				if (hi < lo) {
+					f.max_rows = lo;
+					maxIn.value = String(lo);
+					announce(fmt(t('max_rows_raised', 'Maximum rows raised to %d to match the minimum.'), lo));
+				} else {
+					maxIn.value = String(hi);
+				}
+			}
+			minIn.addEventListener('change', reconcileRows);
+			maxIn.addEventListener('change', reconcileRows);
 			body.appendChild(labelled(t('min_rows_label', 'Minimum rows (0-20)'), minIn));
 			body.appendChild(labelled(t('max_rows_label', 'Maximum rows (1-20)'), maxIn));
 			var addIn = textIn(f.add_label, function (v) { f.add_label = v; }); addIn.maxLength = 60;
