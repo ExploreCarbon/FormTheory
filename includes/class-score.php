@@ -76,15 +76,25 @@ class FormTheory_Score {
 	 * @param array $values  Sanitized values, id => value.
 	 * @param array $visible Optional visibility map.
 	 */
-	public static function target( array $form, array $values, array $visible = array() ) {
+	/** Score outcome: the lowest category key, "overall" when all pass, or null when scoring is off. */
+	public static function outcome( array $form, array $values, array $visible = array() ) {
 		$cfg     = $form['config'];
 		$scoring = $cfg['scoring'] ?? array();
 		if ( empty( $scoring['enabled'] ) ) {
 			return null;
 		}
-		$pct  = self::percentages( $cfg['fields'] ?? array(), $values, $visible );
-		$cat  = self::pick( $pct, (int) ( $scoring['threshold'] ?? 80 ) );
-		$page = 'overall' !== $cat ? self::page_url( $scoring['pages'][ $cat ] ?? 0 ) : null;
+		$pct = self::percentages( $cfg['fields'] ?? array(), $values, $visible );
+		return self::pick( $pct, (int) ( $scoring['threshold'] ?? 80 ) );
+	}
+
+	/** Result page URL for the outcome, or null when scoring is off or no page is published. */
+	public static function target( array $form, array $values, array $visible = array() ) {
+		$cat = self::outcome( $form, $values, $visible );
+		if ( null === $cat ) {
+			return null;
+		}
+		$scoring = $form['config']['scoring'];
+		$page    = 'overall' !== $cat ? self::page_url( $scoring['pages'][ $cat ] ?? 0 ) : null;
 		return $page ?? self::page_url( $scoring['overall_page'] ?? 0 );
 	}
 }

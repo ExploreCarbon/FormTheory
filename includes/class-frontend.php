@@ -405,7 +405,7 @@ class FormTheory_Frontend {
 		$this->files    = $files;
 		$this->sig_data = array();
 		$this->rep      = array();
-		$result     = array( 'ok' => false, 'errors' => array(), 'values' => array(), 'entry_id' => null, 'redirect' => null, 'message' => null );
+		$result     = array( 'ok' => false, 'errors' => array(), 'values' => array(), 'entry_id' => null, 'redirect' => null, 'message' => null, 'score_result' => null );
 
 		// Honeypot: silently pretend success, store nothing.
 		if ( ! empty( $post['ft_hp'] ) ) {
@@ -531,6 +531,7 @@ class FormTheory_Frontend {
 		$result['ok']       = true;
 		$result['entry_id'] = $entry_id ? $entry_id : null;
 		$result['redirect'] = self::confirmation_target( $form, $ctx );
+		$result['score_result'] = 'score' === ( $form['config']['confirmation_type'] ?? '' ) ? FormTheory_Score::outcome( $form, $values, $visible ) : null;
 		$result['message']  = $result['redirect'] ? null : self::confirmation_html( $form, $data, $entry_id );
 		return $result;
 	}
