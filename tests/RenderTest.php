@@ -55,6 +55,13 @@ class RenderTest extends TestCase {
 		$this->assertStringNotContainsString( '<b>', $html );
 	}
 
+	public function test_html_and_hidden_fields_close_their_wrapper() {
+		foreach ( array( 'html', 'hidden' ) as $type ) {
+			$html = $this->render( array( 'type' => $type, 'content' => '<h1>Hi</h1>' ) );
+			$this->assertSame( substr_count( $html, '<div' ), substr_count( $html, '</div>' ), $type . ' leaves a <div> unclosed' );
+		}
+	}
+
 	public function test_label_is_associated_with_input() {
 		$html = $this->render( array() );
 		$this->assertStringContainsString( '<label for="ft-7-f1">Name</label>', $html );
@@ -138,5 +145,11 @@ class RenderTest extends TestCase {
 		$this->assertStringContainsString( '<span class="ft-sr">3 of 4</span>', $html );
 		$this->assertStringContainsString( 'id="ft-7-f1-2" name="ft[f1]" value="2" checked="checked"', $html );
 		$this->assertSame( 4, substr_count( $html, '<label for="ft-7-f1-' ) );
+	}
+
+	public function test_autoadvance_attribute_only_when_enabled() {
+		$this->assertSame( ' data-ft-autoadvance', \FormTheory_Frontend::autoadvance_attr( array( 'auto_advance' => true ) ) );
+		$this->assertSame( '', \FormTheory_Frontend::autoadvance_attr( array( 'auto_advance' => false ) ) );
+		$this->assertSame( '', \FormTheory_Frontend::autoadvance_attr( array() ) );
 	}
 }

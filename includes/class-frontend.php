@@ -187,6 +187,11 @@ class FormTheory_Frontend {
 	const SIG_MAX_W     = 2000;
 	const SIG_MAX_H     = 1000;
 
+	/** Form tag attribute that turns on radio auto-advance in front.js. */
+	public static function autoadvance_attr( array $config ) {
+		return ! empty( $config['auto_advance'] ) ? ' data-ft-autoadvance' : '';
+	}
+
 	/** Classic (non-JS) POST handler. */
 	public function maybe_submit() {
 		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || empty( $_POST['formtheory_id'] ) || wp_doing_ajax() ) {
@@ -506,17 +511,25 @@ class FormTheory_Frontend {
 			}
 		}
 
-		$entry_id = FormTheory_DB::insert_entry( $form_id, $data );
+		// "Don't store entries": nothing is inserted (entry id 0), so notifications and webhooks
+		// still run on the submitted data and their webhook log rows are not tied to a deleted entry.
+		$store    = ! isset( $form['config']['store_entries'] ) || ! empty( $form['config']['store_entries'] );
+		$entry_id = $store ? FormTheory_DB::insert_entry( $form_id, $data ) : 0;
 		$resumed  = (string) ( $post['ft_resume'] ?? '' );
 		if ( FormTheory_Drafts::valid_token( $resumed ) ) {
 			FormTheory_Drafts::delete( $resumed, $form_id ); // Submitted: the saved draft is no longer needed.
 		}
 		FormTheory_Notify::send( $form, $data, $entry_id );
 		do_action( 'formtheory_after_submission', $entry_id, $form, $data );
+		if ( ! $store ) {
+			foreach ( $written as $path ) {
+				@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- attachments were already sent; no entry will ever reference these files.
+			}
+		}
 
-		$ctx                = array( 'form' => $form, 'data' => $data, 'entry_id' => $entry_id );
+		$ctx                = array( 'form' => $form, 'data' => $data, 'entry_id' => $entry_id, 'values' => $values, 'visible' => $visible );
 		$result['ok']       = true;
-		$result['entry_id'] = $entry_id;
+		$result['entry_id'] = $entry_id ? $entry_id : null;
 		$result['redirect'] = self::confirmation_target( $form, $ctx );
 		$result['message']  = $result['redirect'] ? null : self::confirmation_html( $form, $data, $entry_id );
 		return $result;
@@ -559,6 +572,9 @@ class FormTheory_Frontend {
 		if ( 'page' === $type ) {
 			$id = (int) ( $cfg['confirmation_page'] ?? 0 );
 			return $id && 'publish' === get_post_status( $id ) ? (string) get_permalink( $id ) : null;
+		}
+		if ( 'score' === $type ) {
+			return FormTheory_Score::target( $form, $ctx['values'] ?? $ctx['data'], $ctx['visible'] ?? array() );
 		}
 		if ( 'redirect' !== $type || empty( $cfg['confirmation_url'] ) ) {
 			return null;
@@ -998,7 +1014,7 @@ class FormTheory_Frontend {
 		$start = max( 0, min( (int) $start, count( $pages ) - 1 ) );
 
 		ob_start();
-		$ajax = ! empty( $form['config']['ajax'] ) ? ' data-ft-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' : '';
+		$ajax = self::autoadvance_attr( $form['config'] ) . ( ! empty( $form['config']['ajax'] ) ? ' data-ft-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' : '' );
 		if ( $save ) {
 			$ajax .= ' data-ft-save-url="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '"' . ( $start ? ' data-ft-start-page="' . (int) $start . '"' : '' );
 		}
@@ -1154,12 +1170,12 @@ class FormTheory_Frontend {
 		echo '<div id="' . esc_attr( $id ) . '-wrap" class="' . esc_attr( $classes ) . '" data-ft-field="' . esc_attr( $f['id'] ) . '" data-ft-required="' . ( $f['required'] ? '1' : '0' ) . '" data-ft-type="' . esc_attr( $f['type'] ) . '"' . $cond . '>'; // phpcs:ignore -- $cond escaped above.
 
 		if ( 'html' === $f['type'] ) {
-			echo '<div class="ft-field ft-type-html"' . $cond . '>' . wp_kses_post( $f['content'] ) . '</div>'; // phpcs:ignore -- $cond escaped above.
+			echo '<div class="ft-field ft-type-html"' . $cond . '>' . wp_kses_post( $f['content'] ) . '</div></div>'; // phpcs:ignore -- $cond escaped above.
 			return;
 		}
 		if ( 'hidden' === $f['type'] ) {
 			$v = '' !== (string) $value ? $value : FormTheory_Fields::populate( $f['default'] );
-			echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $v ) . '">';
+			echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $v ) . '"></div>';
 			return;
 		}
 		$group = in_array( $f['type'], array( 'radio', 'checkbox' ), true );

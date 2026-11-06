@@ -174,6 +174,9 @@ class FormTheory_DB {
 			'confirmation_page' => 0,
 			'confirmation_url'  => '',
 			'save_resume'       => false,
+			'store_entries'     => true,
+			'auto_advance'      => false,
+			'scoring'           => array( 'enabled' => false, 'threshold' => 80, 'overall_page' => 0, 'pages' => array() ),
 		);
 	}
 

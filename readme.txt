@@ -4,7 +4,7 @@ Tags: forms, form builder, contact form, conditional logic, webhooks
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.3.1
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,6 +81,12 @@ No. Webhook secrets are blanked in exported JSON.
 Set the retention period (days) under FormTheory > Settings. 0 keeps entries forever; the maximum is 3650. A daily job deletes older entries and their webhook log rows.
 
 == Changelog ==
+
+= 1.4.0 =
+* Quiz scoring: optional points per radio/select choice and a score category per field.
+* New confirmation type "Redirect by score": sends the visitor to the page mapped to their lowest-scoring category, or to an overall page when every category is at or above the threshold (default 80%).
+* New form setting "Save entries": turn off to send notifications and webhooks without storing the entry.
+* New form setting "Multi-page: move to the next page when a choice is selected" (radio auto-advance).
 
 = 1.3.1 =
 * Admin builder: separate sections for Fields, Form settings, Notifications and Webhooks.

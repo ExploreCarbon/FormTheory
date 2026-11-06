@@ -86,6 +86,26 @@ class PortableTest extends TestCase {
 		$this->assertStringNotContainsString( '<script', $res['config']['fields'][0]['content'] );
 		$this->assertSame( 'T', $res['title'] );
 	}
+
+	public function test_export_import_round_trips_scoring_config() {
+		$config = \FormTheory_Fields::sanitize_config( array(
+			'confirmation_type' => 'score',
+			'store_entries'     => false,
+			'auto_advance'      => true,
+			'fields'            => array(
+				array( 'id' => 'q', 'type' => 'radio', 'label' => 'Q', 'options' => array( 'a', 'b' ), 'points' => array( 0, 10 ), 'category' => 'debt' ),
+			),
+			'scoring'           => array( 'enabled' => true, 'threshold' => 70, 'overall_page' => 3, 'pages' => array( 'debt' => 4 ) ),
+		) );
+		$out = \FormTheory_Portable::import( \FormTheory_Portable::export( array( 'id' => 1, 'title' => 'Quiz', 'config' => $config ) ) );
+		$this->assertSame( array( 0.0, 10.0 ), $out['config']['fields'][0]['points'] );
+		$this->assertSame( 'debt', $out['config']['fields'][0]['category'] );
+		$this->assertSame( 70, $out['config']['scoring']['threshold'] );
+		$this->assertSame( array( 'debt' => 4 ), $out['config']['scoring']['pages'] );
+		$this->assertSame( 'score', $out['config']['confirmation_type'] );
+		$this->assertFalse( $out['config']['store_entries'] );
+		$this->assertTrue( $out['config']['auto_advance'] );
+	}
 }
 
 function wp_json_encode_stub( $d ) {
