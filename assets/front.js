@@ -183,6 +183,7 @@
 
 	function setError(wrap, msg) {
 		var err = wrap.querySelector('.ft-error');
+		if (!err) return; // html/hidden fields render no error element
 		var ctl = wrap.getAttribute('data-ft-type') === 'consent' ? wrap.querySelector('input') : (wrap.querySelector('fieldset') || wrap.querySelector('input, select, textarea'));
 		err.textContent = msg;
 		err.hidden = !msg;
