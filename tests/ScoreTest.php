@@ -99,6 +99,14 @@ class ScoreTest extends TestCase {
 		$this->assertSame( 'https://x.test/p30/', \FormTheory_Score::target( $high, array( 'q1' => 'b' ) ) );
 	}
 
+	public function test_outcome_names_the_category_or_overall_and_is_null_when_disabled() {
+		$fields = array( $this->radio( 'q1', 'debt', array( 'a', 'b' ), array( 0, 10 ) ) );
+		$form   = $this->form( array(), $fields );
+		$this->assertSame( 'debt', \FormTheory_Score::outcome( $form, array( 'q1' => 'a' ) ) );
+		$this->assertSame( 'overall', \FormTheory_Score::outcome( $form, array( 'q1' => 'b' ) ) );
+		$this->assertNull( \FormTheory_Score::outcome( $this->form( array( 'enabled' => false ), $fields ), array() ) );
+	}
+
 	public function test_target_null_when_scoring_disabled() {
 		$f = $this->form( array( 'enabled' => false ), array() );
 		$this->assertNull( \FormTheory_Score::target( $f, array() ) );

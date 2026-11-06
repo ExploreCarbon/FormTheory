@@ -77,6 +77,15 @@ class ScoreProcessTest extends TestCase {
 		$this->assertSame( 'https://x.test/p30/', $r['redirect'] );
 	}
 
+	public function test_score_result_is_returned_even_when_no_page_is_published() {
+		$r = $this->front->process( $this->form(), $this->post( array( 'q1' => 'No', 'q2' => 'Yes' ) ), array() );
+		$this->assertSame( 'debt', $r['score_result'] );
+		$r = $this->front->process( $this->form(), $this->post( array( 'q1' => 'Yes', 'q2' => 'Yes' ) ), array() );
+		$this->assertSame( 'overall', $r['score_result'] );
+		$plain = $this->front->process( $this->form( array( 'confirmation_type' => 'message', 'scoring' => array( 'enabled' => false ) ) ), $this->post( array( 'q1' => 'No', 'q2' => 'Yes' ) ), array() );
+		$this->assertNull( $plain['score_result'] );
+	}
+
 	public function test_score_confirmation_without_published_pages_shows_message() {
 		$form = $this->form( array( 'scoring' => array( 'enabled' => true, 'overall_page' => 99, 'pages' => array( 'debt' => 98 ) ) ) );
 		$r    = $this->front->process( $form, $this->post( array( 'q1' => 'No', 'q2' => 'No' ) ), array() );

@@ -132,6 +132,29 @@
 		});
 	}
 
+	// Analytics: DOM events plus a window.dataLayer push (GTM/GA4) when present.
+	// Only choice fields are reported; free text (names, emails, messages) never is.
+	var TRACKED_TYPES = ['radio', 'select', 'checkbox', 'rating'];
+
+	function track(form, name, detail) {
+		var idEl = form.querySelector('[name="formtheory_id"]');
+		detail.form_id = idEl ? parseInt(idEl.value, 10) || 0 : 0;
+		form.dispatchEvent(new CustomEvent('formtheory:' + name, { bubbles: true, detail: detail }));
+		if (window.dataLayer && typeof window.dataLayer.push === 'function') {
+			var ev = { event: 'formtheory_' + name };
+			Object.keys(detail).forEach(function (k) { ev[k] = detail[k]; });
+			window.dataLayer.push(ev);
+		}
+	}
+
+	function questionLabel(wrap) {
+		var el = wrap.querySelector('legend, label');
+		if (!el) return '';
+		var c = el.cloneNode(true);
+		Array.prototype.forEach.call(c.querySelectorAll('.ft-req, .ft-sr'), function (n) { n.parentNode.removeChild(n); });
+		return c.textContent.replace(/\s+/g, ' ').trim();
+	}
+
 	function fieldValue(form, id) {
 		var wrap = form.querySelector('[data-ft-field="' + id + '"]');
 		if (!wrap || wrap.hidden) return [];
@@ -455,6 +478,16 @@
 			refresh();
 			var w = e.target.closest('[data-ft-field]');
 			if (w && w.classList.contains('ft-has-error')) validateWrap(w);
+			if (w && TRACKED_TYPES.indexOf(w.getAttribute('data-ft-type')) !== -1) {
+				var pg = w.closest('.ft-page');
+				track(form, 'answer', {
+					question_id: w.getAttribute('data-ft-field'),
+					question_label: questionLabel(w),
+					question_number: pg ? (parseInt(pg.getAttribute('data-ft-page'), 10) || 0) : 0,
+					answer: e.target.value,
+					selected: e.target.type === 'checkbox' ? e.target.checked : true
+				});
+			}
 			maybeAutoAdvance(e.target);
 		});
 
@@ -541,6 +574,7 @@
 				})
 				.then(function (res) {
 					form.removeAttribute('aria-busy');
+					if (res.ok) track(form, 'complete', { result: res.score_result || '' });
 					if (res.ok && res.redirect) { window.location.assign(res.redirect); return; }
 					if (res.ok) {
 						var conf = document.createElement('div');
