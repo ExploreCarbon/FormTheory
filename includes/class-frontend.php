@@ -1170,12 +1170,12 @@ class FormTheory_Frontend {
 		echo '<div id="' . esc_attr( $id ) . '-wrap" class="' . esc_attr( $classes ) . '" data-ft-field="' . esc_attr( $f['id'] ) . '" data-ft-required="' . ( $f['required'] ? '1' : '0' ) . '" data-ft-type="' . esc_attr( $f['type'] ) . '"' . $cond . '>'; // phpcs:ignore -- $cond escaped above.
 
 		if ( 'html' === $f['type'] ) {
-			echo '<div class="ft-field ft-type-html"' . $cond . '>' . wp_kses_post( $f['content'] ) . '</div>'; // phpcs:ignore -- $cond escaped above.
+			echo '<div class="ft-field ft-type-html"' . $cond . '>' . wp_kses_post( $f['content'] ) . '</div></div>'; // phpcs:ignore -- $cond escaped above.
 			return;
 		}
 		if ( 'hidden' === $f['type'] ) {
 			$v = '' !== (string) $value ? $value : FormTheory_Fields::populate( $f['default'] );
-			echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $v ) . '">';
+			echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $v ) . '"></div>';
 			return;
 		}
 		$group = in_array( $f['type'], array( 'radio', 'checkbox' ), true );
